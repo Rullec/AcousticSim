@@ -3,7 +3,9 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <random>
-#define M_PI 3.1415926535
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327950288
+#endif
 
 const int gInvalidIdx = -1;
 

@@ -4,7 +4,7 @@
 #include <cstdarg>
 #ifdef __APPLE__
 #include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 #endif
 
 #ifdef __linux__
@@ -186,7 +186,7 @@ std::string cFileUtil::GetExtension(const std::string &filename)
 {
     // remove leading '.'
     size_t dot_idx = 0;
-    for (dot_idx; dot_idx < filename.size(); ++dot_idx)
+    for (; dot_idx < filename.size(); ++dot_idx)
     {
         if (filename[dot_idx] != '.')
         {

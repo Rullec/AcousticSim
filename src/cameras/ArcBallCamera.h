@@ -16,7 +16,7 @@ public:
                    float far_plane);
 
     virtual ~cArcBallCamera();
-    virtual tMatrix4f ViewMatrix();
+    virtual tMatrix4f ViewMatrix() override;
     virtual void MoveForward() override;
     virtual void MoveBackward() override;
     virtual void MoveLeft() override;
