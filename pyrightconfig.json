@@ -1,0 +1,7 @@
+{
+    "include": [
+        "scripts",
+        "src",
+        "1d_evaluation"
+    ]
+}

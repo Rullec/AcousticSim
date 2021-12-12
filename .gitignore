@@ -25,8 +25,13 @@
 *.la
 *.a
 *.lib
+build*/
 
 # Executables
 *.exe
 *.out
 *.app
+main
+
+# ide
+.vscode/
