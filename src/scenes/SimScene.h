@@ -5,12 +5,13 @@
 
 namespace Json
 {
-class Value;
+    class Value;
 };
 
 enum eSceneType
 {
-    SCENE_SIM = 0,          // default simulation scene
+    SCENE_SIM = 0,  // default simulation scene
+    SCENE_ACOUSTIC, // acoustic simulation scene
     NUM_OF_SCENE_TYPES
 };
 
@@ -21,6 +22,7 @@ struct tRay;
 struct tPerturb;
 // class cDrawScene;
 SIM_DECLARE_CLASS_AND_PTR(cKinematicBody)
+SIM_DECLARE_CLASS_AND_PTR(cBaseObject)
 SIM_DECLARE_CLASS_AND_PTR(cRaycaster)
 SIM_DECLARE_CLASS_AND_PTR(cCollisionDetecter)
 class cSimScene : public cScene
@@ -62,10 +64,8 @@ protected:
     bool mEnableProfiling;
     bool mEnableObstacle; // using obstacle?
     bool mEnableCollisionDetection;
-    std::vector<cKinematicBodyPtr>
-        mObstacleList;        // obstacle
+    std::vector<cBaseObjectPtr> mObjectList;
     cRaycasterPtr mRaycaster; // raycaster
-    // int mSubdivision;             // division number along with the line
 
     tVectorXf mTriangleDrawBuffer,
         mEdgesDrawBuffer; // buffer to triangle buffer drawing (should use index
@@ -85,6 +85,7 @@ protected:
     void ClearForce(); // clear all forces
     void SaveCurrentScene();
 
+    virtual void BuildObjects(const Json::Value &obj_conf_path) const;
     virtual void CalcTriangleDrawBuffer();       //
     virtual int CalcEdgesDrawBuffer(int st = 0); //
     virtual int GetNumOfVertices() const;
@@ -92,16 +93,10 @@ protected:
     virtual int GetNumOfDrawEdges() const;
     virtual int GetNumOfTriangles() const;
     void CalcNodePositionVector(tVectorXd &pos) const;
-    // virtual void InitConstraint(const Json::Value &root);
-    // virtual void UpdateCurNodalPosition(const tVectorXd &xcur);
-    // virtual void UpdateSubstep() = 0;
-
-    // virtual void CreatePerturb(tRay *ray);
     virtual void UpdateObstacles();
     virtual void CreateObstacle(const Json::Value &conf);
     virtual void CreateCollisionDetecter();
     bool mPauseSim;
     virtual void PauseSim();
     virtual void PerformCollisionDetection();
-    // virtual int GetNumOfTriangles() const;
 };

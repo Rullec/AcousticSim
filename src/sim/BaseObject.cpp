@@ -6,7 +6,7 @@
 
 #include <string>
 std::string gObjectTypeStr[eObjectType::NUM_OBJ_TYPES] = {
-    "KinematicBody", "RigidBody", "Cloth", "Fluid"};
+    "KinematicBody", "RigidBody", "Cloth", "Fluid", "Acoustic"};
 
 cBaseObject::cBaseObject(eObjectType type, int id_) : mType(type), mObjId(id_)
 {

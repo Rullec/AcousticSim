@@ -1,70 +1,27 @@
 {
     "scene_type": "sim",
-    "object_name": "cloth",
-    "cloth_type": "pd",
-    "cloth_size": [
-        0.3,
-        0.3
-    ],
-    "cloth_mass": 0.027,
-    "cloth_density": 0.30,
-    "cloth_init_pos": [
-        0,
-        0.3,
-        0
-    ],
-    "cloth_init_orientation": [
-        0,
-        0,
-        0
+    "obj_lst": [
+        {
+            "object_name": "acoustic_body",
+            "object_type": "Acoustic"
+        }
     ],
     "window_height": 600,
     "window_width": 800,
     "enable_draw": true,
-    "enable_cloth": true,
-    "geometry_type_bak": "uniform_square",
-    "geometry_type_bak1": "skew_triangle",
-    "geometry_type": "regular_triangle",
-    "subdivision": [
-        50,
-        50
-    ],
-    "damping": 1e-5,
-    "stiffness": 1e2,
-    "enable_bending": true,
     "enable_only_exporting_cutted_window": true,
-    "bending_stiffness": 1,
-    "default_timestep": 0.03333,
-    "max_steps_opt": 10,
-    "pd_contact_force_kp": 1,
-    "pd_contact_force_kd": 0.001,
-    "pd_contact_friction": 0.001,
-    "constraints": {
-        "static_point": [
-            [
-                0.3,
-                0.3
-            ],
-            [
-                0,
-                0.3
-            ]
-        ]
-    },
-    "cloth_uv_rotation": 0,
     "pause_at_first": false,
     "ground_png_path": "data/grid0.png",
-    "enable_camera_auto_rot" : false,
-    "enable_cloth_from_obj": false,
+    "enable_camera_auto_rot": false,
     "camera": {
         "camera_type": "arcball_cam",
         "camera_pos": [
-            0.00187508856,
-            0.42842519843,
-            0.55907583299
+            0.0,
+            0.4,
+            0.5
         ],
         "camera_focus": [
-            -0.00352920924,
+            0.0,
             0.4,
             0
         ],
@@ -73,9 +30,5 @@
         "far": 100
     },
     "enable_profiling": false,
-    "enable_obstacle": true,
-    "obstacle_conf": [
-        
-    ],
     "enable_collision_detection": false
 }

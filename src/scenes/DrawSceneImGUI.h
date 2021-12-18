@@ -8,13 +8,13 @@ public:
     virtual ~cDrawSceneImGui();
     virtual void Init(const std::string &conf_path) override;
     virtual void Update(double dt) override final;
-    virtual void CursorMove(int xpos, int ypos);
-    virtual void MouseButton(int button, int action, int mods);
-    virtual void Scroll(double xoff, double yoff);
+    virtual void CursorMove(int xpos, int ypos) override;
+    virtual void MouseButton(int button, int action, int mods) override;
+    virtual void Scroll(double xoff, double yoff) override;
     virtual void Reset() override;
 
 protected:
-    virtual void InitVulkan();
+    virtual void InitVulkan() override;
     virtual void CreateInstance() override final;
     virtual void CreateImGuiContext();
     virtual void CreateDescriptorPoolImGui();
@@ -23,7 +23,7 @@ protected:
     virtual void CreateCommandBuffersImGui();
     virtual void CreateFontImGui();
     virtual void RecreateSwapChain();
-    virtual void CleanSwapChain();
+    virtual void CleanSwapChain() override;
     virtual void DrawFrame() override final;
     virtual void CreateFrameBuffersImGui();
     virtual void DrawImGui(uint32_t);

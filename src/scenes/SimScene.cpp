@@ -8,7 +8,7 @@
 #include "sim/Perturb.h"
 #include <iostream>
 
-std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim"};
+std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim", "acoustic"};
 
 eSceneType cSimScene::BuildSceneType(const std::string &str)
 {
@@ -39,6 +39,7 @@ cSimScene::cSimScene()
 }
 
 eSceneType cSimScene::GetSceneType() const { return this->mSceneType; }
+
 void cSimScene::Init(const std::string &conf_path)
 {
     // 1. load config
@@ -48,25 +49,28 @@ void cSimScene::Init(const std::string &conf_path)
     mEnableProfiling =
         cJsonUtil::ParseAsBool(cSimScene::ENABLE_PROFLINE_KEY, root);
 
-    // mIdealDefaultTimestep =
-    //     cJsonUtil::ParseAsDouble(cSimScene::DEFAULT_TIMESTEP_KEY, root);
-    // mSceneType = BuildSceneType(
-    //     cJsonUtil::ParseAsString(cSimScene::SCENE_TYPE_KEY, root));
-    mEnableObstacle =
-        cJsonUtil::ParseAsBool(cSimScene::ENABLE_OBSTACLE_KEY, root);
-
     mEnableCollisionDetection =
         cJsonUtil::ParseAsBool(cSimScene::ENABLE_COLLISION_DETECTION_KEY, root);
-    if (mEnableObstacle)
-        CreateObstacle(
-            cJsonUtil::ParseAsValue(cSimScene::OBSTACLE_CONF_KEY, root));
+    // BuildObjects(
+    //     cJsonUtil::ParseAsValue(cSimScene::OBSTACLE_CONF_KEY, root));
 
     CreateCollisionDetecter();
 
     InitDrawBuffer();
     InitRaycaster(root);
 }
-
+void cSimScene::BuildObjects(const Json::Value &obj_conf_) const
+{
+    // 1. parse the number of obstacles
+    Json::Value obj_conf = obj_conf_;
+    int num_of_obstacles = obj_conf.size();
+    SIM_ASSERT(num_of_obstacles == obj_conf.size());
+    // for (int i = 0; i < num_of_obstacles; i++)
+    // {
+    //     auto obs = BuildKinematicBody(obj_conf[i], GetNumOfObjects());
+    //     mObjectList.push_back(obs);
+    // }
+}
 void cSimScene::PauseSim() { mPauseSim = !mPauseSim; }
 
 /**
@@ -75,11 +79,11 @@ void cSimScene::PauseSim() { mPauseSim = !mPauseSim; }
 #include "geometries/ObjExport.h"
 void cSimScene::SaveCurrentScene()
 {
-    for (auto &x : mObstacleList)
-    {
-        cObjExporter::ExportObj(x->GetObjName() + ".obj", x->GetVertexArray(),
-                                x->GetTriangleArray());
-    }
+    // for (auto &x : mObstacleList)
+    // {
+    //     cObjExporter::ExportObj(x->GetObjName() + ".obj", x->GetVertexArray(),
+    //                             x->GetTriangleArray());
+    // }
 }
 
 void cSimScene::InitDrawBuffer()
@@ -123,12 +127,12 @@ void cSimScene::InitRaycaster(const Json::Value &conf)
     // for (int i = 0; i < this->)
     mRaycaster = std::make_shared<cRaycaster>();
     mRaycaster->Init(conf);
-    for (auto &x : mObstacleList)
-    {
-        // auto obstacle_v_array = x->GetVertexArray();
-        // auto obstacle_triangle_array = x->GetTriangleArray();
-        mRaycaster->AddResources(x);
-    }
+    // for (auto &x : mObstacleList)
+    // {
+    //     // auto obstacle_v_array = x->GetVertexArray();
+    //     // auto obstacle_triangle_array = x->GetTriangleArray();
+    //     mRaycaster->AddResources(x);
+    // }
     // std::cout << "[debug] add resources to raycaster done, num of obstacles =
     // "
     //           << mObstacleList.size() << std::endl;
@@ -156,15 +160,15 @@ void cSimScene::Update(double delta_time)
  */
 void cSimScene::UpdateObstacles()
 {
-    for (auto &obs : this->mObstacleList)
-    {
-        if (false == obs->IsStatic())
-        {
-            // std::cout << " obstacle " << obs->GetObjName()
-            //           << " is not static, need to update\n";
-            obs->Update(mCurdt);
-        }
-    }
+    // for (auto &obs : this->mObstacleList)
+    // {
+    //     if (false == obs->IsStatic())
+    //     {
+    //         // std::cout << " obstacle " << obs->GetObjName()
+    //         //           << " is not static, need to update\n";
+    //         obs->Update(mCurdt);
+    //     }
+    // }
 }
 /**
  * \brief       do (discrete) collision detection
@@ -193,10 +197,10 @@ void cSimScene::Reset()
 int cSimScene::GetNumOfVertices() const
 {
     int num_of_vertices = 0;
-    for (auto &x : mObstacleList)
-    {
-        num_of_vertices += x->GetNumOfVertices();
-    }
+    // for (auto &x : mObstacleList)
+    // {
+    //     num_of_vertices += x->GetNumOfVertices();
+    // }
     return num_of_vertices;
 }
 
@@ -210,20 +214,20 @@ int cSimScene::GetNumOfFreedom() const { return GetNumOfVertices() * 3; }
 int cSimScene::GetNumOfDrawEdges() const
 {
     int num_of_edges = 0;
-    for (auto &x : mObstacleList)
-    {
-        num_of_edges += x->GetNumOfEdges();
-    }
+    // for (auto &x : mObstacleList)
+    // {
+    //     num_of_edges += x->GetNumOfEdges();
+    // }
     return num_of_edges;
 }
 
 int cSimScene::GetNumOfTriangles() const
 {
     int num_of_triangles = 0;
-    for (auto &x : mObstacleList)
-    {
-        num_of_triangles += x->GetNumOfTriangles();
-    }
+    // for (auto &x : mObstacleList)
+    // {
+    //     num_of_triangles += x->GetNumOfTriangles();
+    // }
     return num_of_triangles;
 }
 /**
@@ -248,10 +252,10 @@ void cSimScene::CalcTriangleDrawBuffer()
 
     // 2. calculate for obstacle triangle
     {
-        for (auto &x : mObstacleList)
-        {
-            x->CalcTriangleDrawBuffer(ref, st);
-        }
+        // for (auto &x : mObstacleList)
+        // {
+        //     x->CalcTriangleDrawBuffer(ref, st);
+        // }
     }
 }
 
@@ -272,10 +276,10 @@ int cSimScene::CalcEdgesDrawBuffer(int st /* = 0 */)
                                      mEdgesDrawBuffer.size() - st);
 
     // 2. for draw buffer
-    for (auto &x : mObstacleList)
-    {
-        x->CalcEdgeDrawBuffer(render_ref, st);
-    }
+    // for (auto &x : mObstacleList)
+    // {
+    //     x->CalcEdgeDrawBuffer(render_ref, st);
+    // }
 
     return st;
 }
@@ -349,15 +353,6 @@ void cSimScene::ReleasePerturb()
 
 void cSimScene::CreateObstacle(const Json::Value &conf)
 {
-    // 1. parse the number of obstacles
-    Json::Value obstacles_lst = conf;
-    int num_of_obstacles = obstacles_lst.size();
-    SIM_ASSERT(num_of_obstacles == obstacles_lst.size());
-    for (int i = 0; i < num_of_obstacles; i++)
-    {
-        auto obs = BuildKinematicBody(obstacles_lst[i], GetNumOfObjects());
-        mObstacleList.push_back(obs);
-    }
 
     // printf("[debug] create %d obstacle(s) done\n", mObstacleList.size());
     // exit(0);
@@ -389,10 +384,10 @@ void cSimScene::CreateCollisionDetecter()
 
         mColDetecter = std::make_shared<cCollisionDetecter>();
         // add resources into the collision detecter now
-        for (auto &x : this->mObstacleList)
-        {
-            mColDetecter->AddObject(x, false);
-        }
+        // for (auto &x : this->mObstacleList)
+        // {
+        //     mColDetecter->AddObject(x, false);
+        // }
     }
 }
 
@@ -402,7 +397,7 @@ void cSimScene::CreateCollisionDetecter()
 int cSimScene::GetNumOfObjects() const
 {
     int num_of_objects = 0;
-    num_of_objects += mObstacleList.size();
+    // num_of_objects += mObstacleList.size();
     return num_of_objects;
 }
 
@@ -411,7 +406,8 @@ int cSimScene::GetNumOfObjects() const
  */
 std::vector<cKinematicBodyPtr> cSimScene::GetObstacleList()
 {
-    return this->mObstacleList;
+    // return this->mObstacleList;
+    return {};
 }
 
 /**

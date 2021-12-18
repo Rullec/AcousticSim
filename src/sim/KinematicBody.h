@@ -1,3 +1,4 @@
+#pragma once
 #include "sim/BaseObject.h"
 #include "utils/MathUtil.h"
 

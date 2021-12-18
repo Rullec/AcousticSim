@@ -12,6 +12,7 @@ enum eObjectType
     RIGIDBODY_TYPE,
     CLOTH_TYPE,
     FLUID_TYPE,
+    ACOUSTIC_TYPE,
     NUM_OBJ_TYPES,
     INVALID_OBJ_TYPE
 };
