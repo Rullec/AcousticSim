@@ -159,15 +159,15 @@ void SimDraw(const std::string &conf, bool disable_imgui)
 
         // 1. calc delta time for real time simulation
         auto cur = cTimeUtil::GetCurrentTime_chrono();
-        double delta_time = cTimeUtil::CalcTimeElaspedms(last, cur) * 1e-3;
+        float delta_time = cTimeUtil::CalcTimeElaspedms(last, cur) * 1e-3;
 
         // 2. update
         // delta_time = 1e-3;
         // delta_time /= 4;
-        double limit = 1.0 / 30;
-        // double limit = 1e-4;
+        float limit = 1.0 / 30;
+        // float limit = 1e-4;
 #ifdef _WIN32
-        delta_time = std::min(delta_time, limit);
+        delta_time = min(delta_time, limit);
 #else
         delta_time = std::min(delta_time, limit);
 #endif
@@ -196,7 +196,7 @@ void SimNoDraw(const std::string &conf_path)
 
     int max_iters = 1e3;
     int cur_iter = 0;
-    double dt = 1e-2;
+    float dt = 1e-2;
     while (++cur_iter < max_iters)
     {
         scene->Update(dt);
