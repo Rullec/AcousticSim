@@ -1,0 +1,23 @@
+# vertices definition
+4 
+0, 0, 0
+1, 0, 0
+0, 1, 0,
+0, 0, 1
+
+# each (positively-oriented) tetrahedral element with vertices
+
+# v0 v1 v2 v3
+
+# has triangular faces
+
+# v0 v1 v2
+
+# v1 v3 v2
+
+# v2 v3 v0
+
+# v3 v1 v0
+# tetrahedra definition
+1
+0, 1, 2, 3
