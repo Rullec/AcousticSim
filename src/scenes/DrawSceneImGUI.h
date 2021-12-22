@@ -27,7 +27,7 @@ protected:
     virtual void DrawFrame() override final;
     virtual void CreateFrameBuffersImGui();
     virtual void DrawImGui(uint32_t);
-
+    virtual void UpdateSimImGui();
     VkDebugReportCallbackEXT mDebugReport;
     VkDescriptorPool mDescriptorPoolImGui;
     VkRenderPass mRenderPassImGui;

@@ -8,4 +8,5 @@ add_library(
     CollisionDetecter.cpp
     CollisionInfo.cpp
     BezierCurve.cpp
+    Tetrahedron.cpp
 )

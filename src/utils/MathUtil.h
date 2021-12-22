@@ -37,6 +37,7 @@ typedef Eigen::Vector4d tVector;
 typedef Eigen::VectorXd tVectorXd;
 typedef Eigen::VectorXi tVectorXi;
 typedef Eigen::Vector3i tVector3i;
+typedef Eigen::Vector4i tVector4i;
 typedef Eigen::VectorXf tVectorXf;
 typedef Eigen::Vector3d tVector3d;
 typedef Eigen::Vector3f tVector3f;

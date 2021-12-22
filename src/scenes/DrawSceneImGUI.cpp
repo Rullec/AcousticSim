@@ -297,9 +297,16 @@ void cDrawSceneImGui::Update(double dt)
     {
         switch (mSimScene->GetSceneType())
         {
-        default:
-            // no gui
+        case SCENE_SIM:
+        {
+            UpdateSimImGui();
             break;
+        }
+        default:
+        { // no gui
+            std::cout << "Get scene type " << mSimScene->GetSceneType() << std::endl;
+            break;
+        }
         }
     }
     ImGui::Render();
@@ -308,6 +315,31 @@ void cDrawSceneImGui::Update(double dt)
     cDrawScene::Update(dt);
 }
 
+/**
+ * \brief           imgui setting for acoustic simulation scene 
+*/
+void cDrawSceneImGui::UpdateSimImGui()
+{
+    ImVec2 init_window_size = ImVec2(200, 150);
+    ImGui::SetNextWindowSize(init_window_size, ImGuiCond_FirstUseEver);
+
+    ImGui::SetNextWindowPos(ImVec2(float(gWindowWidth) - init_window_size.x, 0),
+                            ImGuiCond_FirstUseEver);
+
+    ImGuiWindowFlags window_flags = 0;
+    // window_flags |= ImGuiWindowFlags_NoMove;
+    // window_flags |= ImGuiWindowFlags_NoResize;
+    // bool open = false;
+    // bool *p_open = &open;
+
+    ImGui::Begin("config");
+    // std::cout << "update acoustic imgui\n";
+    if (true == ImGui::Button("push_button"))
+    {
+        std::cout << "[debug] button pushed\n";
+    }
+    ImGui::End();
+}
 void cDrawSceneImGui::DrawFrame()
 {
     uint32_t imageIndex;
@@ -494,7 +526,6 @@ void cDrawSceneImGui::Scroll(double xoff, double yoff)
 void cDrawSceneImGui::Reset()
 {
     cDrawScene::Reset();
-    
 }
 
 void cDrawSceneImGui::Init(const std::string &conf_path)

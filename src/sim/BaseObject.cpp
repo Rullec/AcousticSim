@@ -6,7 +6,8 @@
 
 #include <string>
 std::string gObjectTypeStr[eObjectType::NUM_OBJ_TYPES] = {
-    "KinematicBody", "RigidBody", "Cloth", "Fluid", "Acoustic"};
+    "KinematicBody", "RigidBody", "Cloth", "Fluid",
+    "SoftBody", "Acoustic"};
 
 cBaseObject::cBaseObject(eObjectType type, int id_) : mType(type), mObjId(id_)
 {
@@ -167,7 +168,6 @@ void cBaseObject::SetVertexColorAlpha(float val)
  * \brief           get vertex color alpha
  */
 float cBaseObject::GetVertexColorAlpha() const { return mColorAlpha; }
-
 
 /**
  * \brief       calcualte the total area

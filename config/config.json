@@ -4,6 +4,11 @@
         {
             "object_name": "acoustic_body",
             "object_type": "Acoustic"
+        },
+        {
+            "object_name": "soft_body",
+            "object_type": "SoftBody",
+            "tet_path" : "./data/tetmesh/single_tet/single.node"
         }
     ],
     "window_height": 600,

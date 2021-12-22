@@ -19,6 +19,7 @@ Rand.cpp
 TimeUtil.cpp
 SysUtil.cpp
 ObjUtil.cpp
+TetUtil.cpp
 DepthImageSaver.cpp
 MPIUtil.cpp
 StringUtil.cpp

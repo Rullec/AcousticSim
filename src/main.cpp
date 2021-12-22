@@ -5,7 +5,6 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif
-
 #ifdef __linux__
 #define VK_USE_PLATFORM_XCB_KHR
 #include <GLFW/glfw3.h>
@@ -82,15 +81,13 @@ void InitGlfw()
 
 #include "utils/LogUtil.h"
 #include "utils/TimeUtil.hpp"
-bool gEnableDraw = true;
+// bool gEnableDraw = true;
 // bool gEnableDraw = false;
-void SimDraw(const std::string &conf_path, bool disable_imgui);
-void SimNoDraw(const std::string &conf_path);
+void SimDraw(const std::string &conf_path);
 void ParseConfig(std::string conf);
 
 #include "cxxopts.hpp"
-void ParseArg(int argc, char *argv[], std::string &config_path,
-              bool &disable_imgui)
+void ParseArg(int argc, char *argv[], std::string &config_path)
 {
     try
     {
@@ -98,9 +95,10 @@ void ParseArg(int argc, char *argv[], std::string &config_path,
         options.positional_help("[optional args]").show_positional_help();
 
         options.add_options()("conf", "config path",
-                              cxxopts::value<std::string>())(
-            "d,disable_imgui", "enalbe imgui rendering",
-            cxxopts::value<bool>()->default_value("false"));
+                              cxxopts::value<std::string>());
+        //                   (
+        // "d,disable_imgui", "enalbe imgui rendering",
+        // cxxopts::value<bool>()->default_value("false"));
 
         options.parse_positional({"conf"});
         auto result = options.parse(argc, argv);
@@ -110,46 +108,40 @@ void ParseArg(int argc, char *argv[], std::string &config_path,
             config_path = result["conf"].as<std::string>();
             std::cout << "saw param config = " << config_path << std::endl;
         }
-        if (result.count("d"))
-        {
-            disable_imgui = result["disable_imgui"].as<bool>();
-            std::cout << "saw param disable_imgui = " << disable_imgui
-                      << std::endl;
-        }
+        // if (result.count("d"))
+        // {
+        //     disable_imgui = result["disable_imgui"].as<bool>();
+        //     std::cout << "saw param disable_imgui = " << disable_imgui
+        //               << std::endl;
+        // }
     }
     catch (const cxxopts::OptionException &e)
     {
         std::cout << "[error] when parsing, " << e.what() << std::endl;
         exit(1);
     }
-    SIM_INFO("conf path {}, enable imgui {}", config_path, disable_imgui);
+    // SIM_INFO("conf path {}, enable imgui {}", config_path, disable_imgui);
+    SIM_INFO("conf path {}", config_path);
 }
 
 #include "sim/AudioOutput.h"
-cAudioOutputPtr gAudioOutput;
+extern cAudioOutputPtr gAudioOutput;
 int main(int argc, char **argv)
 {
     std::string conf = "";
-    bool disable_imgui = false;
-    ParseArg(argc, argv, conf, disable_imgui);
+    ParseArg(argc, argv, conf);
 
     ParseConfig(conf);
 
-    if (gEnableDraw == true)
-    {
-        SimDraw(conf, disable_imgui);
-    }
-    else
-    {
-        SimNoDraw(conf);
-    }
+    SimDraw(conf);
+
     return 0;
 }
 #include "scenes/DrawSceneImGUI.h"
-void SimDraw(const std::string &conf, bool disable_imgui)
+void SimDraw(const std::string &conf)
 {
     InitGlfw();
-    scene = cSceneBuilder::BuildScene("sim_draw", true, !disable_imgui);
+    scene = cSceneBuilder::BuildScene("sim_draw", true, true);
     draw_scene = std::dynamic_pointer_cast<cDrawSceneImGui>(scene);
     draw_scene->Init(conf);
     auto last = cTimeUtil::GetCurrentTime_chrono();
@@ -162,10 +154,7 @@ void SimDraw(const std::string &conf, bool disable_imgui)
         float delta_time = cTimeUtil::CalcTimeElaspedms(last, cur) * 1e-3;
 
         // 2. update
-        // delta_time = 1e-3;
-        // delta_time /= 4;
         float limit = 1.0 / 30;
-        // float limit = 1e-4;
 #ifdef _WIN32
         delta_time = min(delta_time, limit);
 #else
@@ -184,37 +173,25 @@ void SimDraw(const std::string &conf, bool disable_imgui)
     }
 
     glfwDestroyWindow(window);
-
     glfwTerminate();
 }
-
-void SimNoDraw(const std::string &conf_path)
-{
-    // InitGlfw();
-    scene = cSceneBuilder::BuildSimScene(conf_path);
-    scene->Init(conf_path);
-
-    int max_iters = 1e3;
-    int cur_iter = 0;
-    float dt = 1e-2;
-    while (++cur_iter < max_iters)
-    {
-        scene->Update(dt);
-        printf("[debug] iters %d/%d\n", cur_iter, max_iters);
-    }
-}
-
 void ParseConfig(std::string conf)
 {
-    SIM_ASSERT(cFileUtil::ExistsFile(conf) == true);
+    if (cFileUtil::ExistsFile(conf) == false)
+    {
+        if (conf.size() == 0)
+        {
+            SIM_ERROR("Please specify the config file!");
+        }
+        else
+        {
+            SIM_ERROR("current config file {} doesn't exist", conf);
+        }
+    }
     Json::Value root;
     cJsonUtil::LoadJson(conf, root);
     gPause = cJsonUtil::ParseAsBool("pause_at_first", root);
-    gEnableDraw = cJsonUtil::ParseAsBool("enable_draw", root);
-    if (gEnableDraw == true)
-    {
-        gWindowWidth = cJsonUtil::ParseAsInt("window_width", root);
-        gWindowHeight = cJsonUtil::ParseAsInt("window_height", root);
-    }
+    gWindowWidth = cJsonUtil::ParseAsInt("window_width", root);
+    gWindowHeight = cJsonUtil::ParseAsInt("window_height", root);
     SIM_INFO("pause at first = {}", gPause);
 }

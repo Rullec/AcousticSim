@@ -8,7 +8,8 @@
 #include "sim/Perturb.h"
 #include <iostream>
 
-std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim", "acoustic"};
+// std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim", "acoustic"};
+std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim"};
 
 eSceneType cSimScene::BuildSceneType(const std::string &str)
 {
@@ -34,11 +35,13 @@ cSimScene::cSimScene()
 
     mPerturb = nullptr;
     mPauseSim = false;
-    mSceneType = eSceneType::NUM_OF_SCENE_TYPES;
+    mSceneType = eSceneType::SCENE_SIM;
     // mColDetecter = nullptr;
 }
 
 eSceneType cSimScene::GetSceneType() const { return this->mSceneType; }
+#include "sim/AudioOutput.h"
+extern cAudioOutputPtr gAudioOutput;
 
 void cSimScene::Init(const std::string &conf_path)
 {
@@ -51,6 +54,7 @@ void cSimScene::Init(const std::string &conf_path)
 
     mEnableCollisionDetection =
         cJsonUtil::ParseAsBool(cSimScene::ENABLE_COLLISION_DETECTION_KEY, root);
+    // gAudioOutput->Init();
     // BuildObjects(
     //     cJsonUtil::ParseAsValue(cSimScene::OBSTACLE_CONF_KEY, root));
 

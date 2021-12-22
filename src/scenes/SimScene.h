@@ -11,7 +11,7 @@ namespace Json
 enum eSceneType
 {
     SCENE_SIM = 0,  // default simulation scene
-    SCENE_ACOUSTIC, // acoustic simulation scene
+    // SCENE_ACOUSTIC, // acoustic simulation scene
     NUM_OF_SCENE_TYPES
 };
 
