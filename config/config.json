@@ -1,10 +1,10 @@
 {
     "scene_type": "sim",
-    "obj_lst": [
-        {
-            "object_name": "acoustic_body",
-            "object_type": "Acoustic"
-        },
+    "obj_list": [
+        // {
+        //     "object_name": "acoustic_body",
+        //     "object_type": "Acoustic"
+        // },
         {
             "object_name": "soft_body",
             "object_type": "SoftBody",

@@ -1,5 +1,6 @@
 #pragma once
 #include "utils/MathUtil.h"
+#include "utils/DefUtil.h"
 #include <memory>
 #include <string>
 
@@ -77,3 +78,5 @@ protected:
     virtual void UpdateTriangleNormal();
     virtual void UpdateVertexNormalFromTriangleNormal();
 };
+
+SIM_DECLARE_PTR(cBaseObject);

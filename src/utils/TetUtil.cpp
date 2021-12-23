@@ -1,6 +1,7 @@
 #include "TetUtil.h"
 #include "utils/LogUtil.h"
-
+#include "utils/FileUtil.h"
+#include <iostream>
 /**
  * \brief               load tet mesh from ".node" files (custom format)
  * \param path          mesh file path
@@ -17,5 +18,11 @@ void cTetUtil::LoadTet(const std::string &path,
 
 {
     SIM_DEBUG("begin to load tet from {}", path);
+    SIM_ASSERT(cFileUtil::ExistsFile(path.c_str()));
+    for (auto &x : cFileUtil::ReadFileAllLines(path))
+    {
+        std::cout << x << std::endl;
+    }
+    exit(1);
     return;
 }

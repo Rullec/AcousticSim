@@ -1,7 +1,9 @@
 #include "SoftBody.h"
+#include "utils/JsonUtil.h"
 #include "utils/TetUtil.h"
 #include "geometries/Tetrahedron.h"
-cSoftBody::cSoftBody()
+#include <iostream>
+cSoftBody::cSoftBody(int id) : cBaseObject(eObjectType::SOFTBODY_TYPE, id)
 {
 }
 
@@ -16,16 +18,26 @@ void cSoftBody::Init(const Json::Value &conf)
 {
     cBaseObject::Init(conf);
 
-    mTetMeshPath = cJsonUtil::ParseAsString(conf, "tet_path");
+    mTetMeshPath = cJsonUtil::ParseAsString("tet_path", conf);
     tVertexPtrVector vertex_vec = {};
     tEdgePtrVector edge_vec = {};
     tTrianglePtrVector tri_vec = {};
-    tTetPtrVector tet_ve = {};
-    cTetUtil::LoadTet(path,
+    tTetPtrVector tet_vec = {};
+    cTetUtil::LoadTet(mTetMeshPath,
                       vertex_vec,
                       edge_vec,
                       tri_vec,
                       tet_vec);
-    std::cout << "load from path {} " << path << "done\n";
+    std::cout << "load from path " << mTetMeshPath << "done\n";
     exit(1);
+}
+
+void cSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                       int &st) const
+{
+    
+}
+void cSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                   int &st) const
+{
 }

@@ -1,13 +1,13 @@
+#include <iostream>
 #include "SimScene.h"
+#include "utils/ColorUtil.h"
+#include "utils/JsonUtil.h"
 #include "geometries/CollisionDetecter.h"
 #include "geometries/Primitives.h"
 #include "geometries/Triangulator.h"
 #include "sim/KinematicBody.h"
-#include "utils/ColorUtil.h"
-#include "utils/JsonUtil.h"
 #include "sim/Perturb.h"
-#include <iostream>
-
+#include "sim/SimObjectBuilder.h"
 // std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim", "acoustic"};
 std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim"};
 
@@ -55,25 +55,26 @@ void cSimScene::Init(const std::string &conf_path)
     mEnableCollisionDetection =
         cJsonUtil::ParseAsBool(cSimScene::ENABLE_COLLISION_DETECTION_KEY, root);
     // gAudioOutput->Init();
-    // BuildObjects(
-    //     cJsonUtil::ParseAsValue(cSimScene::OBSTACLE_CONF_KEY, root));
+    BuildObjects(
+        cJsonUtil::ParseAsValue(cSimScene::OBJECT_LIST_KEY, root));
 
     CreateCollisionDetecter();
 
     InitDrawBuffer();
     InitRaycaster(root);
 }
-void cSimScene::BuildObjects(const Json::Value &obj_conf_) const
+void cSimScene::BuildObjects(const Json::Value &obj_conf_)
 {
     // 1. parse the number of obstacles
     Json::Value obj_conf = obj_conf_;
     int num_of_obstacles = obj_conf.size();
     SIM_ASSERT(num_of_obstacles == obj_conf.size());
-    // for (int i = 0; i < num_of_obstacles; i++)
-    // {
-    //     auto obs = BuildKinematicBody(obj_conf[i], GetNumOfObjects());
-    //     mObjectList.push_back(obs);
-    // }
+    for (int i = 0; i < num_of_obstacles; i++)
+    {
+        auto obs = BuildSimObj(obj_conf[i], mObjectList.size());
+        // auto obs = BuildKinematicBody(obj_conf[i], GetNumOfObjects());
+        mObjectList.push_back(obs);
+    }
 }
 void cSimScene::PauseSim() { mPauseSim = !mPauseSim; }
 

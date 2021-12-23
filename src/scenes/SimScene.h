@@ -30,7 +30,7 @@ class cSimScene : public cScene
 public:
     inline static const std::string ENABLE_PROFLINE_KEY = "enable_profiling",
                                     ENABLE_OBSTACLE_KEY = "enable_obstacle",
-                                    OBSTACLE_CONF_KEY = "obstacle_conf",
+                                    OBJECT_LIST_KEY = "obj_list",
                                     ENABLE_COLLISION_DETECTION_KEY =
                                         "enable_collision_detection";
 
@@ -85,7 +85,7 @@ protected:
     void ClearForce(); // clear all forces
     void SaveCurrentScene();
 
-    virtual void BuildObjects(const Json::Value &obj_conf_path) const;
+    virtual void BuildObjects(const Json::Value &obj_conf_path);
     virtual void CalcTriangleDrawBuffer();       //
     virtual int CalcEdgesDrawBuffer(int st = 0); //
     virtual int GetNumOfVertices() const;

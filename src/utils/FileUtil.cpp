@@ -660,3 +660,16 @@ std::vector<std::string> cFileUtil::ListDir(std::string dir)
     // std::cout <<  << std::endl;
     return paths;
 }
+
+std::vector<std::string> cFileUtil::ReadFileAllLines(const std::string &filename)
+{
+    std::vector<std::string> all_lines = {};
+    std::ifstream file(filename);
+    std::string str;
+    while (std::getline(file, str))
+    {
+        // Process str
+        all_lines.push_back(str);
+    }
+    return all_lines;
+}

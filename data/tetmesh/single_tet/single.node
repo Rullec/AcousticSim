@@ -2,7 +2,7 @@
 4 
 0, 0, 0
 1, 0, 0
-0, 1, 0,
+0, 1, 0
 0, 0, 1
 
 # each (positively-oriented) tetrahedral element with vertices
