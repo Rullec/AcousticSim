@@ -33,3 +33,38 @@ void cStringUtil::RemoveEmptyLine(std::vector<std::string> &cont)
         }
     }
 }
+
+std::string cStringUtil::Strip(std::string line)
+{
+    if (line.size() == 0)
+        return line;
+    std::string cur_line = line;
+    while (cur_line[0] == ' ' || cur_line[0] == '\n')
+    {
+        cur_line = cur_line.substr(1, cur_line.size() - 1);
+    }
+    while (cur_line[cur_line.size() - 1] == ' ' || cur_line[cur_line.size() - 1] == '\n')
+    {
+        cur_line = cur_line.substr(0, cur_line.size() - 1);
+    }
+    return cur_line;
+}
+
+void cStringUtil::RemoveCommentLine(std::vector<std::string> &cont, std::string comment_delimeter /*= "#"*/)
+{
+    std::vector<std::string>::iterator it = cont.begin();
+    while (it != cont.end())
+    {
+        std::string cur_string = *it;
+        cur_string = cStringUtil::Strip(cur_string);
+        if (cur_string.find(comment_delimeter) == 0)
+        {
+            it = cont.erase(it);
+            it = cont.begin();
+        }
+        else
+        {
+            it++;
+        }
+    }
+}
