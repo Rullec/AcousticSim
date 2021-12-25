@@ -25,12 +25,15 @@ enum eObjectType
  */
 namespace Json
 {
-class Value;
+    class Value;
 };
 
 struct tVertex;
 struct tEdge;
 struct tTriangle;
+SIM_DECLARE_PTR(tVertex);
+SIM_DECLARE_PTR(tEdge);
+SIM_DECLARE_PTR(tTriangle);
 class cBaseObject : std::enable_shared_from_this<cBaseObject>
 {
 public:
@@ -55,26 +58,30 @@ public:
     void SetVertexColorAlpha(float val);
     float GetVertexColorAlpha() const;
 
-    const std::vector<tVertex *> &GetVertexArray() const;
-    const std::vector<tEdge *> &GetEdgeArray() const;
-    const std::vector<tTriangle *> &GetTriangleArray() const;
+    const std::vector<tVertexPtr> &GetVertexArray() const;
+    const std::vector<tEdgePtr> &GetEdgeArray() const;
+    const std::vector<tTrianglePtr> &GetTriangleArray() const;
 
-    std::vector<tVertex *> &GetVertexArrayRef();
-    std::vector<tEdge *> &GetEdgeArrayRef();
-    std::vector<tTriangle *> &GetTriangleArrayRef();
+    std::vector<tVertexPtr> &GetVertexArrayRef();
+    std::vector<tEdgePtr> &GetEdgeArrayRef();
+    std::vector<tTrianglePtr> &GetTriangleArrayRef();
 
     void ChangeTriangleColor(int tri_id, const tVector3f &color);
     virtual void CalcAABB(tVector &min, tVector &max) const;
     double CalcTotalArea() const;
+
 protected:
     float mColorAlpha = 1.0;
     int mObjId;
     std::string mObjName;
     eObjectType mType;
     bool mEnableDrawBuffer; // enable to open draw buffer
-    std::vector<tVertex *> mVertexArray;
-    std::vector<tEdge *> mEdgeArray;
-    std::vector<tTriangle *> mTriangleArray;
+    // std::vector<tVertex *> mVertexArray;
+    // std::vector<tEdge *> mEdgeArray;
+    // std::vector<tTriangle *> mTriangleArray;
+    std::vector<tVertexPtr> mVertexArrayShared;
+    std::vector<tEdgePtr> mEdgeArrayShared;
+    std::vector<tTrianglePtr> mTriangleArrayShared;
     virtual void UpdateTriangleNormal();
     virtual void UpdateVertexNormalFromTriangleNormal();
 };

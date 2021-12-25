@@ -6,9 +6,9 @@
 #include <iostream>
 #include <map>
 void cTriangulator::BuildGeometry(const Json::Value &config,
-                                  std::vector<tVertex *> &vertices_array,
-                                  std::vector<tEdge *> &edges_array,
-                                  std::vector<tTriangle *> &triangles_array)
+                                  std::vector<tVertexPtr> &vertices_array,
+                                  std::vector<tEdgePtr> &edges_array,
+                                  std::vector<tTrianglePtr> &triangles_array)
 {
     std::string geo_type =
         cJsonUtil::ParseAsString(cTriangulator::GEOMETRY_TYPE_KEY, config);
@@ -96,8 +96,8 @@ void cTriangulator::BuildGeometry(const Json::Value &config,
 
 void cTriangulator::BuildGeometry_UniformTriangle(
     const tVector2d &mesh_shape, const tVector2i &subdivision,
-    std::vector<tVertex *> &vertices_array, std::vector<tEdge *> &edges_array,
-    std::vector<tTriangle *> &triangles_array, bool add_vertices_perturb)
+    std::vector<tVertexPtr> &vertices_array, std::vector<tEdgePtr> &edges_array,
+    std::vector<tTrianglePtr> &triangles_array, bool add_vertices_perturb)
 {
     // 1. clear all
     vertices_array.clear();
@@ -184,7 +184,7 @@ void cTriangulator::BuildGeometry_UniformTriangle(
                 need_left_edge = true;
             }
 
-            tEdge *skew_edge = new tEdge();
+            tEdgePtr skew_edge = std::make_shared<tEdge>();
             if (edges_array[skew_edge_id] != nullptr)
             {
                 SIM_ERROR("wrong visit in skew edge {}", skew_edge_id);
@@ -193,9 +193,9 @@ void cTriangulator::BuildGeometry_UniformTriangle(
             if (is_even)
             {
                 auto tri1 =
-                    new tTriangle(left_up_vid, left_down_vid, right_down_vid);
+                    std::make_shared<tTriangle>(left_up_vid, left_down_vid, right_down_vid);
                 auto tri2 =
-                    new tTriangle(left_up_vid, right_down_vid, right_up_vid);
+                    std::make_shared<tTriangle>(left_up_vid, right_down_vid, right_up_vid);
 
                 triangles_array.push_back(tri1);
                 triangles_array.push_back(tri2);
@@ -215,9 +215,9 @@ void cTriangulator::BuildGeometry_UniformTriangle(
                 */
                 // for odd number, from upright to downleft
                 auto tri1 =
-                    new tTriangle(left_up_vid, left_down_vid, right_up_vid);
+                    std::make_shared<tTriangle>(left_up_vid, left_down_vid, right_up_vid);
                 auto tri2 =
-                    new tTriangle(left_down_vid, right_down_vid, right_up_vid);
+                    std::make_shared<tTriangle>(left_down_vid, right_down_vid, right_up_vid);
                 triangles_array.push_back(tri1);
                 triangles_array.push_back(tri2);
                 skew_edge->mId0 = right_up_vid;
@@ -232,7 +232,7 @@ void cTriangulator::BuildGeometry_UniformTriangle(
             //        skew_edge->mTriangleId0, skew_edge->mTriangleId1);
             // add bottom edge
             {
-                tEdge *bottom_edge = new tEdge();
+                tEdgePtr bottom_edge = std::make_shared<tEdge>();
                 SIM_ASSERT(edges_array[bottom_edge_id] == nullptr);
                 edges_array[bottom_edge_id] = bottom_edge;
                 bottom_edge->mId0 = left_down_vid;
@@ -267,7 +267,7 @@ void cTriangulator::BuildGeometry_UniformTriangle(
 
             // add right edge
             {
-                tEdge *right_edge = new tEdge();
+                tEdgePtr right_edge = std::make_shared<tEdge>();
                 if (edges_array[right_edge_id] != nullptr)
                 {
                     SIM_ERROR("wrong visit in right edge {}", right_edge_id);
@@ -302,7 +302,7 @@ void cTriangulator::BuildGeometry_UniformTriangle(
             // add top edge
             if (need_top_edge)
             {
-                tEdge *top_edge = new tEdge();
+                tEdgePtr top_edge = std::make_shared<tEdge>();
                 SIM_ASSERT(edges_array[top_edge_id] == nullptr);
                 edges_array[top_edge_id] = top_edge;
                 top_edge->mId0 = left_up_vid;
@@ -327,7 +327,7 @@ void cTriangulator::BuildGeometry_UniformTriangle(
             // add left edge
             if (need_left_edge)
             {
-                tEdge *left_edge = new tEdge();
+                tEdgePtr left_edge = std::make_shared<tEdge>();
                 SIM_ASSERT(edges_array[left_edge_id] == nullptr);
                 edges_array[left_edge_id] = left_edge;
                 left_edge->mId0 = left_up_vid;
@@ -350,7 +350,7 @@ void cTriangulator::BuildGeometry_UniformTriangle(
  */
 void cTriangulator::BuildRectVertices(double height, double width,
                                       int height_div, int width_div,
-                                      std::vector<tVertex *> &vertices_array,
+                                      std::vector<tVertexPtr> &vertices_array,
                                       bool add_vertices_perturb)
 {
     vertices_array.clear();
@@ -381,7 +381,7 @@ void cTriangulator::BuildRectVertices(double height, double width,
     for (int i = 0; i < width_div + 1; i++)
         for (int j = 0; j < height_div + 1; j++)
         {
-            tVertex *v = new tVertex();
+            tVertexPtr v = std::make_shared<tVertex>();
 
             // 1. first set the cartesian pos, in order to get the texture
             // coords
@@ -412,13 +412,13 @@ void cTriangulator::BuildRectVertices(double height, double width,
         }
 }
 
-bool ConfirmVertexInTriangles(tTriangle *tri, int vid)
+bool ConfirmVertexInTriangles(tTrianglePtr tri, int vid)
 {
     return (tri->mId0 == vid) || (tri->mId1 == vid) || (tri->mId2 == vid);
 };
-void cTriangulator::ValidateGeometry(std::vector<tVertex *> &vertices_array,
-                                     std::vector<tEdge *> &edges_array,
-                                     std::vector<tTriangle *> &triangles_array)
+void cTriangulator::ValidateGeometry(std::vector<tVertexPtr> &vertices_array,
+                                     std::vector<tEdgePtr> &edges_array,
+                                     std::vector<tTrianglePtr> &triangles_array)
 {
     // confirm the edges is really shared by triangles
     for (int i = 0; i < edges_array.size(); i++)
@@ -462,9 +462,9 @@ void cTriangulator::ValidateGeometry(std::vector<tVertex *> &vertices_array,
  *
  *          Only save a basic info
  */
-void cTriangulator::SaveGeometry(std::vector<tVertex *> &vertices_array,
-                                 std::vector<tEdge *> &edges_array,
-                                 std::vector<tTriangle *> &triangles_array,
+void cTriangulator::SaveGeometry(std::vector<tVertexPtr> &vertices_array,
+                                 std::vector<tEdgePtr> &edges_array,
+                                 std::vector<tTrianglePtr> &triangles_array,
                                  const std::string &path)
 {
     Json::Value root;
@@ -494,9 +494,9 @@ void cTriangulator::SaveGeometry(std::vector<tVertex *> &vertices_array,
     cJsonUtil::WriteJson(path, root, true);
 }
 
-void cTriangulator::LoadGeometry(std::vector<tVertex *> &vertices_array,
-                                 std::vector<tEdge *> &edges_array,
-                                 std::vector<tTriangle *> &triangles_array,
+void cTriangulator::LoadGeometry(std::vector<tVertexPtr> &vertices_array,
+                                 std::vector<tEdgePtr> &edges_array,
+                                 std::vector<tTrianglePtr> &triangles_array,
                                  const std::string &path)
 {
     vertices_array.clear();
@@ -507,7 +507,7 @@ void cTriangulator::LoadGeometry(std::vector<tVertex *> &vertices_array,
     int num_of_vertices = cJsonUtil::ParseAsInt(NUM_OF_VERTICES_KEY, root);
     for (int i = 0; i < num_of_vertices; i++)
     {
-        vertices_array.push_back(new tVertex());
+        vertices_array.push_back(std::make_shared<tVertex>());
         vertices_array[vertices_array.size() - 1]->mColor = ColorBlue;
     }
 
@@ -516,7 +516,7 @@ void cTriangulator::LoadGeometry(std::vector<tVertex *> &vertices_array,
 
     for (int i = 0; i < edge_info.size() / 2; i++)
     {
-        tEdge *edge = new tEdge();
+        tEdgePtr edge = std::make_shared<tEdge>();
         edge->mId0 = edge_info[2 * i + 0];
         edge->mId1 = edge_info[2 * i + 1];
         edges_array.push_back(edge);
@@ -526,7 +526,7 @@ void cTriangulator::LoadGeometry(std::vector<tVertex *> &vertices_array,
         cJsonUtil::ParseAsValue(TRIANGLE_ARRAY_KEY, root);
     for (int i = 0; i < tri_json.size(); i++)
     {
-        tTriangle *tri = new tTriangle();
+        tTrianglePtr tri = std::make_shared<tTriangle>();
         tri->mId0 = tri_json[i][0].asInt();
         tri->mId1 = tri_json[i][1].asInt();
         tri->mId2 = tri_json[i][2].asInt();
@@ -544,7 +544,7 @@ void cTriangulator::LoadGeometry(std::vector<tVertex *> &vertices_array,
 }
 
 void cTriangulator::RotateMaterialCoordsAfterReset(
-    const tMatrix &init_mat_inv, std::vector<tVertex *> &vertices_array,
+    const tMatrix &init_mat_inv, std::vector<tVertexPtr> &vertices_array,
     float cloth_uv_rotation_)
 {
     // degrees
@@ -587,8 +587,8 @@ void cTriangulator::RotateMaterialCoordsAfterReset(
  */
 
 void cTriangulator::BuildEdgesTriangleId(
-    std::vector<tEdge *> &edges_array,
-    std::vector<tTriangle *> &triangles_array)
+    std::vector<tEdgePtr> &edges_array,
+    std::vector<tTrianglePtr> &triangles_array)
 {
 
     // 1. build the map from edge's vertices id to edge id
@@ -682,7 +682,7 @@ void cTriangulator::BuildEdgesTriangleId(
 }
 void cTriangulator::RotateMaterialCoords(float cur_uv_rot_deg,
                                          float tar_uv_rot_deg,
-                                         std::vector<tVertex *> &vertices_array)
+                                         std::vector<tVertexPtr> &vertices_array)
 {
     // std::cout << "---------------------\n";
     tMatrix2f convert_mat =

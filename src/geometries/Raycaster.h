@@ -43,6 +43,6 @@ public:
 
 protected:
     std::vector<cBaseObjectPtr> mObjects;
-    std::vector<std::vector<tTriangle *>> mTriangleArray_lst;
-    std::vector<std::vector<tVertex *>> mVertexArray_lst;
+    std::vector<std::vector<tTrianglePtr>> mTriangleArray_lst;
+    std::vector<std::vector<tVertexPtr>> mVertexArray_lst;
 };

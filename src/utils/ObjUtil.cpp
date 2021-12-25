@@ -7,9 +7,9 @@
 #include <iostream>
 
 void cObjUtil::LoadObj(const cObjUtil::tParams &param,
-                       std::vector<tVertex *> &v_array,
-                       std::vector<tEdge *> &e_array,
-                       std::vector<tTriangle *> &t_array)
+                       std::vector<tVertexPtr> &v_array,
+                       std::vector<tEdgePtr> &e_array,
+                       std::vector<tTrianglePtr> &t_array)
 {
 
     std::string path = param.mPath;
@@ -61,7 +61,7 @@ void cObjUtil::LoadObj(const cObjUtil::tParams &param,
         {
             // for this triangle
             size_t fv = size_t(shape.mesh.num_face_vertices[f]);
-            tTriangle *t = new tTriangle();
+            tTrianglePtr t = std::make_shared<tTriangle>();
             t->mId0 = shape.mesh.indices[index_offset + 0].vertex_index;
             t->mId1 = shape.mesh.indices[index_offset + 1].vertex_index;
             t->mId2 = shape.mesh.indices[index_offset + 2].vertex_index;
@@ -83,7 +83,7 @@ void cObjUtil::LoadObj(const cObjUtil::tParams &param,
                     v_array.push_back(nullptr);
                 if (v_array[vertex_id] == nullptr)
                 {
-                    v_array[vertex_id] = new tVertex();
+                    v_array[vertex_id] = std::make_shared<tVertex>();
                     v_array[vertex_id]->mPos = tVector(vx, vy, vz, 1);
                 }
                 // // Check if `normal_index` is zero or positive. negative = no
@@ -137,15 +137,14 @@ void cObjUtil::LoadObj(const cObjUtil::tParams &param,
     }
     cObjUtil::BuildEdge(v_array, e_array, t_array);
 }
-
 /**
- * \brief       Given vertex array and triangle array, build the edge list
- */
+* \brief       Given vertex array and triangle array, build the edge list
+*/
 #include <set>
 typedef std::pair<int, int> int_pair;
-void cObjUtil::BuildEdge(const std::vector<tVertex *> &v_array,
-                         std::vector<tEdge *> &e_array,
-                         const std::vector<tTriangle *> &t_array)
+void cObjUtil::BuildEdge(const std::vector<tVertexPtr> &v_array,
+                         std::vector<tEdgePtr> &e_array,
+                         const std::vector<tTrianglePtr> &t_array)
 {
     e_array.clear();
 
@@ -157,7 +156,7 @@ void cObjUtil::BuildEdge(const std::vector<tVertex *> &v_array,
     // for each triangle
     for (int t_id = 0; t_id < t_array.size(); t_id++)
     {
-        tTriangle *tri = t_array[t_id];
+        tTrianglePtr tri = t_array[t_id];
 
         // check three edges
         for (int i = 0; i < 3; i++)
@@ -193,7 +192,7 @@ void cObjUtil::BuildEdge(const std::vector<tVertex *> &v_array,
                     std::cout
                         << "triangle pair second = " << triangle_pair.second
                         << std::endl;
-                    
+
                     SIM_ERROR("build edge illegal case");
                     exit(1);
                 }
@@ -212,7 +211,7 @@ void cObjUtil::BuildEdge(const std::vector<tVertex *> &v_array,
     {
         int v0 = t->first.first, v1 = t->first.second;
         int tid0 = t->second.first, tid1 = t->second.second;
-        tEdge *edge = new tEdge();
+        tEdgePtr edge = std::make_shared<tEdge>();
         edge->mId0 = v0;
         edge->mId1 = v1;
         edge->mRawLength = (v_array[v0]->mPos - v_array[v1]->mPos).norm();
@@ -230,13 +229,13 @@ void cObjUtil::BuildEdge(const std::vector<tVertex *> &v_array,
 }
 
 /**
- * \brief           Build plane geometry data
- */
+* \brief           Build plane geometry data
+*/
 void cObjUtil::BuildPlaneGeometryData(const double scale,
                                       const tVector &plane_equation,
-                                      std::vector<tVertex *> &vertex_array,
-                                      std::vector<tEdge *> &edge_array,
-                                      std::vector<tTriangle *> &triangle_array)
+                                      std::vector<tVertexPtr> &vertex_array,
+                                      std::vector<tEdgePtr> &edge_array,
+                                      std::vector<tTrianglePtr> &triangle_array)
 {
     vertex_array.clear();
     edge_array.clear();
@@ -251,7 +250,7 @@ void cObjUtil::BuildPlaneGeometryData(const double scale,
     // build vertices
     for (auto &x : pos_lst)
     {
-        tVertex *v = new tVertex();
+        tVertexPtr v = std::make_shared<tVertex>();
         v->mPos.noalias() = x;
         v->mPos.segment(0, 3) *= scale;
         vertex_array.push_back(v);
@@ -260,7 +259,7 @@ void cObjUtil::BuildPlaneGeometryData(const double scale,
     // build triangles
     for (auto &x : triangle_idx_lst)
     {
-        tTriangle *tri = new tTriangle();
+        tTrianglePtr tri = std::make_shared<tTriangle> ();
         tri->mId0 = x[0];
         tri->mId1 = x[1];
         tri->mId2 = x[2];

@@ -44,30 +44,30 @@ eObjectType cBaseObject::BuildObjectType(std::string str)
 
 eObjectType cBaseObject::GetObjectType() const { return this->mType; }
 
-int cBaseObject::GetNumOfTriangles() const { return mTriangleArray.size(); }
-int cBaseObject::GetNumOfEdges() const { return mEdgeArray.size(); }
-int cBaseObject::GetNumOfVertices() const { return mVertexArray.size(); }
-const std::vector<tVertex *> &cBaseObject::GetVertexArray() const
+int cBaseObject::GetNumOfTriangles() const { return mTriangleArrayShared.size(); }
+int cBaseObject::GetNumOfEdges() const { return mEdgeArrayShared.size(); }
+int cBaseObject::GetNumOfVertices() const { return mVertexArrayShared.size(); }
+const std::vector<tVertexPtr> &cBaseObject::GetVertexArray() const
 {
-    return this->mVertexArray;
+    return this->mVertexArrayShared;
 }
-const std::vector<tEdge *> &cBaseObject::GetEdgeArray() const
+const std::vector<tEdgePtr> &cBaseObject::GetEdgeArray() const
 {
-    return this->mEdgeArray;
+    return this->mEdgeArrayShared;
 }
-const std::vector<tTriangle *> &cBaseObject::GetTriangleArray() const
+const std::vector<tTrianglePtr> &cBaseObject::GetTriangleArray() const
 {
-    return this->mTriangleArray;
+    return this->mTriangleArrayShared;
 }
 
-std::vector<tVertex *> &cBaseObject::GetVertexArrayRef()
+std::vector<tVertexPtr> &cBaseObject::GetVertexArrayRef()
 {
-    return mVertexArray;
+    return mVertexArrayShared;
 }
-std::vector<tEdge *> &cBaseObject::GetEdgeArrayRef() { return mEdgeArray; }
-std::vector<tTriangle *> &cBaseObject::GetTriangleArrayRef()
+std::vector<tEdgePtr> &cBaseObject::GetEdgeArrayRef() { return mEdgeArrayShared; }
+std::vector<tTrianglePtr> &cBaseObject::GetTriangleArrayRef()
 {
-    return mTriangleArray;
+    return mTriangleArrayShared;
 }
 /**
  * \brief           change triangle color
@@ -75,9 +75,9 @@ std::vector<tTriangle *> &cBaseObject::GetTriangleArrayRef()
 void cBaseObject::ChangeTriangleColor(int tri_id, const tVector3f &color)
 {
     tVector new_color = tVector(color[0], color[1], color[2], mColorAlpha);
-    mVertexArray[mTriangleArray[tri_id]->mId0]->mColor = new_color;
-    mVertexArray[mTriangleArray[tri_id]->mId1]->mColor = new_color;
-    mVertexArray[mTriangleArray[tri_id]->mId2]->mColor = new_color;
+    mVertexArrayShared[mTriangleArrayShared[tri_id]->mId0]->mColor = new_color;
+    mVertexArrayShared[mTriangleArrayShared[tri_id]->mId1]->mColor = new_color;
+    mVertexArrayShared[mTriangleArrayShared[tri_id]->mId2]->mColor = new_color;
 }
 
 /**
@@ -88,7 +88,7 @@ void cBaseObject::CalcAABB(tVector &min, tVector &max) const
 {
     min = tVector::Ones() * std::numeric_limits<double>::max();
     max = tVector::Ones() * std::numeric_limits<double>::max() * -1;
-    for (auto &x : mVertexArray)
+    for (auto &x : mVertexArrayShared)
     {
         for (int i = 0; i < 3; i++)
         {
@@ -114,11 +114,11 @@ void cBaseObject::UpdateTriangleNormal()
 {
     // we assume the rotation axis of v0, v1, v2 is the normal direction here
     // cTimeUtil::Begin("update_normal");
-    for (auto &tri : mTriangleArray)
+    for (auto &tri : mTriangleArrayShared)
     {
-        const tVector &v0 = mVertexArray[tri->mId0]->mPos;
-        const tVector &v1 = mVertexArray[tri->mId1]->mPos;
-        const tVector &v2 = mVertexArray[tri->mId2]->mPos;
+        const tVector &v0 = mVertexArrayShared[tri->mId0]->mPos;
+        const tVector &v1 = mVertexArrayShared[tri->mId1]->mPos;
+        const tVector &v2 = mVertexArrayShared[tri->mId2]->mPos;
         tri->mNormal = (v1 - v0).cross3(v2 - v1).normalized();
         // std::cout << tri->mNormal.transpose() << std::endl;
     }
@@ -133,20 +133,20 @@ void cBaseObject::UpdateVertexNormalFromTriangleNormal()
 {
     // 1. clear all vertex normal
     // cTimeUtil::Begin("update_v_normal");
-    for (auto &x : mVertexArray)
+    for (auto &x : mVertexArrayShared)
         x->mNormal.setZero();
     // 2. iter each edge
-    for (auto &x : mTriangleArray)
+    for (auto &x : mTriangleArrayShared)
     {
-        mVertexArray[x->mId0]->mNormal += x->mNormal;
-        mVertexArray[x->mId1]->mNormal += x->mNormal;
-        mVertexArray[x->mId2]->mNormal += x->mNormal;
+        mVertexArrayShared[x->mId0]->mNormal += x->mNormal;
+        mVertexArrayShared[x->mId1]->mNormal += x->mNormal;
+        mVertexArrayShared[x->mId2]->mNormal += x->mNormal;
     }
 
     // 3. averge each vertex
-    for (int i = 0; i < mVertexArray.size(); i++)
+    for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
-        auto &v = mVertexArray[i];
+        auto &v = mVertexArrayShared[i];
         v->mNormal.normalize();
     }
     // cTimeUtil::End("update_v_normal");
@@ -158,7 +158,7 @@ void cBaseObject::UpdateVertexNormalFromTriangleNormal()
 void cBaseObject::SetVertexColorAlpha(float val)
 {
     mColorAlpha = val;
-    for (auto &v : mVertexArray)
+    for (auto &v : mVertexArrayShared)
     {
         v->mColor[3] = val;
     }
@@ -175,11 +175,11 @@ float cBaseObject::GetVertexColorAlpha() const { return mColorAlpha; }
 double cBaseObject::CalcTotalArea() const
 {
     float total_area = 0;
-    for (auto &t : mTriangleArray)
+    for (auto &t : mTriangleArrayShared)
     {
-        total_area += cMathUtil::CalcTriangleArea(mVertexArray[t->mId0]->mPos,
-                                                  mVertexArray[t->mId1]->mPos,
-                                                  mVertexArray[t->mId2]->mPos);
+        total_area += cMathUtil::CalcTriangleArea(mVertexArrayShared[t->mId0]->mPos,
+                                                  mVertexArrayShared[t->mId1]->mPos,
+                                                  mVertexArrayShared[t->mId2]->mPos);
     }
     return total_area;
 }

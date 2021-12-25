@@ -22,10 +22,9 @@ cRaycaster::cRaycaster()
 
 void cRaycaster::Init(const Json::Value &conf)
 {
-    
 }
-// void cRaycaster::AddResources(const std::vector<tTriangle *> triangles,
-//                               const std::vector<tVertex *> vertices)
+// void cRaycaster::AddResources(const std::vector<tTrianglePtr > triangles,
+//                               const std::vector<tVertexPtr> vertices)
 // {
 //     mTriangleArray_lst.push_back(triangles);
 //     mVertexArray_lst.push_back(vertices);
@@ -35,8 +34,8 @@ void cRaycaster::AddResources(cBaseObjectPtr object)
 {
     mObjects.push_back(object);
 
-    std::vector<tTriangle *> tri = object->GetTriangleArray();
-    std::vector<tVertex *> ver = object->GetVertexArray();
+    std::vector<tTrianglePtr> tri = object->GetTriangleArray();
+    std::vector<tVertexPtr> ver = object->GetVertexArray();
 
     mTriangleArray_lst.push_back(tri);
     // std::cout << mTriangleArray_lst.size() << std::endl;

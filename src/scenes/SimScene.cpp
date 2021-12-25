@@ -126,8 +126,7 @@ void cSimScene::InitRaycaster(const Json::Value &conf)
     {
         mRaycaster->AddResources(x);
     }
-    std::cout << "[debug] add resources to raycaster done, num of objects =
-                 " << mObjectList.size() << std::endl;
+    std::cout << "[debug] add resources to raycaster done, num of objects = " << mObjectList.size() << std::endl;
 }
 /**
  * \brief           Update the simulation procedure

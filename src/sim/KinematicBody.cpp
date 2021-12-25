@@ -179,8 +179,8 @@ void cKinematicBody::BuildPlane()
     // 1. build legacy XOZ plane, then do a transformation
     // for (int i = 0; i < 4; i++)
     cObjUtil::BuildPlaneGeometryData(mPlaneScale, this->mPlaneEquation,
-                                     mVertexArray, mEdgeArray, mTriangleArray);
-    for (auto &x : mVertexArray)
+                                     mVertexArrayShared, mEdgeArrayShared, mTriangleArrayShared);
+    for (auto &x : mVertexArrayShared)
         x->mColor = tVector(0.1f, 0.1f, 0.1f, 1);
 }
 
@@ -195,21 +195,21 @@ void cKinematicBody::BuildCustomKinematicBody()
     // std::cout << "mesh path = " << mCustomMeshPath << std::endl;
     cObjUtil::tParams obj_params;
     obj_params.mPath = mCustomMeshPath;
-    cObjUtil::LoadObj(obj_params, mVertexArray, mEdgeArray, mTriangleArray);
+    cObjUtil::LoadObj(obj_params, mVertexArrayShared, mEdgeArrayShared, mTriangleArrayShared);
 
     // tMatrix trans = GetWorldTransform();
     tVector scale_vec = GetScaleVec();
-    mScaledMeshVertices.noalias() = tVectorXd::Zero(mVertexArray.size() * 3);
-    for (int i = 0; i < mVertexArray.size(); i++)
+    mScaledMeshVertices.noalias() = tVectorXd::Zero(mVertexArrayShared.size() * 3);
+    for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
-        auto &x = mVertexArray[i];
+        auto &x = mVertexArrayShared[i];
         mScaledMeshVertices.segment(3 * i, 3) =
             (scale_vec.cwiseProduct(x->mPos)).segment(0, 3);
         x->mColor = tVector::Ones() * 0.3;
         x->mColor[3] = 1.0;
     }
     // exit(0);
-    cTriangulator::ValidateGeometry(mVertexArray, mEdgeArray, mTriangleArray);
+    cTriangulator::ValidateGeometry(mVertexArrayShared, mEdgeArrayShared, mTriangleArrayShared);
 }
 
 /**
@@ -218,9 +218,9 @@ void cKinematicBody::BuildCustomKinematicBody()
 void cKinematicBody::SetMeshPos()
 {
     tMatrix trans = GetCurWorldTransform();
-    for (int i = 0; i < mVertexArray.size(); i++)
+    for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
-        auto &x = mVertexArray[i];
+        auto &x = mVertexArrayShared[i];
         x->mPos =
             trans * cMathUtil::Expand(mScaledMeshVertices.segment(3 * i, 3), 1);
     }
@@ -228,10 +228,10 @@ void cKinematicBody::SetMeshPos()
 
 // int cKinematicBody::GetDrawNumOfTriangles() const
 // {
-//     return mTriangleArray.size();
+//     return mTriangleArrayShared.size();
 // }
 
-// int cKinematicBody::GetDrawNumOfEdges() const { return mEdgeArray.size(); }
+// int cKinematicBody::GetDrawNumOfEdges() const { return mEdgeArrayShared.size(); }
 extern void CalcTriangleDrawBufferSingle(tVertex *v0, tVertex *v1, tVertex *v2,
                                          Eigen::Map<tVectorXf> &buffer,
                                          int &st_pos);
@@ -311,11 +311,11 @@ extern void CalcEdgeDrawBufferSingle(tVertex *v0, tVertex *v1,
 void cKinematicBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
                                             int &st) const
 {
-    for (auto &x : mTriangleArray)
+    for (auto &x : mTriangleArrayShared)
     {
-        CalcTriangleDrawBufferSingle(mVertexArray[x->mId0],
-                                     mVertexArray[x->mId1],
-                                     mVertexArray[x->mId2], res, st);
+        CalcTriangleDrawBufferSingle(mVertexArrayShared[x->mId0],
+                                     mVertexArrayShared[x->mId1],
+                                     mVertexArrayShared[x->mId2], res, st);
     }
 }
 
@@ -325,17 +325,17 @@ void cKinematicBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
 
     tVector normal = tVector::Zero();
     tVector black_color = tVector(0, 0, 0, 1);
-    for (auto &e : mEdgeArray)
+    for (auto &e : mEdgeArrayShared)
     {
         // 1. get the normal of this edge
-        normal = mTriangleArray[e->mTriangleId0]->mNormal;
+        normal = mTriangleArrayShared[e->mTriangleId0]->mNormal;
         if (e->mTriangleId1 != -1)
         {
-            normal += mTriangleArray[e->mTriangleId1]->mNormal;
+            normal += mTriangleArrayShared[e->mTriangleId1]->mNormal;
             normal /= 2;
         }
 
-        CalcEdgeDrawBufferSingle(mVertexArray[e->mId0], mVertexArray[e->mId1],
+        CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
                                  normal, res, st, black_color);
     }
 }
@@ -445,16 +445,16 @@ void cKinematicBody::Reset() { this->mCurTime = 0; }
 tVector cKinematicBody::CalcCOM() const
 {
     tVector com = tVector::Zero();
-    for (auto &v : this->mVertexArray)
+    for (auto &v : this->mVertexArrayShared)
     {
         com += v->mPos;
     }
-    com /= mVertexArray.size();
+    com /= mVertexArrayShared.size();
     return com;
 }
 void cKinematicBody::MoveTranslation(const tVector &shift)
 {
-    for (auto &v : this->mVertexArray)
+    for (auto &v : this->mVertexArrayShared)
     {
         v->mPos += shift;
     }
@@ -462,7 +462,7 @@ void cKinematicBody::MoveTranslation(const tVector &shift)
 
 void cKinematicBody::ApplyScale(float scale)
 {
-    for (auto &v : mVertexArray)
+    for (auto &v : mVertexArrayShared)
     {
         v->mPos.segment(0, 3) = v->mPos.segment(0, 3) * scale;
     }
