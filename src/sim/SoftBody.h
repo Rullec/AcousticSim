@@ -13,6 +13,15 @@ SIM_DECLARE_PTR(tTriangle);
 SIM_DECLARE_PTR(tEdge);
 SIM_DECLARE_PTR(tVertex);
 SIM_DECLARE_PTR(tTet);
+enum eConstitutionModelType
+{
+    LINEAR_ELASTICITY = 0,
+    COROTATED,
+    FIX_COROTATED,
+    STVK,
+    NEO_HOOKEAN
+};
+
 class cSoftBody : public cBaseObject
 {
 public:
@@ -29,22 +38,24 @@ public:
     virtual int GetNumOfTriangles() const override;
     virtual int GetNumOfEdges() const override;
     virtual int GetNumOfVertices() const override;
-    virtual void SetVerticesPos(const tVectorXf & pos);
+    virtual void SetVerticesPos(const tVectorXf &pos);
+
 protected:
     std::string mTetMeshPath = "";
     std::vector<tVertexPtr> mVertexArrayShared = {};
     std::vector<tEdgePtr> mEdgeArrayShared = {};
     std::vector<tTrianglePtr> mTriangleArrayShared = {};
     std::vector<tTetPtr> mTetArrayShared = {};
-    tEigenArr<tMatrix3f> mF;        // deformation gradient, F
-    tEigenArr<tMatrix3f> mInvDm;    // DmInv, used to calculate F, please read the SIGGRAPH 2012 course for more details
-    tVectorXf mGravityForce, mExtForce,  mIntForce, mUserForce; // internal & external force vector on each node, \in R^{3n}
-    tVectorXf mXcur, mXprev;        // timestep previous and current
+    tEigenArr<tMatrix3f> mF;                                   // deformation gradient, F
+    tEigenArr<tMatrix3f> mInvDm;                               // DmInv, used to calculate F, please read the SIGGRAPH 2012 course for more details
+    tVectorXf mGravityForce, mExtForce, mIntForce, mUserForce; // internal & external force vector on each node, \in R^{3n}
+    tVectorXf mXcur, mXprev;                                   // timestep previous and current
     tVectorXf mInvMassMatrixDiag;
-    
+    tVectorXf mInitTetVolume;
+
     virtual void InitInvDm();
     virtual void InitPos();
-
+    virtual void InitTetVolume();
     void UpdateIntForce();
     void UpdateExtForce();
     float CalcEnergy();

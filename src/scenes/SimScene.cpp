@@ -120,27 +120,14 @@ void cSimScene::InitDrawBuffer()
 #include "geometries/Raycaster.h"
 void cSimScene::InitRaycaster(const Json::Value &conf)
 {
-    // auto total_triangle_array = mTriangleArray;
-    // auto total_vertex_array = mVertexArray;
-    // std::cout << "begin to add obstacle data array\n";
-    // for (auto &x : mObstacleList)
-    // {
-    //     auto obstacle_v_array =  x->GetVertexArray();
-    //     auto obstacle_triangle_array =  x->GetVertexArray();
-
-    // }
-    // for (int i = 0; i < this->)
     mRaycaster = std::make_shared<cRaycaster>();
     mRaycaster->Init(conf);
-    // for (auto &x : mObstacleList)
-    // {
-    //     // auto obstacle_v_array = x->GetVertexArray();
-    //     // auto obstacle_triangle_array = x->GetTriangleArray();
-    //     mRaycaster->AddResources(x);
-    // }
-    // std::cout << "[debug] add resources to raycaster done, num of obstacles =
-    // "
-    //           << mObstacleList.size() << std::endl;
+    for (auto &x : mObjectList)
+    {
+        mRaycaster->AddResources(x);
+    }
+    std::cout << "[debug] add resources to raycaster done, num of objects =
+                 " << mObjectList.size() << std::endl;
 }
 /**
  * \brief           Update the simulation procedure
@@ -148,16 +135,20 @@ void cSimScene::InitRaycaster(const Json::Value &conf)
 #include "utils/TimeUtil.hpp"
 void cSimScene::Update(double delta_time)
 {
-    // double default_dt = mIdealDefaultTimestep;
-    // if (delta_time < default_dt)
-    //     default_dt = delta_time;
-    // printf("[debug] sim scene update cur time = %.4f\n", mCurTime);
-    cScene::Update(delta_time);
+    if (mPauseSim == false)
+    {
+        // double default_dt = mIdealDefaultTimestep;
+        // if (delta_time < default_dt)
+        //     default_dt = delta_time;
 
-    UpdateObstacles();
-    // clear force
-    // apply ext force
-    // update position
+        // printf("[debug] sim scene update cur time = %.4f\n", mCurTime);
+        cScene::Update(delta_time);
+
+        UpdateObstacles();
+        // clear force
+        // apply ext force
+        // update position
+    }
 }
 
 /**
@@ -167,7 +158,7 @@ void cSimScene::UpdateObstacles()
 {
     for (auto &obs : this->mObjectList)
     {
-        
+
         // if (false == obs->IsStatic())
         {
             // std::cout << " obstacle " << obs->GetObjName()
@@ -322,6 +313,7 @@ void cSimScene::UpdatePerturbPos(const tVector &camera_pos, const tVector &dir)
 void cSimScene::MouseButton(int button, int action, int mods)
 {
 }
+
 #include "GLFW/glfw3.h"
 void cSimScene::Key(int key, int scancode, int action, int mods)
 {
@@ -337,11 +329,51 @@ void cSimScene::Key(int key, int scancode, int action, int mods)
 
 bool cSimScene::CreatePerturb(tRay *ray)
 {
+    SIM_ASSERT(mRaycaster != nullptr);
+
+    cRaycaster::tRaycastResult res = mRaycaster->RayCast(ray);
+    if (res.mObject == nullptr)
+    {
+        return false;
+    }
+    else
+    {
+        std::cout << "[debug] add perturb on triangle " << res.mLocalTriangleId
+                  << std::endl;
+    }
+
+    // 2. we have a triangle to track
+    SIM_ASSERT(mPerturb == nullptr);
+
+    mPerturb = new tPerturb();
+
+    mPerturb->mObject = res.mObject;
+    mPerturb->mAffectedTriId = res.mLocalTriangleId;
+    const auto &ver_array = mPerturb->mObject->GetVertexArray();
+    const auto &tri_array = mPerturb->mObject->GetTriangleArray();
+
+    mPerturb->mBarycentricCoords =
+        cMathUtil::CalcBarycentric(
+            res.mIntersectionPoint,
+            ver_array[tri_array[res.mLocalTriangleId]->mId0]->mPos,
+            ver_array[tri_array[res.mLocalTriangleId]->mId1]->mPos,
+            ver_array[tri_array[res.mLocalTriangleId]->mId2]->mPos)
+            .segment(0, 3);
+    // std::cout
+    //     << "uv = "
+    //     << ver_array[tri_array[res.mLocalTriangleId]->mId0]->muv.transpose()
+    //     << " vid = " << tri_array[res.mLocalTriangleId]->mId0 << std::endl;
+    SIM_ASSERT(mPerturb->mBarycentricCoords.hasNaN() == false);
+    mPerturb->InitTangentRect(-1 * ray->mDir);
+    mPerturb->UpdatePerturbPos(ray->mOrigin, ray->mDir);
+
+    // // change the color
+    mPerturb->mObject->ChangeTriangleColor(
+        res.mLocalTriangleId, ColorShoJoHi.segment(0, 3).cast<float>());
     return true;
 }
 void cSimScene::ReleasePerturb()
 {
-
     if (mPerturb != nullptr)
     {
         // restore the color
