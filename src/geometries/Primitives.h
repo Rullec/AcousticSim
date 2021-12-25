@@ -1,5 +1,6 @@
 #pragma once
 #include "utils/MathUtil.h"
+#include "utils/DefUtil.h"
 struct tVertex
 {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -11,7 +12,7 @@ struct tVertex
                    // a vertex over a fabric, but now the texture in rendering
     tVector mColor;
 };
-
+SIM_DECLARE_PTR(tVertex);
 struct tEdge
 {
     tEdge();
@@ -24,7 +25,7 @@ struct tEdge
                       // is -1
     double mK_spring; // stiffness for springs
 };
-
+SIM_DECLARE_PTR(tEdge);
 // struct tEdge : public tEdge
 // {
 //     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -39,7 +40,7 @@ struct tTriangle
     int mId0, mId1, mId2;
     tVector mNormal;
 };
-
+SIM_DECLARE_PTR(tTriangle);
 /**
  * \brief       an origin + a directed ray
  */

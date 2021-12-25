@@ -219,20 +219,20 @@ int cSimScene::GetNumOfFreedom() const { return GetNumOfVertices() * 3; }
 int cSimScene::GetNumOfDrawEdges() const
 {
     int num_of_edges = 0;
-    // for (auto &x : mObstacleList)
-    // {
-    //     num_of_edges += x->GetNumOfEdges();
-    // }
+    for (auto &x : mObjectList)
+    {
+        num_of_edges += x->GetNumOfEdges();
+    }
     return num_of_edges;
 }
 
 int cSimScene::GetNumOfTriangles() const
 {
     int num_of_triangles = 0;
-    // for (auto &x : mObstacleList)
-    // {
-    //     num_of_triangles += x->GetNumOfTriangles();
-    // }
+    for (auto &x : mObjectList)
+    {
+        num_of_triangles += x->GetNumOfTriangles();
+    }
     return num_of_triangles;
 }
 /**
@@ -256,11 +256,10 @@ void cSimScene::CalcTriangleDrawBuffer()
                               mTriangleDrawBuffer.size());
 
     // 2. calculate for obstacle triangle
+
+    for (auto &x : mObjectList)
     {
-        // for (auto &x : mObstacleList)
-        // {
-        //     x->CalcTriangleDrawBuffer(ref, st);
-        // }
+        x->CalcTriangleDrawBuffer(ref, st);
     }
 }
 
@@ -281,10 +280,11 @@ int cSimScene::CalcEdgesDrawBuffer(int st /* = 0 */)
                                      mEdgesDrawBuffer.size() - st);
 
     // 2. for draw buffer
-    // for (auto &x : mObstacleList)
-    // {
-    //     x->CalcEdgeDrawBuffer(render_ref, st);
-    // }
+
+    for (auto &x : mObjectList)
+    {
+        x->CalcEdgeDrawBuffer(render_ref, st);
+    }
 
     return st;
 }

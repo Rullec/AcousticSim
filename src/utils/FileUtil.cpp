@@ -663,6 +663,11 @@ std::vector<std::string> cFileUtil::ListDir(std::string dir)
 
 std::vector<std::string> cFileUtil::ReadFileAllLines(const std::string &filename)
 {
+    if (false == cFileUtil::ExistsFile(filename))
+    {
+        SIM_ERROR("{} doesn't exist", filename);
+        return {};
+    }
     std::vector<std::string> all_lines = {};
     std::ifstream file(filename);
     std::string str;

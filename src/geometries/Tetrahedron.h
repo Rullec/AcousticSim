@@ -24,7 +24,8 @@ struct tTet
     Here we remember the triangle id and opposite
     */
     tVector4i mTriangleId;
-    bool mTriangleOpposite;
+    
+    bool mTriangleOpposite[4];
 };
 
 SIM_DECLARE_PTR(tTet);
