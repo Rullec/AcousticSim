@@ -46,7 +46,7 @@ public:
                                         int &st) const = 0;
     virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                     int &st) const = 0;
-    // virtual void Update(double dt) = 0;
+    virtual void Update(float dt) = 0;
 
     // triangularize methods to visit the mesh data
     virtual int GetNumOfTriangles() const;

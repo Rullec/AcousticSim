@@ -21,9 +21,9 @@
     "camera": {
         "camera_type": "arcball_cam",
         "camera_pos": [
-            0.5,
-            0.5,
-            0.5
+            1.5,
+            1.5,
+            1.5
         ],
         "camera_focus": [
             0.0,

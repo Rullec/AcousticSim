@@ -42,7 +42,7 @@ public:
                                         int &st) const override final;
     virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                     int &st) const override final;
-    virtual void Update(float dt);
+    virtual void Update(float dt) override;
 
     // virtual void UpdatePos(double dt) override final;
     // virtual void UpdateRenderingResource() override final;

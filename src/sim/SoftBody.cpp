@@ -2,7 +2,9 @@
 #include "utils/JsonUtil.h"
 #include "utils/TetUtil.h"
 #include "geometries/Tetrahedron.h"
+#include "geometries/Primitives.h"
 #include <iostream>
+extern const tVector gGravity;
 cSoftBody::cSoftBody(int id) : cBaseObject(eObjectType::SOFTBODY_TYPE, id)
 {
 }
@@ -29,9 +31,51 @@ void cSoftBody::Init(const Json::Value &conf)
     std::cout << "load from path " << mTetMeshPath << "done\n";
     UpdateTriangleNormal();
     UpdateVertexNormalFromTriangleNormal();
+
+    InitInvDm();
+    int num_of_v = this->mVertexArrayShared.size();
+    mIntForce.noalias() = tVectorXf::Zero(3 * num_of_v);
+    mExtForce.noalias() = tVectorXf::Zero(3 * num_of_v);
+    mUserForce.noalias() = tVectorXf::Zero(3 * num_of_v);
+    InitPos();
+    mInvMassMatrixDiag.noalias() = tVectorXf::Ones(3 * num_of_v) / mVertexArrayShared[0]->mMass;
+    mGravityForce = tVectorXf::Zero(3 * num_of_v);
+    // for (int i = 0; i < num_of_v; i++)
+    // {
+    //     mGravityForce.segment(3 * i, 3) = mVertexArrayShared[i]->mMass * gGravity.segment(0, 3).cast<float>();
+    // }
+
     // exit(1);
 }
+void cSoftBody::InitPos()
+{
+    int num_of_v = this->mVertexArrayShared.size();
+    mXcur.resize(3 * num_of_v);
+    for (int i = 0; i < num_of_v; i++)
+    {
+        mXcur.segment(3 * i, 3) = mVertexArrayShared[i]->mPos.segment(0, 3).cast<float>();
+    }
+    mXprev.noalias() = mXcur;
+}
 
+void cSoftBody::SetVerticesPos(const tVectorXf &pos)
+{
+    int num_of_v = this->mVertexArrayShared.size();
+    SIM_ASSERT(pos.size() == 3 * num_of_v);
+    mXcur.noalias() = pos;
+    mXprev.noalias() = pos;
+    SyncPosToVectorArray();
+}
+
+void cSoftBody::SyncPosToVectorArray()
+{
+    int num_of_v = this->mVertexArrayShared.size();
+    for (int i = 0; i < num_of_v; i++)
+    {
+        mVertexArrayShared[i]->mPos.segment(0, 3) =
+            mXcur.segment(3 * i, 3).cast<double>();
+    }
+}
 extern void CalcTriangleDrawBufferSingle(tVertexPtr v0, tVertexPtr v1, tVertexPtr v2,
                                          Eigen::Map<tVectorXf> &buffer, int &st_pos);
 void cSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
@@ -116,4 +160,150 @@ int cSoftBody::GetNumOfEdges() const
 int cSoftBody::GetNumOfVertices() const
 {
     return this->mVertexArrayShared.size();
+}
+
+float CalculateTetVolume(
+    const tVector &pos0,
+    const tVector &pos1,
+    const tVector &pos2,
+    const tVector &pos3)
+{
+    // 1/6 * (AB X AC) \cdot (AD)
+    tVector AB = pos1 - pos0;
+    tVector AC = pos2 - pos0;
+    tVector AD = pos3 - pos0;
+    return (AB.cross3(AC)).dot(AD) / 6.0;
+}
+/**
+ * \brief            update the result
+*/
+void cSoftBody::Update(float dt)
+{
+    dt = 1e-3;
+    UpdateDeformationGradient();
+    UpdateIntForce();
+    UpdateExtForce();
+    SolveForNextPos(dt);
+}
+void cSoftBody::UpdateExtForce()
+{
+    int num_of_v = this->mVertexArrayShared.size();
+    float ground_height = 1e-2;
+    float k = 100;
+    // mExtForce.fill(5);
+    mExtForce[3 * 2 + 1] = 10;
+    // for (int i = 0; i < 1; i++)
+    // {
+    //     // float dist = mVertexArrayShared[i]->mPos[1] - ground_height;
+    //     // if (dist < 0)
+    //     {
+    //         // mExtForce[3 * i + 1] = -dist * k;
+
+    //     }
+    // }
+}
+void cSoftBody::SolveForNextPos(float dt)
+{
+    // AX = b; A(system matrix), b(residual)
+    tVectorXf residual = (mIntForce + mExtForce) * dt * dt + 2 * mXcur - mXprev;
+    mXprev.noalias() = mXcur;
+    mXcur = mInvMassMatrixDiag.cwiseProduct(residual);
+    SyncPosToVectorArray();
+}
+
+/**
+ * \brief           create Dminv
+*/
+void cSoftBody::InitInvDm()
+{
+    int num_of_tet = this->mTetArrayShared.size();
+    mInvDm.resize(num_of_tet, tMatrix3f::Zero());
+    for (int i = 0; i < num_of_tet; i++)
+    {
+        auto cur_tet = mTetArrayShared[i];
+        tVector3f X1 = this->mVertexArrayShared[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<float>();
+        tVector3f X2 = this->mVertexArrayShared[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<float>();
+        tVector3f X3 = this->mVertexArrayShared[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<float>();
+        tVector3f X4 = this->mVertexArrayShared[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<float>();
+        tMatrix3f cur_dm;
+        cur_dm.col(0) = X1 - X4;
+        cur_dm.col(1) = X2 - X4;
+        cur_dm.col(2) = X3 - X4;
+        mInvDm[i] = cur_dm.inverse();
+        std::cout << "tet " << i << " Dminv = " << mInvDm[i] << std::endl;
+    }
+}
+
+void cSoftBody::UpdateDeformationGradient()
+{
+    int num_of_tet = this->mTetArrayShared.size();
+
+    if (mF.size() != num_of_tet)
+    {
+        mF.resize(num_of_tet);
+    }
+    tMatrix3f Ds = tMatrix3f::Zero();
+
+    for (int i = 0; i < num_of_tet; i++)
+    {
+        // 1. calculate Ds (please check the siggraph 2012 note for more details)
+        auto cur_tet = mTetArrayShared[i];
+        tVector3f x1 = this->mVertexArrayShared[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<float>();
+        tVector3f x2 = this->mVertexArrayShared[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<float>();
+        tVector3f x3 = this->mVertexArrayShared[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<float>();
+        tVector3f x4 = this->mVertexArrayShared[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<float>();
+        Ds.col(0) = x1 - x4;
+        Ds.col(1) = x2 - x4;
+        Ds.col(2) = x3 - x4;
+        mF[i].noalias() = Ds * mInvDm[i];
+        std::cout << "calc tet " << i << " F = \n " << mF[i] << std::endl;
+    }
+}
+
+void cSoftBody::UpdateIntForce()
+{
+    // update internal force
+    int num_of_tet = this->mTetArrayShared.size();
+    // internal force H = - W P(F) D_m^{-T}, iter on each tet
+    float mu = 1000;
+    float lambda = 0.5;
+    tMatrix3f I = tMatrix3f::Identity();
+    mIntForce.setZero();
+    for (int i = 0; i < num_of_tet; i++)
+    {
+        auto tet = mTetArrayShared[i];
+        // 1.1 get W: tet volume
+        float W = CalculateTetVolume(
+            mVertexArrayShared[tet->mVertexId[0]]->mPos,
+            mVertexArrayShared[tet->mVertexId[1]]->mPos,
+            mVertexArrayShared[tet->mVertexId[2]]->mPos,
+            mVertexArrayShared[tet->mVertexId[3]]->mPos);
+        // 1.2 get deformation gradient F
+        const tMatrix3f F = mF[i];
+        // 1.3 get P(F) in linear elasticity
+        /*
+            P(F) = \mu *(FT +F -2I) + \lambda * tr(F - I) I 
+        */
+        // tMatrix3f P = mu * (F.transpose() + F - 2 * I) + lambda * (F - I).trace() * I;
+
+        // stvk
+        // {
+        tMatrix3f E = 0.5 * (F.transpose() * F - I);
+        tMatrix3f P = F * (2 * mu * E + lambda * E.trace() * I);
+        // }
+        // 1.4 calculate force on nodes
+        tMatrix3f H = -W * P * mInvDm[i].transpose();
+        std::cout << "tet " << i << " H = \n"
+                  << H << std::endl;
+        tVector3f f3 = -(H.col(0) + H.col(1) + H.col(2));
+        mIntForce.segment(tet->mVertexId[0] * 3, 3) += H.col(0);
+        mIntForce.segment(tet->mVertexId[1] * 3, 3) += H.col(1);
+        mIntForce.segment(tet->mVertexId[2] * 3, 3) += H.col(2);
+        mIntForce.segment(tet->mVertexId[3] * 3, 3) += f3;
+    }
+}
+
+float cSoftBody::CalcEnergy()
+{
+    
 }

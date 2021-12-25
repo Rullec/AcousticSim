@@ -125,6 +125,7 @@ void cTetUtil::LoadTet(const std::string &path,
             auto cur_v = std::make_shared<tVertex>();
             cur_v->mPos = tVector::Ones();
             cur_v->mColor = ColorBlue;
+            cur_v->mMass = 1.0;
             istr >> v_id >> cur_v->mPos[0] >> cur_v->mPos[1] >> cur_v->mPos[2];
             std::cout << "v " << v_id << " = " << cur_v->mPos.transpose() << std::endl;
             vertex_vec.push_back(cur_v);

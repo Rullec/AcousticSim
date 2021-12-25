@@ -165,15 +165,16 @@ void cSimScene::Update(double delta_time)
  */
 void cSimScene::UpdateObstacles()
 {
-    // for (auto &obs : this->mObstacleList)
-    // {
-    //     if (false == obs->IsStatic())
-    //     {
-    //         // std::cout << " obstacle " << obs->GetObjName()
-    //         //           << " is not static, need to update\n";
-    //         obs->Update(mCurdt);
-    //     }
-    // }
+    for (auto &obs : this->mObjectList)
+    {
+        
+        // if (false == obs->IsStatic())
+        {
+            // std::cout << " obstacle " << obs->GetObjName()
+            //           << " is not static, need to update\n";
+            obs->Update(mCurdt);
+        }
+    }
 }
 /**
  * \brief       do (discrete) collision detection
