@@ -1,14 +1,12 @@
 {
     "scene_type": "sim",
     "obj_list": [
-        // {
-        //     "object_name": "acoustic_body",
-        //     "object_type": "Acoustic"
-        // },
         {
             "object_name": "soft_body",
             "object_type": "SoftBody",
-            "tet_path" : "./data/tetmesh/single_tet/tet.1"
+            // "tet_path": "./data/tetmesh/single_tet/tet.1",
+            "tet_path": "./data/tetmesh/cube/cube.1",
+            "rho": 1000
         }
     ],
     "window_height": 600,

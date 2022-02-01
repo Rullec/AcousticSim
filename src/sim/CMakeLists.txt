@@ -6,7 +6,8 @@ set(
     Perturb.cpp
     AudioOutput.cpp
     AcousticBody.cpp
-    SoftBody.cpp
+    softbody/SoftBody.cpp
+    softbody/SoftBodyInt.cpp
     SimObjectBuilder.cpp
 )
 

@@ -6,6 +6,23 @@
 #include "geometries/Tetrahedron.h"
 #include <iostream>
 #include <sstream>
+
+/**
+ * \brief       Calculate the volume for given tet
+*/
+float cTetUtil::CalculateTetVolume(
+    const tVector &pos0,
+    const tVector &pos1,
+    const tVector &pos2,
+    const tVector &pos3)
+{
+    // 1/6 * (AB X AC) \cdot (AD)
+    tVector AB = pos1 - pos0;
+    tVector AC = pos2 - pos0;
+    tVector AD = pos3 - pos0;
+    return (AB.cross3(AC)).dot(AD) / 6.0;
+}
+
 /**
  * \brief               load tet mesh from ".node" files (custom format)
  * \param path          mesh file path
@@ -125,7 +142,7 @@ void cTetUtil::LoadTet(const std::string &path,
             auto cur_v = std::make_shared<tVertex>();
             cur_v->mPos = tVector::Ones();
             cur_v->mColor = ColorBlue;
-            cur_v->mMass = 1.0;
+            // cur_v->mMass = 1.0;
             istr >> v_id >> cur_v->mPos[0] >> cur_v->mPos[1] >> cur_v->mPos[2];
             std::cout << "v " << v_id << " = " << cur_v->mPos.transpose() << std::endl;
             vertex_vec.push_back(cur_v);

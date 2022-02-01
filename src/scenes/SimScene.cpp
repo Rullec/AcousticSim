@@ -143,7 +143,7 @@ void cSimScene::Update(double delta_time)
         // printf("[debug] sim scene update cur time = %.4f\n", mCurTime);
         cScene::Update(delta_time);
 
-        UpdateObstacles();
+        UpdateObjects();
         // clear force
         // apply ext force
         // update position
@@ -153,17 +153,19 @@ void cSimScene::Update(double delta_time)
 /**
  * \brief           update obstacles
  */
-void cSimScene::UpdateObstacles()
+void cSimScene::UpdateObjects()
 {
+    // 1. update perturb on objects if possible
+    if (mPerturb != nullptr)
+    {
+        // ApplyUserPerturbForceOnce
+        mPerturb->mObject->ApplyUserPerturbForceOnce(mPerturb);
+    }
+
+    // 2. update objects
     for (auto &obs : this->mObjectList)
     {
-
-        // if (false == obs->IsStatic())
-        {
-            // std::cout << " obstacle " << obs->GetObjName()
-            //           << " is not static, need to update\n";
-            obs->Update(mCurdt);
-        }
+        obs->Update(mCurdt);
     }
 }
 /**
@@ -451,3 +453,14 @@ std::vector<cKinematicBodyPtr> cSimScene::GetObstacleList()
  * \brief                   Is sim paused
  */
 bool cSimScene::IsSimPaused() const { return this->mPauseSim; }
+
+/**
+ * \brief                   Update imgui for simulation scene
+*/
+void cSimScene::UpdateImGui()
+{
+    for (auto &obj : this->mObjectList)
+    {
+        obj->UpdateImGUi();
+    }
+}

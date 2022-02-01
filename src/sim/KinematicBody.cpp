@@ -467,3 +467,7 @@ void cKinematicBody::ApplyScale(float scale)
         v->mPos.segment(0, 3) = v->mPos.segment(0, 3) * scale;
     }
 }
+
+void cKinematicBody::ApplyUserPerturbForceOnce(tPerturb *)
+{
+}

@@ -334,10 +334,11 @@ void cDrawSceneImGui::UpdateSimImGui()
 
     ImGui::Begin("config");
     // std::cout << "update acoustic imgui\n";
-    if (true == ImGui::Button("push_button"))
-    {
-        std::cout << "[debug] button pushed\n";
-    }
+    // if (true == ImGui::Button("push_button"))
+    // {
+    //     std::cout << "[debug] button pushed\n";
+    // }
+    this->mSimScene->UpdateImGui();
     ImGui::End();
 }
 void cDrawSceneImGui::DrawFrame()

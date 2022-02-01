@@ -43,7 +43,7 @@ public:
     virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                     int &st) const override final;
     virtual void Update(float dt) override;
-
+    virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
     // virtual void UpdatePos(double dt) override final;
     // virtual void UpdateRenderingResource() override final;
     virtual tMatrix GetCurWorldTransform() const; //

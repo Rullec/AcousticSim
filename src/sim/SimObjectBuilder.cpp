@@ -1,7 +1,7 @@
 #include "SimObjectBuilder.h"
 #include "utils/JsonUtil.h"
 #include "sim/BaseObject.h"
-#include "sim/SoftBody.h"
+#include "sim/softbody/SoftBody.h"
 cBaseObjectPtr BuildSimObj(const Json::Value &conf, int id_)
 {
     eObjectType type = cBaseObject::BuildObjectType(cJsonUtil::ParseAsString("object_type", conf));

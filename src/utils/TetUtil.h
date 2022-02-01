@@ -25,4 +25,9 @@ public:
                         tEdgePtrVector &edge_vec,
                         tTrianglePtrVector &tri_vec,
                         tTetPtrVector &tet_vec);
+    static float CalculateTetVolume(
+        const tVector &pos0,
+        const tVector &pos1,
+        const tVector &pos2,
+        const tVector &pos3);
 };

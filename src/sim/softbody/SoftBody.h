@@ -13,13 +13,14 @@ SIM_DECLARE_PTR(tTriangle);
 SIM_DECLARE_PTR(tEdge);
 SIM_DECLARE_PTR(tVertex);
 SIM_DECLARE_PTR(tTet);
-enum eConstitutionModelType
+enum eMaterialModelType
 {
     LINEAR_ELASTICITY = 0,
     COROTATED,
     FIX_COROTATED,
     STVK,
-    NEO_HOOKEAN
+    NEO_HOOKEAN,
+    NUM_OF_MATERIAL_MODEL
 };
 
 class cSoftBody : public cBaseObject
@@ -39,22 +40,27 @@ public:
     virtual int GetNumOfEdges() const override;
     virtual int GetNumOfVertices() const override;
     virtual void SetVerticesPos(const tVectorXf &pos);
-
+    virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
+    virtual eMaterialModelType GetMaterial() const;
+    virtual void UpdateImGUi() override;
 protected:
     std::string mTetMeshPath = "";
-    std::vector<tVertexPtr> mVertexArrayShared = {};
-    std::vector<tEdgePtr> mEdgeArrayShared = {};
-    std::vector<tTrianglePtr> mTriangleArrayShared = {};
+    // std::vector<tVertexPtr> mVertexArrayShared = {};
+    // std::vector<tEdgePtr> mEdgeArrayShared = {};
+    // std::vector<tTrianglePtr> mTriangleArrayShared = {};
     std::vector<tTetPtr> mTetArrayShared = {};
     tEigenArr<tMatrix3f> mF;                                   // deformation gradient, F
     tEigenArr<tMatrix3f> mInvDm;                               // DmInv, used to calculate F, please read the SIGGRAPH 2012 course for more details
     tVectorXf mGravityForce, mExtForce, mIntForce, mUserForce; // internal & external force vector on each node, \in R^{3n}
     tVectorXf mXcur, mXprev;                                   // timestep previous and current
-    tVectorXf mInvMassMatrixDiag;
+    tVectorXf mInvLumpedMassMatrixDiag;                        // row-diagnozation-lumped mass matrix
     tVectorXf mInitTetVolume;
+    float mRho; // the volume density [SI] kg/m^3
+    eMaterialModelType mMaterial;
 
     virtual void InitInvDm();
     virtual void InitPos();
+    virtual void InitDiagLumpedMassMatrix();
     virtual void InitTetVolume();
     void UpdateIntForce();
     void UpdateExtForce();
@@ -64,6 +70,11 @@ protected:
     virtual void UpdateDeformationGradient();
     void SolveForNextPos(float dt);
     void SyncPosToVectorArray();
+    int GetNumOfTets() const;
+    virtual int GetNumOfFreedoms() const;
+    tMatrix3f CalcPiolaKirchoff(const tMatrix3f &F);
 };
 
 SIM_DECLARE_PTR(cSoftBody);
+
+extern std::string BuildMaterialTypeStr(eMaterialModelType type);

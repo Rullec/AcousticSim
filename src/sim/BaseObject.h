@@ -31,6 +31,7 @@ namespace Json
 struct tVertex;
 struct tEdge;
 struct tTriangle;
+struct tPerturb;
 SIM_DECLARE_PTR(tVertex);
 SIM_DECLARE_PTR(tEdge);
 SIM_DECLARE_PTR(tTriangle);
@@ -50,6 +51,7 @@ public:
     virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                     int &st) const = 0;
     virtual void Update(float dt) = 0;
+    virtual void ApplyUserPerturbForceOnce(tPerturb *) = 0;
 
     // triangularize methods to visit the mesh data
     virtual int GetNumOfTriangles() const;
@@ -69,6 +71,7 @@ public:
     void ChangeTriangleColor(int tri_id, const tVector3f &color);
     virtual void CalcAABB(tVector &min, tVector &max) const;
     double CalcTotalArea() const;
+    virtual void UpdateImGUi();
 
 protected:
     float mColorAlpha = 1.0;

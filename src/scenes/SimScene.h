@@ -10,7 +10,7 @@ namespace Json
 
 enum eSceneType
 {
-    SCENE_SIM = 0,  // default simulation scene
+    SCENE_SIM = 0, // default simulation scene
     // SCENE_ACOUSTIC, // acoustic simulation scene
     NUM_OF_SCENE_TYPES
 };
@@ -57,6 +57,7 @@ public:
     virtual int GetNumOfObjects() const;
     virtual std::vector<cKinematicBodyPtr> GetObstacleList();
     virtual bool IsSimPaused() const;
+    virtual void UpdateImGui();
 
 protected:
     tPerturb *mPerturb;
@@ -93,7 +94,7 @@ protected:
     virtual int GetNumOfDrawEdges() const;
     virtual int GetNumOfTriangles() const;
     void CalcNodePositionVector(tVectorXd &pos) const;
-    virtual void UpdateObstacles();
+    virtual void UpdateObjects();
     virtual void CreateObstacle(const Json::Value &conf);
     virtual void CreateCollisionDetecter();
     bool mPauseSim;
