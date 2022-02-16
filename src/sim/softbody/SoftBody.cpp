@@ -429,7 +429,7 @@ void cSoftBody::UpdateIntForce()
         const tMatrix3d &F = mF[i];
         // 1.3 get P(F) in linear elasticity
 
-        P.noalias() = CalcPiolaKirchoff(F);
+        P.noalias() = CalcPK1(F);
         // 1.4 calculate force on nodes
         tMatrix3d H = -W * P * mInvDm[i].transpose();
         // std::cout << "tet " << i << " H = \n"
@@ -450,55 +450,63 @@ void cSoftBody::UpdateIntForce()
 /**
  * \brief       Given deformation gradient F, calculate P(F)
 */
-tMatrix3d cSoftBody::CalcPiolaKirchoff(const tMatrix3d &F)
+tMatrix3d cSoftBody::CalcPK1(const tMatrix3d &F)
 {
-    tMatrix3d P = tMatrix3d::Zero();
-    tMatrix3d I = tMatrix3d::Identity();
-    double mu = 1e5;
-    double lambda = 0.5;
+    // tMatrix3d P = tMatrix3d::Zero();
+    // tMatrix3d I = tMatrix3d::Identity();
 
-    switch (mMaterial)
-    {
-    // case eMaterialModelType::COROTATED:
+    // switch (mMaterial)
     // {
-    //     P.setZero();
+    // // case eMaterialModelType::COROTATED:
+    // // {
+    // //     P.setZero();
+    // //     break;
+    // // }
+    // case eMaterialModelType::LINEAR_ELASTICITY:
+    // {
+    //     /*
+    //         P(F) = \mu * (FT + F -2I) + \lambda * tr(F - I) I
+    //     */
+    //     P.noalias() = gMu * (F.transpose() + F - 2 * I) + gLambda * (F - I).trace() * I;
     //     break;
     // }
-    case eMaterialModelType::LINEAR_ELASTICITY:
-    {
-        /*
-            P(F) = \mu * (FT + F -2I) + \lambda * tr(F - I) I
-        */
-        P.noalias() = mu * (F.transpose() + F - 2 * I) + lambda * (F - I).trace() * I;
-        break;
-    }
-    // case eMaterialModelType::FIX_COROTATED:
+    // // case eMaterialModelType::FIX_COROTATED:
+    // // {
+    // //     P.setZero();
+    // //     break;
+    // // }
+    // case eMaterialModelType::STVK:
     // {
-    //     P.setZero();
+    //     tMatrix3d E = 0.5 * (F.transpose() * F - I);
+    //     P = F * (2 * gMu * E + gLambda * E.trace() * I);
     //     break;
     // }
-    case eMaterialModelType::STVK:
-    {
-        tMatrix3d E = 0.5 * (F.transpose() * F - I);
-        P = F * (2 * mu * E + lambda * E.trace() * I);
-        break;
-    }
-    case eMaterialModelType::NEO_HOOKEAN:
-    {
-        /*
-        P(F) = mu * F - mu * F^{-T} + lambda * log(I3) / 2 * F^{-T}
-        */
-        double I3 = 100;
-        tMatrix3d F_inv_T = F.inverse().transpose();
-        P.noalias() = mu * (F - F_inv_T) + lambda * std::log(I3) / 2 * F_inv_T;
-        break;
-    }
-    default:
-    {
-        SIM_ERROR("do not support material model {}", BuildMaterialTypeStr(mMaterial));
-        exit(1);
-    }
-    break;
-    }
+    // case eMaterialModelType::NEO_HOOKEAN:
+    // {
+    //     /*
+    //     P(F) = mu * F - mu * F^{-T} + lambda * log(I3) / 2 * F^{-T}
+    //     */
+    //     double I3 = 100;
+    //     tMatrix3d F_inv_T = F.inverse().transpose();
+    //     P.noalias() = gMu * (F - F_inv_T) + gLambda * std::log(I3) / 2 * F_inv_T;
+    //     break;
+    // }
+    // default:
+    // {
+    //     SIM_ERROR("do not support material model {}", BuildMaterialTypeStr(mMaterial));
+    //     exit(1);
+    // }
+    // break;
+    // }
+    // return P;
+
+    tMatrix3d P = F * CalcPK1_last(F);
     return P;
+}
+
+tMatrix3d cSoftBody::CalcPK1_last(const tMatrix3d &F)
+{
+    tMatrix3d I = tMatrix3d::Identity();
+    tMatrix3d E = 0.5 * (F.transpose() * F - I);
+    return 2 * gMu * E + gLambda * E.trace() * I;
 }

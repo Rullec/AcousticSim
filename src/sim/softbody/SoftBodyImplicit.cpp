@@ -20,6 +20,7 @@ void cSoftBodyImplicit::Init(const Json::Value &conf)
     cSoftBody::Init(conf);
 
     CheckDFDx();
+    CheckDPDF();
 }
 
 tEigenArr<tMatrix3d> cSoftBodyImplicit::CalcDFDx(int ele_id)
@@ -88,9 +89,12 @@ void cSoftBodyImplicit::CheckDFDx()
                 if (dFdx_diff_norm > 10 * eps)
                 {
                     std::cout << "[error] failed, dFdx diff norm = " << dFdx_diff_norm << std::endl;
-                    std::cout << "dFdx num = \n" << dFdx_num << std::endl;
-                    std::cout << "dFdx ana = \n" << dFdx_ana << std::endl;
-                    std::cout << "dFdx diff = \n" << dFdx_diff << std::endl;
+                    std::cout << "dFdx num = \n"
+                              << dFdx_num << std::endl;
+                    std::cout << "dFdx ana = \n"
+                              << dFdx_ana << std::endl;
+                    std::cout << "dFdx diff = \n"
+                              << dFdx_diff << std::endl;
                 }
 
                 mXcur[3 * cur_v + comp] -= eps;
@@ -102,8 +106,10 @@ void cSoftBodyImplicit::CheckDFDx()
 
     SIM_INFO("check df/dx succ");
 }
+
 void cSoftBodyImplicit::CheckDPDF()
 {
+    CalcDPDF();
 }
 
 void cSoftBodyImplicit::InitDDsDxTensor()

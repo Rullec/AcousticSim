@@ -43,6 +43,7 @@ public:
     virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
     virtual eMaterialModelType GetMaterial() const;
     virtual void UpdateImGUi() override;
+
 protected:
     std::string mTetMeshPath = "";
     // std::vector<tVertexPtr> mVertexArrayShared = {};
@@ -57,6 +58,8 @@ protected:
     tVectorXd mInitTetVolume;
     double mRho; // the volume density [SI] kg/m^3
     eMaterialModelType mMaterial;
+    double gMu = 1e5;
+    double gLambda = 0.5;
 
     virtual void InitInvDm();
     virtual void InitPos();
@@ -73,7 +76,8 @@ protected:
     void SyncPosToVectorArray();
     int GetNumOfTets() const;
     virtual int GetNumOfFreedoms() const;
-    tMatrix3d CalcPiolaKirchoff(const tMatrix3d &F);
+    tMatrix3d CalcPK1(const tMatrix3d &F);
+    tMatrix3d CalcPK1_last(const tMatrix3d &F);
 };
 
 SIM_DECLARE_PTR(cSoftBody);
