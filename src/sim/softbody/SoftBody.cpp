@@ -48,10 +48,10 @@ void cSoftBody::Init(const Json::Value &conf)
 
     InitInvDm();
     int num_of_v = this->mVertexArrayShared.size();
-    mIntForce.noalias() = tVectorXf::Zero(3 * num_of_v);
-    mExtForce.noalias() = tVectorXf::Zero(3 * num_of_v);
-    mUserForce.noalias() = tVectorXf::Zero(3 * num_of_v);
-    mGravityForce = tVectorXf::Zero(3 * num_of_v);
+    mIntForce.noalias() = tVectorXd::Zero(3 * num_of_v);
+    mExtForce.noalias() = tVectorXd::Zero(3 * num_of_v);
+    mUserForce.noalias() = tVectorXd::Zero(3 * num_of_v);
+    mGravityForce = tVectorXd::Zero(3 * num_of_v);
     InitPos();
     InitTetVolume();
     InitDiagLumpedMassMatrix();
@@ -61,7 +61,7 @@ void cSoftBody::Init(const Json::Value &conf)
     SyncPosToVectorArray();
     for (int i = 0; i < num_of_v; i++)
     {
-        mGravityForce.segment(3 * i, 3) = gGravity.segment(0, 3).cast<float>() / mInvLumpedMassMatrixDiag[3 * i];
+        mGravityForce.segment(3 * i, 3) = gGravity.segment(0, 3).cast<double>() / mInvLumpedMassMatrixDiag[3 * i];
     }
 
     // exit(1);
@@ -72,12 +72,12 @@ void cSoftBody::InitPos()
     mXcur.resize(3 * num_of_v);
     for (int i = 0; i < num_of_v; i++)
     {
-        mXcur.segment(3 * i, 3) = mVertexArrayShared[i]->mPos.segment(0, 3).cast<float>();
+        mXcur.segment(3 * i, 3) = mVertexArrayShared[i]->mPos.segment(0, 3).cast<double>();
     }
     mXprev.noalias() = mXcur;
 }
 
-void cSoftBody::SetVerticesPos(const tVectorXf &pos)
+void cSoftBody::SetVerticesPos(const tVectorXd &pos)
 {
     int num_of_v = this->mVertexArrayShared.size();
     SIM_ASSERT(pos.size() == 3 * num_of_v);
@@ -196,13 +196,13 @@ void cSoftBody::Update(float dt)
 void cSoftBody::UpdateExtForce()
 {
     int num_of_v = this->mVertexArrayShared.size();
-    float ground_height = 1e-2;
-    float k = 1e3;
+    double ground_height = 1e-2;
+    double k = 1e3;
     // mExtForce.fill(5);
     // mExtForce[3 * 1 + 1] = 10;
     for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
-        float dist = mVertexArrayShared[i]->mPos[1] - ground_height;
+        double dist = mVertexArrayShared[i]->mPos[1] - ground_height;
         if (dist < 0)
         {
             mExtForce[3 * i + 1] = -dist * k;
@@ -214,9 +214,9 @@ void cSoftBody::SolveForNextPos(float dt)
 {
     // AX = b; A(system matrix), b(residual)
     // std::cout << "mGravityForce = " << mGravityForce.transpose() << std::endl;
-    tVectorXf accel = mInvLumpedMassMatrixDiag.cwiseProduct(mIntForce + mExtForce + mGravityForce + mUserForce) * dt * dt;
-    tVectorXf Xnew = accel + 2 * this->mXcur - mXprev;
-    tVectorXf Xnew_new = accel + mXcur;
+    tVectorXd accel = mInvLumpedMassMatrixDiag.cwiseProduct(mIntForce + mExtForce + mGravityForce + mUserForce) * dt * dt;
+    tVectorXd Xnew = accel + 2 * this->mXcur - mXprev;
+    tVectorXd Xnew_new = accel + mXcur;
 
     mXprev = mXcur;
     mXcur = Xnew_new;
@@ -229,15 +229,15 @@ void cSoftBody::SolveForNextPos(float dt)
 void cSoftBody::InitInvDm()
 {
     int num_of_tet = this->mTetArrayShared.size();
-    mInvDm.resize(num_of_tet, tMatrix3f::Zero());
+    mInvDm.resize(num_of_tet, tMatrix3d::Zero());
     for (int i = 0; i < num_of_tet; i++)
     {
         auto cur_tet = mTetArrayShared[i];
-        tVector3f X1 = this->mVertexArrayShared[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<float>();
-        tVector3f X2 = this->mVertexArrayShared[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<float>();
-        tVector3f X3 = this->mVertexArrayShared[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<float>();
-        tVector3f X4 = this->mVertexArrayShared[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<float>();
-        tMatrix3f cur_dm;
+        tVector3d X1 = this->mVertexArrayShared[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<double>();
+        tVector3d X2 = this->mVertexArrayShared[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<double>();
+        tVector3d X3 = this->mVertexArrayShared[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<double>();
+        tVector3d X4 = this->mVertexArrayShared[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<double>();
+        tMatrix3d cur_dm;
         cur_dm.col(0) = X1 - X4;
         cur_dm.col(1) = X2 - X4;
         cur_dm.col(2) = X3 - X4;
@@ -254,23 +254,29 @@ void cSoftBody::UpdateDeformationGradient()
     {
         mF.resize(num_of_tet);
     }
-    tMatrix3f Ds = tMatrix3f::Zero();
 
     for (int i = 0; i < num_of_tet; i++)
     {
         // 1. calculate Ds (please check the siggraph 2012 note for more details)
-        auto cur_tet = mTetArrayShared[i];
-        tVector3f x1 = this->mVertexArrayShared[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<float>();
-        tVector3f x2 = this->mVertexArrayShared[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<float>();
-        tVector3f x3 = this->mVertexArrayShared[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<float>();
-        tVector3f x4 = this->mVertexArrayShared[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<float>();
-        Ds.col(0) = x1 - x4;
-        Ds.col(1) = x2 - x4;
-        Ds.col(2) = x3 - x4;
-        mF[i].noalias() = Ds * mInvDm[i];
+        UpdateDeformationGradientForTet(i);
         // std::cout << "calc tet " << i << " F = \n " << mF[i] << std::endl;
     }
 }
+
+void cSoftBody::UpdateDeformationGradientForTet(int i)
+{
+    auto cur_tet = mTetArrayShared[i];
+    tVector3d x1 = this->mVertexArrayShared[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<double>();
+    tVector3d x2 = this->mVertexArrayShared[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<double>();
+    tVector3d x3 = this->mVertexArrayShared[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<double>();
+    tVector3d x4 = this->mVertexArrayShared[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<double>();
+    tMatrix3d Ds = tMatrix3d::Zero();
+    Ds.col(0) = x1 - x4;
+    Ds.col(1) = x2 - x4;
+    Ds.col(2) = x3 - x4;
+    mF[i].noalias() = Ds * mInvDm[i];
+}
+
 void cSoftBody::InitTetVolume()
 {
     mInitTetVolume.resize(mTetArrayShared.size());
@@ -285,7 +291,7 @@ void cSoftBody::InitTetVolume()
     }
 }
 
-float cSoftBody::CalcEnergy()
+double cSoftBody::CalcEnergy()
 {
     return 0;
 }
@@ -310,7 +316,7 @@ void cSoftBody::InitDiagLumpedMassMatrix()
 {
     int dof = GetNumOfFreedoms();
     int num_of_v = GetNumOfVertices();
-    tVectorXf DLMM_diag = tVectorXf::Zero(num_of_v);
+    tVectorXd DLMM_diag = tVectorXd::Zero(num_of_v);
 
     tMatrix4f ele_mass_template = tMatrix4f::Zero();
     ele_mass_template << 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2;
@@ -320,10 +326,10 @@ void cSoftBody::InitDiagLumpedMassMatrix()
     {
         auto cur_tet = mTetArrayShared[i];
         // 1. shape the volume
-        float tet_volume = mInitTetVolume[i];
+        double tet_volume = mInitTetVolume[i];
         // 2. shape the selection matrix
-        float lump_value_row_sum = ele_mass_template.row(0).sum(); // lump_value_row_sum = 5
-        float lump_value = lump_value_row_sum * tet_volume;
+        double lump_value_row_sum = ele_mass_template.row(0).sum(); // lump_value_row_sum = 5
+        double lump_value = lump_value_row_sum * tet_volume;
         // 3. add the component
         for (int j = 0; j < 4; j++)
         {
@@ -334,10 +340,10 @@ void cSoftBody::InitDiagLumpedMassMatrix()
     DLMM_diag = DLMM_diag.eval() / 20 * this->mRho;
     // std::cout << "DLMM = " << DLMM_diag.transpose();
     // mInvLumpedMassMatrixDiag = DLMM_diag.cwiseInverse();
-    mInvLumpedMassMatrixDiag.noalias() = tVectorXf::Zero(dof);
+    mInvLumpedMassMatrixDiag.noalias() = tVectorXd::Zero(dof);
     for (int i = 0; i < num_of_v; i++)
     {
-        float val = 1.0 / DLMM_diag[i];
+        double val = 1.0 / DLMM_diag[i];
         mInvLumpedMassMatrixDiag[3 * i + 0] = val;
         mInvLumpedMassMatrixDiag[3 * i + 1] = val;
         mInvLumpedMassMatrixDiag[3 * i + 2] = val;
@@ -365,7 +371,7 @@ void cSoftBody::ApplyUserPerturbForceOnce(tPerturb *pert)
     mUserForce.setZero();
     int tri_id = pert->mAffectedTriId;
     tVector3d bary = pert->mBarycentricCoords;
-    tVector3f force = pert->GetPerturbForce().cast<float>().segment(0, 3) * 100;
+    tVector3d force = pert->GetPerturbForce().cast<double>().segment(0, 3) * 100;
     int v0 = mTriangleArrayShared[tri_id]->mId0;
     int v1 = mTriangleArrayShared[tri_id]->mId1;
     int v2 = mTriangleArrayShared[tri_id]->mId2;
@@ -400,4 +406,99 @@ void cSoftBody::UpdateImGUi()
     ImGui::Combo("Material", &item_cur_idx, items.data(), items.size());
 
     mMaterial = static_cast<eMaterialModelType>(item_cur_idx);
+}
+
+// #include "sim/softbody/SoftBody.h"
+// #include "geometries/Tetrahedron.h"
+// #include "utils/LogUtil.h"
+
+void cSoftBody::UpdateIntForce()
+{
+    // update internal force
+    int num_of_tet = this->mTetArrayShared.size();
+    // internal force H = - W P(F) D_m^{-T}, iter on each tet
+
+    mIntForce.setZero();
+    tMatrix3d P = tMatrix3d::Zero();
+    for (int i = 0; i < num_of_tet; i++)
+    {
+        auto tet = mTetArrayShared[i];
+        // 1.1 get W: tet volume
+        double W = mInitTetVolume[i];
+        // 1.2 get deformation gradient F
+        const tMatrix3d &F = mF[i];
+        // 1.3 get P(F) in linear elasticity
+
+        P.noalias() = CalcPiolaKirchoff(F);
+        // 1.4 calculate force on nodes
+        tMatrix3d H = -W * P * mInvDm[i].transpose();
+        // std::cout << "tet " << i << " H = \n"
+        //           << H << std::endl;
+        tVector3d f3 = -(H.col(0) + H.col(1) + H.col(2));
+        // std::cout << "f0 = " << H.col(0).transpose() << std::endl;
+        // std::cout << "f1 = " << H.col(1).transpose() << std::endl;
+        // std::cout << "f2 = " << H.col(2).transpose() << std::endl;
+        // std::cout << "f3 = " << f3.transpose() << std::endl;
+        mIntForce.segment(tet->mVertexId[0] * 3, 3) += H.col(0);
+        mIntForce.segment(tet->mVertexId[1] * 3, 3) += H.col(1);
+        mIntForce.segment(tet->mVertexId[2] * 3, 3) += H.col(2);
+        mIntForce.segment(tet->mVertexId[3] * 3, 3) += f3;
+    }
+    // std::cout << "fint = " << mIntForce.transpose() << std::endl;
+}
+
+/**
+ * \brief       Given deformation gradient F, calculate P(F)
+*/
+tMatrix3d cSoftBody::CalcPiolaKirchoff(const tMatrix3d &F)
+{
+    tMatrix3d P = tMatrix3d::Zero();
+    tMatrix3d I = tMatrix3d::Identity();
+    double mu = 1e5;
+    double lambda = 0.5;
+
+    switch (mMaterial)
+    {
+    // case eMaterialModelType::COROTATED:
+    // {
+    //     P.setZero();
+    //     break;
+    // }
+    case eMaterialModelType::LINEAR_ELASTICITY:
+    {
+        /*
+            P(F) = \mu * (FT + F -2I) + \lambda * tr(F - I) I
+        */
+        P.noalias() = mu * (F.transpose() + F - 2 * I) + lambda * (F - I).trace() * I;
+        break;
+    }
+    // case eMaterialModelType::FIX_COROTATED:
+    // {
+    //     P.setZero();
+    //     break;
+    // }
+    case eMaterialModelType::STVK:
+    {
+        tMatrix3d E = 0.5 * (F.transpose() * F - I);
+        P = F * (2 * mu * E + lambda * E.trace() * I);
+        break;
+    }
+    case eMaterialModelType::NEO_HOOKEAN:
+    {
+        /*
+        P(F) = mu * F - mu * F^{-T} + lambda * log(I3) / 2 * F^{-T}
+        */
+        double I3 = 100;
+        tMatrix3d F_inv_T = F.inverse().transpose();
+        P.noalias() = mu * (F - F_inv_T) + lambda * std::log(I3) / 2 * F_inv_T;
+        break;
+    }
+    default:
+    {
+        SIM_ERROR("do not support material model {}", BuildMaterialTypeStr(mMaterial));
+        exit(1);
+    }
+    break;
+    }
+    return P;
 }

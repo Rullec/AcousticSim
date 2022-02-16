@@ -39,7 +39,7 @@ public:
     virtual int GetNumOfTriangles() const override;
     virtual int GetNumOfEdges() const override;
     virtual int GetNumOfVertices() const override;
-    virtual void SetVerticesPos(const tVectorXf &pos);
+    virtual void SetVerticesPos(const tVectorXd &pos);
     virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
     virtual eMaterialModelType GetMaterial() const;
     virtual void UpdateImGUi() override;
@@ -49,30 +49,31 @@ protected:
     // std::vector<tEdgePtr> mEdgeArrayShared = {};
     // std::vector<tTrianglePtr> mTriangleArrayShared = {};
     std::vector<tTetPtr> mTetArrayShared = {};
-    tEigenArr<tMatrix3f> mF;                                   // deformation gradient, F
-    tEigenArr<tMatrix3f> mInvDm;                               // DmInv, used to calculate F, please read the SIGGRAPH 2012 course for more details
-    tVectorXf mGravityForce, mExtForce, mIntForce, mUserForce; // internal & external force vector on each node, \in R^{3n}
-    tVectorXf mXcur, mXprev;                                   // timestep previous and current
-    tVectorXf mInvLumpedMassMatrixDiag;                        // row-diagnozation-lumped mass matrix
-    tVectorXf mInitTetVolume;
-    float mRho; // the volume density [SI] kg/m^3
+    tEigenArr<tMatrix3d> mF;                                   // deformation gradient, F
+    tEigenArr<tMatrix3d> mInvDm;                               // DmInv, used to calculate F, please read the SIGGRAPH 2012 course for more details
+    tVectorXd mGravityForce, mExtForce, mIntForce, mUserForce; // internal & external force vector on each node, \in R^{3n}
+    tVectorXd mXcur, mXprev;                                   // timestep previous and current
+    tVectorXd mInvLumpedMassMatrixDiag;                        // row-diagnozation-lumped mass matrix
+    tVectorXd mInitTetVolume;
+    double mRho; // the volume density [SI] kg/m^3
     eMaterialModelType mMaterial;
 
     virtual void InitInvDm();
     virtual void InitPos();
     virtual void InitDiagLumpedMassMatrix();
     virtual void InitTetVolume();
-    void UpdateIntForce();
-    void UpdateExtForce();
-    float CalcEnergy();
+    virtual void UpdateIntForce();
+    virtual void UpdateExtForce();
+    double CalcEnergy();
     virtual void UpdateTriangleNormal() override;
     virtual void UpdateVertexNormalFromTriangleNormal() override;
     virtual void UpdateDeformationGradient();
-    void SolveForNextPos(float dt);
+    virtual void UpdateDeformationGradientForTet(int ele);
+    virtual void SolveForNextPos(float dt);
     void SyncPosToVectorArray();
     int GetNumOfTets() const;
     virtual int GetNumOfFreedoms() const;
-    tMatrix3f CalcPiolaKirchoff(const tMatrix3f &F);
+    tMatrix3d CalcPiolaKirchoff(const tMatrix3d &F);
 };
 
 SIM_DECLARE_PTR(cSoftBody);

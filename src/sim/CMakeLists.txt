@@ -7,7 +7,7 @@ set(
     AudioOutput.cpp
     AcousticBody.cpp
     softbody/SoftBody.cpp
-    softbody/SoftBodyInt.cpp
+    softbody/SoftBodyImplicit.cpp
     SimObjectBuilder.cpp
 )
 
