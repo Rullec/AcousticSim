@@ -310,7 +310,7 @@ void cSimScene::UpdatePerturbPos(const tVector &camera_pos, const tVector &dir)
 /**
  * \brief               Event response (add perturb)
  */
-#include "scenes/DrawScene.h"
+
 void cSimScene::MouseButton(int button, int action, int mods)
 {
 }

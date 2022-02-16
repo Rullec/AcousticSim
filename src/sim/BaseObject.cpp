@@ -64,11 +64,13 @@ std::vector<tVertexPtr> &cBaseObject::GetVertexArrayRef()
 {
     return mVertexArrayShared;
 }
+
 std::vector<tEdgePtr> &cBaseObject::GetEdgeArrayRef() { return mEdgeArrayShared; }
 std::vector<tTrianglePtr> &cBaseObject::GetTriangleArrayRef()
 {
     return mTriangleArrayShared;
 }
+
 /**
  * \brief           change triangle color
  */
