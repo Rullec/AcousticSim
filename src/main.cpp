@@ -126,8 +126,12 @@ void ParseArg(int argc, char *argv[], std::string &config_path)
 
 #include "sim/AudioOutput.h"
 extern cAudioOutputPtr gAudioOutput;
+#include "sim/softbody/FourOrderTensorTest.hpp"
 int main(int argc, char **argv)
 {
+    test_tensor();
+    exit(1);
+
     std::string conf = "";
     ParseArg(argc, argv, conf);
 

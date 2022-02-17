@@ -8,6 +8,8 @@ set(
     AcousticBody.cpp
     softbody/SoftBody.cpp
     softbody/SoftBodyImplicit.cpp
+    softbody/FourOrderTensor.cpp
+    softbody/FourOrderTensorTest.hpp
     SimObjectBuilder.cpp
 )
 
