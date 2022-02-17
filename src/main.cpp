@@ -129,8 +129,8 @@ extern cAudioOutputPtr gAudioOutput;
 #include "sim/softbody/FourOrderTensorTest.hpp"
 int main(int argc, char **argv)
 {
-    test_tensor();
-    exit(1);
+    // test_tensor();
+    // exit(1);
 
     std::string conf = "";
     ParseArg(argc, argv, conf);

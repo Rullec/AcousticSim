@@ -5,6 +5,8 @@
 #include "geometries/Primitives.h"
 #include <iostream>
 extern const tVector gGravity;
+double gMu = 1e5;
+double gLambda = 0.5;
 
 std::string gMaterialModelTypeStr[eMaterialModelType::NUM_OF_MATERIAL_MODEL] =
     {
@@ -450,7 +452,7 @@ void cSoftBody::UpdateIntForce()
 /**
  * \brief       Given deformation gradient F, calculate P(F)
 */
-tMatrix3d cSoftBody::CalcPK1(const tMatrix3d &F)
+tMatrix3d CalcPK1(const tMatrix3d &F)
 {
     // tMatrix3d P = tMatrix3d::Zero();
     // tMatrix3d I = tMatrix3d::Identity();
@@ -500,13 +502,23 @@ tMatrix3d cSoftBody::CalcPK1(const tMatrix3d &F)
     // }
     // return P;
 
-    tMatrix3d P = F * CalcPK1_last(F);
+    tMatrix3d P = CalcPK1_part1(F) + CalcPK1_part2(F);
     return P;
 }
 
-tMatrix3d cSoftBody::CalcPK1_last(const tMatrix3d &F)
+tMatrix3d CalcGreenStrain(const tMatrix3d &F)
 {
     tMatrix3d I = tMatrix3d::Identity();
-    tMatrix3d E = 0.5 * (F.transpose() * F - I);
-    return 2 * gMu * E + gLambda * E.trace() * I;
+    return 0.5 * (F.transpose() * F - I);
+}
+tMatrix3d CalcPK1_part1(const tMatrix3d &F)
+{
+    tMatrix3d E = CalcGreenStrain(F);
+    return 2 * gMu * F * E;
+}
+
+tMatrix3d CalcPK1_part2(const tMatrix3d &F)
+{
+    tMatrix3d E = CalcGreenStrain(F);
+    return gLambda * E.trace() * F;
 }
