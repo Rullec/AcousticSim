@@ -8,6 +8,8 @@
 #include "sim/KinematicBody.h"
 #include "sim/Perturb.h"
 #include "sim/SimObjectBuilder.h"
+#include "scenes/SimStateMachine.h"
+#include "imgui.h"
 // std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim", "acoustic"};
 std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim"};
 
@@ -34,7 +36,7 @@ cSimScene::cSimScene()
     // mVertexArray.clear();
 
     mPerturb = nullptr;
-    mPauseSim = false;
+    mSimStateMachine = std::make_shared<tSimStateMachine>();
     mSceneType = eSceneType::SCENE_SIM;
     // mColDetecter = nullptr;
 }
@@ -62,6 +64,7 @@ void cSimScene::Init(const std::string &conf_path)
 
     InitDrawBuffer();
     InitRaycaster(root);
+    mSimStateMachine->SimulatorInitDone(eSimState::SIMSTATE_PAUSE);
 }
 void cSimScene::BuildObjects(const Json::Value &obj_conf_)
 {
@@ -76,7 +79,6 @@ void cSimScene::BuildObjects(const Json::Value &obj_conf_)
         mObjectList.push_back(obs);
     }
 }
-void cSimScene::PauseSim() { mPauseSim = !mPauseSim; }
 
 /**
  * \breif       save current scene (obstacles to objes)
@@ -134,7 +136,8 @@ void cSimScene::InitRaycaster(const Json::Value &conf)
 #include "utils/TimeUtil.hpp"
 void cSimScene::Update(double delta_time)
 {
-    if (mPauseSim == false)
+
+    if (mSimStateMachine->IsRunning() == true)
     {
         // double default_dt = mIdealDefaultTimestep;
         // if (delta_time < default_dt)
@@ -148,6 +151,7 @@ void cSimScene::Update(double delta_time)
         // apply ext force
         // update position
     }
+    mSimStateMachine->SimulationForwardOneFrameDone();
 }
 
 /**
@@ -187,6 +191,8 @@ void cSimScene::Reset()
 {
     cScene::Reset();
     ClearForce();
+    for (auto &x : mObjectList)
+        x->Reset();
 }
 
 /**
@@ -318,13 +324,12 @@ void cSimScene::MouseButton(int button, int action, int mods)
 #include "GLFW/glfw3.h"
 void cSimScene::Key(int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_I && action == GLFW_PRESS)
+    mSimStateMachine->Key(key, scancode, action, mods);
+    switch (key)
     {
-        PauseSim();
-    }
-    else if (key == GLFW_KEY_S && action == GLFW_PRESS)
-    {
+    case GLFW_KEY_S:
         SaveCurrentScene();
+        break;
     }
 }
 
@@ -452,13 +457,17 @@ std::vector<cKinematicBodyPtr> cSimScene::GetObstacleList()
 /**
  * \brief                   Is sim paused
  */
-bool cSimScene::IsSimPaused() const { return this->mPauseSim; }
+bool cSimScene::IsSimPaused() const { return mSimStateMachine->IsRunning() == false; }
 
 /**
  * \brief                   Update imgui for simulation scene
 */
 void cSimScene::UpdateImGui()
 {
+    auto cur_state = mSimStateMachine->GetCurrentState();
+    auto name = tSimStateMachine::BuildStateStr(cur_state);
+    // std::cout << "cSimScene::UpdateImGui, cur state = " << cur_state << " name = " << name << std::endl;
+    ImGui::Text("simulation state: %s", name.c_str());
     for (auto &obj : this->mObjectList)
     {
         obj->UpdateImGUi();

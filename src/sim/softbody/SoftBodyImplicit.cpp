@@ -21,7 +21,7 @@ cSoftBodyImplicit::~cSoftBodyImplicit()
 
 void cSoftBodyImplicit::Update(float dt)
 {
-    dt = 1e-3;
+    dt = 5e-3;
     UpdateDeformationGradient();
     mGlobalStiffnessMatrix.noalias() = CalcGlobalStiffnessMatrix();
     UpdateExtForce();
@@ -75,8 +75,8 @@ void cSoftBodyImplicit::SolveForNextPos(float dt)
 
     tVectorXd MassDiag = mInvLumpedMassMatrixDiag.cwiseInverse();
 
-    tMatrixXd A = -dt * dt * this->mGlobalStiffnessMatrix;
-    A.diagonal() += MassDiag;
+    tMatrixXd A = dt * (mRayleighDamplingB - dt) * this->mGlobalStiffnessMatrix;
+    A.diagonal() += (1 + mRayleighDamplingA * dt) * MassDiag;
 
     tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) + dt * (mExtForce + mIntForce + mGravityForce + mUserForce);
     tVectorXd vel = A.inverse() * b;
@@ -541,20 +541,6 @@ tMatrixXd cSoftBodyImplicit::CalcElementStiffnessMatrix(int tet_id)
     return K;
 }
 
-tVectorXd cSoftBodyImplicit::GetTetForce(size_t tet_id, const tVectorXd &total_force)
-{
-    tVectorXd tet_force = tVectorXd::Zero(12);
-    for (size_t i = 0; i < 4; i++)
-    {
-        tet_force.segment(3 * i, 3) = total_force.segment(3 * mTetArrayShared[tet_id]->mVertexId[i], 3);
-    }
-    return tet_force;
-}
-
-tVectorXd cSoftBodyImplicit::GetTetVerticesPos(size_t tet_id, const tVectorXd &total_pos)
-{
-    return GetTetForce(tet_id, total_pos);
-}
 
 void cSoftBodyImplicit::CheckDPDx()
 {

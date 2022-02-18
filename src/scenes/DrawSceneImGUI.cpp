@@ -320,7 +320,7 @@ void cDrawSceneImGui::Update(double dt)
 */
 void cDrawSceneImGui::UpdateSimImGui()
 {
-    ImVec2 init_window_size = ImVec2(200, 150);
+    ImVec2 init_window_size = ImVec2(400, 300);
     ImGui::SetNextWindowSize(init_window_size, ImGuiCond_FirstUseEver);
 
     ImGui::SetNextWindowPos(ImVec2(float(gWindowWidth) - init_window_size.x, 0),

@@ -72,7 +72,7 @@ public:
     virtual void CalcAABB(tVector &min, tVector &max) const;
     double CalcTotalArea() const;
     virtual void UpdateImGUi();
-
+    virtual void Reset() = 0;
 protected:
     float mColorAlpha = 1.0;
     int mObjId;

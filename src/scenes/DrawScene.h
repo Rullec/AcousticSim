@@ -11,12 +11,12 @@
 #define SIM_VK_VERTEX_NORMAL_SIZE 3
 #define SIM_VK_VERTEX_TEX_SIZE 2
 #define SIM_VK_VERTEX_POS_OFFSET_BYTE 0
-#define SIM_VK_VERTEX_COLOR_OFFSET_BYTE                                        \
+#define SIM_VK_VERTEX_COLOR_OFFSET_BYTE \
     (SIM_VK_VERTEX_POS_OFFSET_BYTE + sizeof(float) * SIM_VK_VERTEX_POS_SIZE)
-#define SIM_VK_VERTEX_NORMAL_OFFSET_BYTE                                       \
+#define SIM_VK_VERTEX_NORMAL_OFFSET_BYTE \
     (SIM_VK_VERTEX_COLOR_OFFSET_BYTE + sizeof(float) * SIM_VK_VERTEX_COLOR_SIZE)
-#define SIM_VK_VERTEX_TEX_OFFSET_BYTE                                          \
-    (SIM_VK_VERTEX_NORMAL_OFFSET_BYTE +                                        \
+#define SIM_VK_VERTEX_TEX_OFFSET_BYTE   \
+    (SIM_VK_VERTEX_NORMAL_OFFSET_BYTE + \
      sizeof(float) * SIM_VK_VERTEX_NORMAL_SIZE)
 
 #define SIM_VK_VERTEX_BUFFER_SIZE (10000 * 10000)
@@ -150,7 +150,7 @@ protected:
     VkDescriptorSetLayout mDescriptorSetLayout; // descriptors (uniform objects)
                                                 // layout used in the shader
     VkPipelineLayout mPipelineLayout;           // uniform values in the shader
-    VkRenderPass mRenderPass; // special settings for a render pass
+    VkRenderPass mRenderPass;                   // special settings for a render pass
     VkPipeline mTriangleGraphicsPipeline, mLinesGraphicsPipeline;
     std::vector<VkFramebuffer> mSwapChainFramebuffers; //
     VkCommandPool mCommandPool;
@@ -214,4 +214,5 @@ protected:
     std::string mGroundPNGPath;
     bool mSceneIsTheLastRenderPass;
     bool mEnableCamAutoRot; // rotate the camera
+    bool mSingleFrameSimulationMode = false;
 };

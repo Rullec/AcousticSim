@@ -43,30 +43,37 @@ void cSoftBody::Init(const Json::Value &conf)
                       mTriangleArrayShared,
                       mTetArrayShared);
     mMaterial = eMaterialModelType::STVK;
+    mRayleighDamplingA = cJsonUtil::ParseAsFloat("rayleigh_damping_a", conf);
+    mRayleighDamplingB = cJsonUtil::ParseAsFloat("rayleigh_damping_b", conf);
+    SIM_INFO("rayleight damping a {} b {}", mRayleighDamplingA, mRayleighDamplingB);
+    mFrictionCoef = cJsonUtil::ParseAsFloat("friction", conf);
+    mCollisionK = cJsonUtil::ParseAsFloat("collision_k", conf);
 
     std::cout << "load from path " << mTetMeshPath << " done\n";
     UpdateTriangleNormal();
     UpdateVertexNormalFromTriangleNormal();
 
     InitInvDm();
+    InitPos();
+    InitTetVolume();
+    InitDiagLumpedMassMatrix();
+    InitForceVector();
+    // mXcur[3 * mTetArrayShared[0]->mVertexId[0] + 1] += 0.02;
+    mXprev = mXcur;
+    mXInit = mXcur;
+    SyncPosToVectorArray();
+}
+void cSoftBody::InitForceVector()
+{
     int num_of_v = this->mVertexArrayShared.size();
     mIntForce.noalias() = tVectorXd::Zero(3 * num_of_v);
     mExtForce.noalias() = tVectorXd::Zero(3 * num_of_v);
     mUserForce.noalias() = tVectorXd::Zero(3 * num_of_v);
-    mGravityForce = tVectorXd::Zero(3 * num_of_v);
-    InitPos();
-    InitTetVolume();
-    InitDiagLumpedMassMatrix();
-
-    // mXcur[3 * mTetArrayShared[0]->mVertexId[0] + 1] += 0.02;
-    mXprev = mXcur;
-    SyncPosToVectorArray();
+    mGravityForce.noalias() = tVectorXd::Zero(3 * num_of_v);
     for (int i = 0; i < num_of_v; i++)
     {
         mGravityForce.segment(3 * i, 3) = gGravity.segment(0, 3).cast<double>() / mInvLumpedMassMatrixDiag[3 * i];
     }
-
-    // exit(1);
 }
 void cSoftBody::InitPos()
 {
@@ -199,15 +206,28 @@ void cSoftBody::UpdateExtForce()
 {
     int num_of_v = this->mVertexArrayShared.size();
     double ground_height = 1e-2;
-    double k = 1e3;
+    double k = mCollisionK;
+    float KinectFrictionCoef = mFrictionCoef;
     // mExtForce.fill(5);
     // mExtForce[3 * 1 + 1] = 10;
     for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
         double dist = mVertexArrayShared[i]->mPos[1] - ground_height;
+
         if (dist < 0)
         {
-            mExtForce[3 * i + 1] = -dist * k;
+            float normal_force_amp = -dist * k;
+
+            tVector3d friction_dir = -1 * (mXcur.segment(3 * i, 3) - mXprev.segment(3 * i, 3));
+            friction_dir[1] = 0;
+            friction_dir.normalize();
+            float friction_force_amp = KinectFrictionCoef * std::fabs(normal_force_amp);
+            tVector3d force = tVector3d::Zero();
+            force[1] = normal_force_amp;
+            force[0] = friction_dir[0] * friction_force_amp;
+            force[2] = friction_dir[2] * friction_force_amp;
+
+            mExtForce.segment(3 * i, 3) = force;
         }
     }
 }
@@ -406,7 +426,10 @@ void cSoftBody::UpdateImGUi()
     }
 
     ImGui::Combo("Material", &item_cur_idx, items.data(), items.size());
-
+    ImGui::SliderFloat("dampingA", &mRayleighDamplingA, 0, 50);
+    ImGui::SliderFloat("dampingB", &mRayleighDamplingB, 0, 500);
+    ImGui::SliderFloat("friction", &mFrictionCoef, 0, 1);
+    ImGui::SliderFloat("collisionK", &mCollisionK, 0, 2e3);
     mMaterial = static_cast<eMaterialModelType>(item_cur_idx);
 }
 
@@ -589,4 +612,27 @@ tMatrix3d CalcPK1_part2(const tMatrix3d &F)
 {
     tMatrix3d E = CalcGreenStrain(F);
     return gLambda * E.trace() * F;
+}
+
+void cSoftBody::Reset()
+{
+    InitForceVector();
+    mXcur = mXInit;
+    mXprev = mXInit;
+    SyncPosToVectorArray();
+}
+
+tVectorXd cSoftBody::GetTetForce(size_t tet_id, const tVectorXd &total_force)
+{
+    tVectorXd tet_force = tVectorXd::Zero(12);
+    for (size_t i = 0; i < 4; i++)
+    {
+        tet_force.segment(3 * i, 3) = total_force.segment(3 * mTetArrayShared[tet_id]->mVertexId[i], 3);
+    }
+    return tet_force;
+}
+
+tVectorXd cSoftBody::GetTetVerticesPos(size_t tet_id, const tVectorXd &total_pos)
+{
+    return GetTetForce(tet_id, total_pos);
 }

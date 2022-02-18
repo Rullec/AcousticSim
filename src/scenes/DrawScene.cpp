@@ -355,7 +355,7 @@ void cDrawScene::CreateGraphicsPipeline(const std::string mode,
         VK_FALSE; // clamp the data outside of the near-far plane insteand of
                   // deleting them
     raster_info.rasterizerDiscardEnable =
-        VK_FALSE; // disable the rasterization, it certainly should be disable
+        VK_FALSE;                                   // disable the rasterization, it certainly should be disable
     raster_info.polygonMode = VK_POLYGON_MODE_FILL; // normal
     raster_info.lineWidth =
         1.0f; // if not 1.0, we need to enable the GPU "line_width" feature
@@ -639,7 +639,6 @@ void cDrawScene::MouseButton(int button, int action, int mods)
         }
     }
 
-    
     mSimScene->MouseButton(button, action, mods);
 }
 
@@ -1109,7 +1108,7 @@ void cDrawScene::CreateDescriptorSetLayout()
     mvpLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     mvpLayoutBinding.descriptorCount = 1;
     mvpLayoutBinding.stageFlags =
-        VK_SHADER_STAGE_VERTEX_BIT; // we use the descriptor in vertex shader
+        VK_SHADER_STAGE_VERTEX_BIT;                // we use the descriptor in vertex shader
     mvpLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
     // sampler

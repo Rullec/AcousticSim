@@ -22,8 +22,7 @@ protected:
     virtual void CheckElementStiffnessMat();
     virtual void CheckGlobalStiffnessMat();
 
-    virtual tVectorXd GetTetForce(size_t tet_id, const tVectorXd &total_force);
-    virtual tVectorXd GetTetVerticesPos(size_t tet_id, const tVectorXd &total_pos);
+    
     virtual void SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_vertices_pos);
 
     virtual void UpdateIntForce() override;

@@ -7,7 +7,9 @@ DrawSceneImGUI.cpp
 
 add_library(sim_scenes_lib 
 Scene.cpp
-SimScene.cpp)
+SimScene.cpp
+SimStateMachine.cpp
+)
 
 
 add_library(

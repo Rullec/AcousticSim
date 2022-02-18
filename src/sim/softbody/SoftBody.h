@@ -43,6 +43,7 @@ public:
     virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
     virtual eMaterialModelType GetMaterial() const;
     virtual void UpdateImGUi() override;
+    virtual void Reset() override;
 
 protected:
     std::string mTetMeshPath = "";
@@ -53,19 +54,23 @@ protected:
     tEigenArr<tMatrix3d> mF;                                   // deformation gradient, F
     tEigenArr<tMatrix3d> mInvDm;                               // DmInv, used to calculate F, please read the SIGGRAPH 2012 course for more details
     tVectorXd mGravityForce, mExtForce, mIntForce, mUserForce; // internal & external force vector on each node, \in R^{3n}
-    tVectorXd mXcur, mXprev;                                   // timestep previous and current
+    tVectorXd mXcur, mXprev, mXInit;                           // timestep previous and current
     tVectorXd mInvLumpedMassMatrixDiag;                        // row-diagnozation-lumped mass matrix
     tVectorXd mInitTetVolume;
     double mRho; // the volume density [SI] kg/m^3
     eMaterialModelType mMaterial;
-
+    float mRayleighDamplingA, mRayleighDamplingB; // rayleigh damping for mass mat and stiffness mat
+    float mFrictionCoef, mCollisionK;
     virtual void InitInvDm();
     virtual void InitPos();
     virtual void InitDiagLumpedMassMatrix();
     virtual void InitTetVolume();
+    virtual void InitForceVector();
     virtual void UpdateIntForce();
     virtual tVectorXd CalcTetIntForce(size_t tet_id);
     virtual tVectorXd CalcTetIntForceBySelectionMatrix(size_t tet_id);
+    virtual tVectorXd GetTetForce(size_t tet_id, const tVectorXd &total_force);
+    virtual tVectorXd GetTetVerticesPos(size_t tet_id, const tVectorXd &total_pos);
     virtual void UpdateExtForce();
     double CalcEnergy();
     virtual void UpdateTriangleNormal() override;

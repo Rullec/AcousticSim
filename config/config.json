@@ -6,7 +6,11 @@
             "object_type": "SoftBody",
             // "tet_path": "./data/tetmesh/single_tet/tet.1",
             "tet_path": "./data/tetmesh/cube/cube.1",
-            "rho": 1000
+            "rayleigh_damping_a": 5,
+            "rayleigh_damping_b": 100,
+            "friction" : 1,
+            "collision_k" : 1e3,
+            "rho": 100
         }
     ],
     "window_height": 600,
@@ -19,13 +23,13 @@
     "camera": {
         "camera_type": "arcball_cam",
         "camera_pos": [
-            0.3,
-            0.5,
-            0.3
+            0.0,
+            0.1,
+            0.5
         ],
         "camera_focus": [
             0.0,
-            0.2,
+            0.1,
             0.0
         ],
         "fov": 52.5,

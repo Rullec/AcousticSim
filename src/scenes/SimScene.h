@@ -25,6 +25,7 @@ SIM_DECLARE_CLASS_AND_PTR(cKinematicBody)
 SIM_DECLARE_CLASS_AND_PTR(cBaseObject)
 SIM_DECLARE_CLASS_AND_PTR(cRaycaster)
 SIM_DECLARE_CLASS_AND_PTR(cCollisionDetecter)
+SIM_DECLARE_STRUCT_AND_PTR(tSimStateMachine)
 class cSimScene : public cScene
 {
 public:
@@ -60,6 +61,7 @@ public:
     virtual void UpdateImGui();
 
 protected:
+    tSimStateMachinePtr mSimStateMachine;
     tPerturb *mPerturb;
     eSceneType mSceneType;
     bool mEnableProfiling;
@@ -97,7 +99,5 @@ protected:
     virtual void UpdateObjects();
     virtual void CreateObstacle(const Json::Value &conf);
     virtual void CreateCollisionDetecter();
-    bool mPauseSim;
-    virtual void PauseSim();
     virtual void PerformCollisionDetection();
 };

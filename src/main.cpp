@@ -29,7 +29,6 @@ GLFWwindow *window = nullptr;
 std::shared_ptr<cDrawScene> draw_scene = nullptr;
 std::shared_ptr<cScene> scene = nullptr;
 bool esc_pushed = false;
-bool gPause = true;
 int gWindowWidth, gWindowHeight;
 
 static void ResizeCallback(GLFWwindow *window, int w, int h)
@@ -54,11 +53,6 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action,
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     {
         esc_pushed = true;
-    }
-    else if (key == GLFW_KEY_I && action == GLFW_PRESS)
-    {
-        gPause = !gPause;
-        std::cout << "[log] simulation paused\n";
     }
 }
 
@@ -194,8 +188,8 @@ void ParseConfig(std::string conf)
     }
     Json::Value root;
     cJsonUtil::LoadJson(conf, root);
-    gPause = cJsonUtil::ParseAsBool("pause_at_first", root);
+    // gPause = cJsonUtil::ParseAsBool("pause_at_first", root);
     gWindowWidth = cJsonUtil::ParseAsInt("window_width", root);
     gWindowHeight = cJsonUtil::ParseAsInt("window_height", root);
-    SIM_INFO("pause at first = {}", gPause);
+    // SIM_INFO("pause at first = {}", gPause);
 }
