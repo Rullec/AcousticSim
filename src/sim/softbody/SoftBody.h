@@ -90,5 +90,4 @@ tMatrix3d CalcGreenStrain(const tMatrix3d &F);
 tMatrix3d CalcPK1(const tMatrix3d &F);
 tMatrix3d CalcPK1_part1(const tMatrix3d &F);
 tMatrix3d CalcPK1_part2(const tMatrix3d &F);
-void GetSelectionMatrix(tMatrixXd &Sd, tMatrixXd &Sb);
 extern float gMu, gLambda;

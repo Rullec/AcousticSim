@@ -142,7 +142,7 @@ OMP_PARALLEL_FOR_SUM_REDUCTION(sum)
 }
 int main(int argc, char **argv)
 {
-    test_openmp();
+    // test_openmp();
     // exit(1);
 
     std::string conf = "";
