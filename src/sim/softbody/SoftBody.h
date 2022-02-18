@@ -64,6 +64,8 @@ protected:
     virtual void InitDiagLumpedMassMatrix();
     virtual void InitTetVolume();
     virtual void UpdateIntForce();
+    virtual tVectorXd CalcTetIntForce(size_t tet_id);
+    virtual tVectorXd CalcTetIntForceBySelectionMatrix(size_t tet_id);
     virtual void UpdateExtForce();
     double CalcEnergy();
     virtual void UpdateTriangleNormal() override;
@@ -83,4 +85,5 @@ tMatrix3d CalcGreenStrain(const tMatrix3d &F);
 tMatrix3d CalcPK1(const tMatrix3d &F);
 tMatrix3d CalcPK1_part1(const tMatrix3d &F);
 tMatrix3d CalcPK1_part2(const tMatrix3d &F);
+void GetSelectionMatrix(tMatrixXd &Sd, tMatrixXd &Sb);
 extern double gMu, gLambda;

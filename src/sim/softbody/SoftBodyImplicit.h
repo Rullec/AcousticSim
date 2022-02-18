@@ -18,13 +18,20 @@ protected:
     virtual void CheckDPDF();
     virtual void CheckDPDF_part1();
     virtual void CheckDPDF_part2();
+    virtual void CheckDPDx();
     virtual void CheckElementStiffnessMat();
-    virtual tVectorXd GetTetForce(size_t tet_id, const tVectorXd &total_force);
     virtual void CheckGlobalStiffnessMat();
+
+    virtual tVectorXd GetTetForce(size_t tet_id, const tVectorXd &total_force);
+    virtual tVectorXd GetTetVerticesPos(size_t tet_id, const tVectorXd &total_pos);
+    virtual void SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_vertices_pos);
+
     virtual void UpdateIntForce() override;
     virtual void SolveForNextPos(float dt) override;
     virtual tMatrixXd CalcElementStiffnessMatrix(int tet_id);
     virtual tMatrixXd CalcGlobalStiffnessMatrix();
-    tEigenArr<tMatrix3d> mDDsDxTensor_const; // tensor C_{ijk} for d(Ds)/dx
     virtual void InitDDsDxTensor();
+
+    tEigenArr<tMatrix3d> mDDsDxTensor_const; // tensor C_{ijk} for d(Ds)/dx
+    tMatrixXd mGlobalStiffnessMatrix;
 };

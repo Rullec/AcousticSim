@@ -44,7 +44,7 @@ void cSoftBody::Init(const Json::Value &conf)
                       mTetArrayShared);
     mMaterial = eMaterialModelType::STVK;
 
-    std::cout << "load from path " << mTetMeshPath << "done\n";
+    std::cout << "load from path " << mTetMeshPath << " done\n";
     UpdateTriangleNormal();
     UpdateVertexNormalFromTriangleNormal();
 
@@ -58,7 +58,7 @@ void cSoftBody::Init(const Json::Value &conf)
     InitTetVolume();
     InitDiagLumpedMassMatrix();
 
-    // mXcur[3 * 2 + 1] += 0.1;
+    // mXcur[3 * mTetArrayShared[0]->mVertexId[0] + 1] += 0.02;
     mXprev = mXcur;
     SyncPosToVectorArray();
     for (int i = 0; i < num_of_v; i++)
@@ -447,6 +447,74 @@ void cSoftBody::UpdateIntForce()
         mIntForce.segment(tet->mVertexId[3] * 3, 3) += f3;
     }
     // std::cout << "fint = " << mIntForce.transpose() << std::endl;
+}
+
+tVectorXd cSoftBody::CalcTetIntForce(size_t tet_id)
+{
+    auto tet = mTetArrayShared[tet_id];
+    // 1.1 get W: tet volume
+    double W = mInitTetVolume[tet_id];
+    // 1.2 get deformation gradient F
+    const tMatrix3d &F = mF[tet_id];
+    // 1.3 get P(F) in linear elasticity
+
+    tMatrix3d P = CalcPK1(F);
+    // 1.4 calculate force on nodes
+    tMatrix3d H = -W * P * mInvDm[tet_id].transpose();
+    // std::cout << "tet " << i << " H = \n"
+    //           << H << std::endl;
+    tVector3d f3 = -(H.col(0) + H.col(1) + H.col(2));
+    tVectorXd tet_int_force = tVectorXd::Zero(12);
+    tet_int_force.segment(0, 3) = H.col(0);
+    tet_int_force.segment(1, 3) = H.col(1);
+    tet_int_force.segment(2, 3) = H.col(2);
+    tet_int_force.segment(3, 3) = f3;
+    return tet_int_force;
+}
+
+/**
+ * \brief           two constant selection matrices used in stiffness matrix
+ *  For more details please check the note "FEM course 第三部分 离散化(刚度矩阵计算)"
+*/
+void GetSelectionMatrix(tMatrixXd &Sd, tMatrixXd &Sb)
+{
+    {
+        Sb.resize(3, 1);
+        Sb << 1, 1, 1;
+    }
+    {
+        tMatrixXd Sa = tMatrixXd::Zero(9, 3),
+                  Sc = tMatrixXd::Zero(12, 9);
+        Sa.block(0, 0, 3, 1).setOnes();
+        Sa.block(3, 1, 3, 1).setOnes();
+        Sa.block(6, 2, 3, 1).setOnes();
+
+        Sc.block(0, 0, 3, 3).setIdentity();
+        Sc.block(3, 3, 3, 3).setIdentity();
+        Sc.block(6, 6, 3, 3).setIdentity();
+
+        tMatrix3d minus_I = -tMatrix3d::Identity();
+        Sc.block(9, 0, 3, 3).noalias() = minus_I;
+        Sc.block(9, 3, 3, 3).noalias() = minus_I;
+        Sc.block(9, 6, 3, 3).noalias() = minus_I;
+        Sd.noalias() = Sc * Sa;
+    }
+}
+
+tVectorXd cSoftBody::CalcTetIntForceBySelectionMatrix(size_t tet_id)
+{
+    auto tet = mTetArrayShared[tet_id];
+    // 1.1 get W: tet volume
+    double W = mInitTetVolume[tet_id];
+    // 1.2 get deformation gradient F
+    const tMatrix3d &F = mF[tet_id];
+    // 1.3 get P(F) in linear elasticity
+
+    tMatrix3d P = CalcPK1(F);
+    tMatrixXd Sd, Sb;
+    GetSelectionMatrix(Sd, Sb);
+    tVectorXd int_force = -W * Sd * P * mInvDm[tet_id].transpose() * Sb;
+    return int_force;
 }
 
 /**
