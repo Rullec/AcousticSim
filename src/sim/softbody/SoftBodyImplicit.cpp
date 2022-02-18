@@ -23,8 +23,8 @@ void cSoftBodyImplicit::Update(float dt)
 {
     dt = 5e-3;
     UpdateDeformationGradient();
-    mGlobalStiffnessMatrix.noalias() = CalcGlobalStiffnessMatrix();
     UpdateExtForce();
+    mGlobalStiffnessMatrix.noalias() = CalcGlobalStiffnessMatrix();
     UpdateIntForce();
     SolveForNextPos(dt);
 }

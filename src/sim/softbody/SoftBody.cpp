@@ -5,8 +5,8 @@
 #include "geometries/Primitives.h"
 #include <iostream>
 extern const tVector gGravity;
-double gMu = 1e5;
-double gLambda = 0.5;
+float gMu = 5e2;
+float gLambda = 0.5;
 
 std::string gMaterialModelTypeStr[eMaterialModelType::NUM_OF_MATERIAL_MODEL] =
     {
@@ -197,8 +197,8 @@ void cSoftBody::Update(float dt)
 {
     dt = 5e-3;
     UpdateDeformationGradient();
-    UpdateIntForce();
     UpdateExtForce();
+    UpdateIntForce();
     SolveForNextPos(dt);
 }
 
@@ -216,6 +216,7 @@ void cSoftBody::UpdateExtForce()
 
         if (dist < 0)
         {
+            mVertexArrayShared[i]->mPos[1] = 0;
             float normal_force_amp = -dist * k;
 
             tVector3d friction_dir = -1 * (mXcur.segment(3 * i, 3) - mXprev.segment(3 * i, 3));
@@ -230,6 +231,12 @@ void cSoftBody::UpdateExtForce()
             mExtForce.segment(3 * i, 3) = force;
         }
     }
+    // for (int i = 0; i < mXcur.size() / 3; i++)
+    // {
+    //     if (mXcur[3 * i + 1] < 0)
+    //         mXcur[3 * i + 1] = 1e-3;
+    // }
+    // SyncPosToVectorArray();
 }
 
 void cSoftBody::SolveForNextPos(float dt)
@@ -430,6 +437,7 @@ void cSoftBody::UpdateImGUi()
     ImGui::SliderFloat("dampingB", &mRayleighDamplingB, 0, 500);
     ImGui::SliderFloat("friction", &mFrictionCoef, 0, 1);
     ImGui::SliderFloat("collisionK", &mCollisionK, 0, 2e3);
+    ImGui::SliderFloat("Mu", &gMu, 0.0, 1e5);
     mMaterial = static_cast<eMaterialModelType>(item_cur_idx);
 }
 

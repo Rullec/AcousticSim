@@ -36,4 +36,5 @@ protected:
 
     std::vector<VkCommandBuffer> mCommandBufferImGui;
     std::vector<VkFramebuffer> mImGuiFrameBuffers;
+    float mCurFPS;
 };

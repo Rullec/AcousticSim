@@ -312,7 +312,9 @@ void cDrawSceneImGui::Update(double dt)
     ImGui::Render();
 
     // update the simulation scene
+    cTimeUtil::Begin("fps_measure");
     cDrawScene::Update(dt);
+    mCurFPS = 1e3 / cTimeUtil::End("fps_measure", true);
 }
 
 /**
@@ -333,12 +335,13 @@ void cDrawSceneImGui::UpdateSimImGui()
     // bool *p_open = &open;
 
     ImGui::Begin("config");
+    ImGui::Text("FPS %.1f", mCurFPS);
     // std::cout << "update acoustic imgui\n";
     // if (true == ImGui::Button("push_button"))
     // {
     //     std::cout << "[debug] button pushed\n";
     // }
-    this->mSimScene->UpdateImGui();
+    mSimScene->UpdateImGui();
     ImGui::End();
 }
 void cDrawSceneImGui::DrawFrame()
