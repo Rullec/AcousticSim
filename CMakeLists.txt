@@ -29,6 +29,7 @@ endif()
 find_package(GLFW3 REQUIRED)
 include_directories(./src)
 find_package(OpenMP REQUIRED)
+link_directories(${OpenMP_LIBRARY_DIR})
 
 if(WIN32)
     add_definitions(-D _USE_MATH_DEFINES)
@@ -48,11 +49,20 @@ else()
     add_definitions(-g)
 endif()
 
-# -------------------enable openmp---------------------
 
+# -------------------enable openmp---------------------
+set(USE_OPENMP ON)
 if(USE_OPENMP)
-    add_definitions(-fopenmp)
+    message(STATUS "openmp c flags ${OpenMP_C_FLAGS}")
+    message(STATUS "openmp cxx flags ${OpenMP_CXX_FLAGS}")
+    message(STATUS "openmp exe linker flags ${OpenMP_EXE_LINKER_FLAGS}")
+    add_compile_definitions(EnableOMP)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_OPENMP")
+    
     message(STATUS "we use openmp")
 else()
     message(STATUS "we dont use openmp")

@@ -24,7 +24,7 @@
 
 #ifdef EnableOMP
 #include <omp.h>
-#define OMP_NUM_THREADS std::max((omp_get_num_procs() - 1), 1)
+#define OMP_NUM_THREADS ((omp_get_num_procs() - 1) > 1 ? (omp_get_num_procs() - 1) : 1)
 #define OMP_BARRIER __pragma(omp barrier)
 #define OMP_PARALLEL __pragma(omp parallel num_threads(OMP_NUM_THREADS))
 #define OMP_PARALLEL_FOR __pragma(omp parallel for num_threads(OMP_NUM_THREADS))

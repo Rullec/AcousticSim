@@ -24,6 +24,9 @@
 #include "utils/JsonUtil.h"
 #include "utils/LogUtil.h"
 #include <cmath>
+#include "sim/AudioOutput.h"
+extern cAudioOutputPtr gAudioOutput;
+#include "sim/softbody/FourOrderTensorTest.hpp"
 
 GLFWwindow *window = nullptr;
 std::shared_ptr<cDrawScene> draw_scene = nullptr;
@@ -118,12 +121,28 @@ void ParseArg(int argc, char *argv[], std::string &config_path)
     SIM_INFO("conf path {}", config_path);
 }
 
-#include "sim/AudioOutput.h"
-extern cAudioOutputPtr gAudioOutput;
-#include "sim/softbody/FourOrderTensorTest.hpp"
+void test_openmp()
+{
+    cTimeUtil::Begin("calc");
+    size_t times = 1e3;
+    size_t dims = 100;
+    float sum = 0;
+    std::cout << "OMP_NUM_THREADS = " << OMP_NUM_THREADS << std::endl;
+OMP_PARALLEL_FOR_SUM_REDUCTION(sum)
+    for (int i = 0; i < times; i++)
+    {
+        // std::cout << "omp = " << omp_get_num_threads() << std::endl;
+        tMatrixXd a = tMatrixXd::Ones(dims, dims), b = tMatrixXd::Ones(dims, dims);
+        sum += (a * b).sum() * 1.7e-7;
+    }
+
+    std::cout << "sum = " << sum << std::endl;
+    cTimeUtil::End("calc");
+    exit(1);
+}
 int main(int argc, char **argv)
 {
-    // test_tensor();
+    test_openmp();
     // exit(1);
 
     std::string conf = "";
