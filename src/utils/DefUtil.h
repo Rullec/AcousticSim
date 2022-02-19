@@ -24,11 +24,18 @@
 
 #ifdef EnableOMP
 #include <omp.h>
-#define OMP_NUM_THREADS ((omp_get_num_procs() - 1) > 1 ? (omp_get_num_procs() - 1) : 1)
+#define OMP_NUM_THREADS ((omp_get_num_procs()-1)>1?(omp_get_num_procs()-1):1)
+#ifdef _WIN32
 #define OMP_BARRIER __pragma(omp barrier)
 #define OMP_PARALLEL __pragma(omp parallel num_threads(OMP_NUM_THREADS))
 #define OMP_PARALLEL_FOR __pragma(omp parallel for num_threads(OMP_NUM_THREADS))
 #define OMP_PARALLEL_FOR_SUM_REDUCTION(sum) __pragma(omp parallel for num_threads(OMP_NUM_THREADS) reduction(+: sum))
+#else
+#define OMP_BARRIER _Pragma("omp barrier")
+#define OMP_PARALLEL _Pragma("omp parallel num_threads(OMP_NUM_THREADS)")
+#define OMP_PARALLEL_FOR _Pragma("omp parallel for num_threads(OMP_NUM_THREADS)")
+#define OMP_PARALLEL_FOR_SUM_REDUCTION(sum) _Pragma("omp parallel for num_threads(OMP_NUM_THREADS) reduction(+: sum)")
+#endif
 #else
 #define OMP_NUM_THREADS 1
 #define OMP_BARRIER 

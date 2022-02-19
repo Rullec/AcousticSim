@@ -121,29 +121,57 @@ void ParseArg(int argc, char *argv[], std::string &config_path)
     SIM_INFO("conf path {}", config_path);
 }
 
-void test_openmp()
+#include "CGSolver.h"
+void test_cg()
 {
-    cTimeUtil::Begin("calc");
-    size_t times = 1e3;
-    size_t dims = 100;
-    float sum = 0;
-    std::cout << "OMP_NUM_THREADS = " << OMP_NUM_THREADS << std::endl;
-OMP_PARALLEL_FOR_SUM_REDUCTION(sum)
-    for (int i = 0; i < times; i++)
-    {
-        // std::cout << "omp = " << omp_get_num_threads() << std::endl;
-        tMatrixXd a = tMatrixXd::Ones(dims, dims), b = tMatrixXd::Ones(dims, dims);
-        sum += (a * b).sum() * 1.7e-7;
-    }
-
-    std::cout << "sum = " << sum << std::endl;
-    cTimeUtil::End("calc");
+    int dims = 1000;
+    tMatrixXd A = tMatrixXd::Random(dims, dims);
+    A = A.transpose() * A;
+    tVectorXd b = tVectorXd::Random(dims);
+    cTimeUtil::Begin("cg");
+    tVectorXd x = cCGSolver::Solve(A, b);
+    cTimeUtil::End("cg");
+    tVectorXd residual = A * x - b;
+    std::cout << "CG residual = " << residual.norm() << std::endl;
+    // std::cout << "CG x = " << x.transpose() << std::endl;
+    cTimeUtil::Begin("inv");
+    tVectorXd inv_x = A.inverse() * b;
+    cTimeUtil::End("inv");
+    tVectorXd inv_residual = A * inv_x - b;
+    std::cout << "inv residual = " << inv_residual.norm() << std::endl;
+    // std::cout << "inv x = " << inv_x.transpose() << std::endl;
+    exit(1);
+}
+#include "sim/softbody/NeoHookeanMaterial.h"
+struct Foo
+{
+    Foo(int num) : num_(num) {}
+    void print_add(int i) const { std::cout << num_ + i << '\n'; }
+    int num_;
+};
+extern void CheckDJDF(const tMatrix3d &F);
+void test_material()
+{
+    Json::Value root;
+    root["youngs"] = 10;
+    root["poisson_ratio"] = 0.5;
+    auto material = std::make_shared<cNeoHookeanMaterial>();
+    material->Init(root);
+    tMatrix3d F = tMatrix3d::Random();
+    material->CheckDPDF(F);
+    // CheckDJDF(F);
+    // std::cout << F << std::endl;
+    // std::cout << F.inverse().transpose() << std::endl;
+    // exit(1);
+    // CheckDdetFIDF(F);
+    // material->CalcP(F);
+    // cFourOrderTensor dpdf_ana = material->CalcDPDF(F);
     exit(1);
 }
 int main(int argc, char **argv)
 {
-    // test_openmp();
-    // exit(1);
+    test_material();
+    exit(1);
 
     std::string conf = "";
     ParseArg(argc, argv, conf);

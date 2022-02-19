@@ -10,7 +10,8 @@ set(
     softbody/SoftBodyImplicit.cpp
     softbody/FourOrderTensor.cpp
     softbody/ThreeOrderTensor.cpp
-    # softbody/FourOrderTensorTest.hpp
+    softbody/NeoHookeanMaterial.cpp
+    softbody/BaseMaterial.cpp
     SimObjectBuilder.cpp
 )
 

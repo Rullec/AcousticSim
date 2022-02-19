@@ -87,7 +87,7 @@ add_subdirectory(./src/scenes)
 set(my_libs ${scenes_lib} ${utils_lib} ${imgui_lib})
 set(libs ${Vulkan_LIBRARIES} ${GLFW3_LIBRARY} ${my_libs})
 
-add_executable(main ./src/main.cpp)
+add_executable(main ./src/main.cpp ./src/CGSolver.cpp)
 target_link_libraries(main ${libs} scenes_lib utils_lib geo_lib OpenMP::OpenMP_CXX)
 
 if(WIN32)

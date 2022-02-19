@@ -64,8 +64,11 @@ cFourOrderTensor cFourOrderTensor::operator+(const cFourOrderTensor &tensor)
         }
     return new_tensor;
 }
-
-cFourOrderTensor cFourOrderTensor::operator*(double scalar)
+cFourOrderTensor cFourOrderTensor::operator-(const cFourOrderTensor &tensor)
+{
+    return (*this) + tensor * (-1.0);
+}
+cFourOrderTensor cFourOrderTensor::operator*(double scalar) const
 {
     cFourOrderTensor new_tensor(*this);
     for (int i = 0; i < mDimI; i++)
@@ -75,12 +78,17 @@ cFourOrderTensor cFourOrderTensor::operator*(double scalar)
         }
     return new_tensor;
 }
+
+cFourOrderTensor cFourOrderTensor::operator/(double scalar) const
+{
+    return (*this) * (1.0 / scalar);
+}
 /**
  * \brief           expand a tensor T_{ijkl} to M_{pq}
  *      M_{i * prod(jkl) + j * prod(kl) + k * prod(l) + l} = T_{ijkl}
  *      For more details, please check "四阶张量转换为矩阵.md"
 */
-tMatrixXd cFourOrderTensor::ExpandToMatrix()
+tMatrixXd cFourOrderTensor::ExpandToMatrix() const
 {
     int rows = mDimI * mDimJ;
     int cols = mDimK * mDimL;

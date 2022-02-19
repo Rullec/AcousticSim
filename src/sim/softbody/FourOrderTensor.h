@@ -13,11 +13,13 @@ public:
     tMatrixXd &operator()(size_t i, size_t j);
     tMatrixXd operator()(size_t i, size_t j) const;
     cFourOrderTensor operator+(const cFourOrderTensor &tensor);
-    cFourOrderTensor operator*(double scalar);
+    cFourOrderTensor operator-(const cFourOrderTensor &tensor);
+    cFourOrderTensor operator*(double scalar) const;
+    cFourOrderTensor operator/(double scalar) const;
     tMatrixXd GetLastTwoComp(size_t k, size_t l);
     void SetLastTwoComp(size_t k, size_t l, const tMatrixXd &val);
 
-    tMatrixXd ExpandToMatrix();
+    tMatrixXd ExpandToMatrix() const;
     void LoadFromAMatrix(size_t dimI, size_t dimJ, size_t dimK, size_t dimL, const tMatrixXd &);
     tVector4i GetShape() const;
     tEigenArr<tMatrixXd> GetInnerArray() const;

@@ -11,6 +11,8 @@ cFourOrderTensor CalcDPDF_part2(const tMatrix3d &F);
 cFourOrderTensor CalcDTrEIDF(const tMatrix3d &F);
 cFourOrderTensor CalcDFDF(const tMatrix3d &F);
 
+typedef std::function<tMatrixXd(const tMatrixXd &)> tForwardCalcFunc;
+extern cFourOrderTensor CalcNumericalDerivaitve_MatrixWRTMatrix(tForwardCalcFunc func, const tMatrixXd &X_raw, const tVector2i output_dims, float eps = 1e-5);
 cSoftBodyImplicit::cSoftBodyImplicit(int id_) : cSoftBody(id_)
 {
 }
@@ -193,23 +195,6 @@ void cSoftBodyImplicit::CheckDFDx()
 #include "sim/softbody/FourOrderTensor.h"
 
 // forward calculate function
-typedef std::function<tMatrixXd(const tMatrixXd &)> tForwardCalcFunc;
-cFourOrderTensor CalcNumericalDerivaitve_MatrixWRTMatrix(tForwardCalcFunc func, const tMatrixXd &X_raw, const tVector2i output_dims, float eps = 1e-5)
-{
-    tMatrixXd X = X_raw;
-    tMatrixXd old_value = func(X);
-    cFourOrderTensor res(output_dims[0], output_dims[1], X.rows(), X.cols());
-    tVector4i derive_dims = res.GetShape();
-    for (size_t k = 0; k < X.rows(); k++)
-        for (size_t l = 0; l < X.cols(); l++)
-        {
-            X(k, l) += eps;
-            tMatrixXd new_value = func(X);
-            res.SetLastTwoComp(k, l, (new_value - old_value) / eps);
-            X(k, l) -= eps;
-        }
-    return res;
-}
 
 void cSoftBodyImplicit::CheckDFDF()
 {
@@ -540,7 +525,6 @@ tMatrixXd cSoftBodyImplicit::CalcElementStiffnessMatrix(int tet_id)
 
     return K;
 }
-
 
 void cSoftBodyImplicit::CheckDPDx()
 {
