@@ -150,28 +150,9 @@ struct Foo
     int num_;
 };
 extern void CheckDJDF(const tMatrix3d &F);
-void test_material()
-{
-    Json::Value root;
-    root["youngs"] = 10;
-    root["poisson_ratio"] = 0.5;
-    auto material = std::make_shared<cNeoHookeanMaterial>();
-    material->Init(root);
-    tMatrix3d F = tMatrix3d::Random();
-    material->CheckDPDF(F);
-    // CheckDJDF(F);
-    // std::cout << F << std::endl;
-    // std::cout << F.inverse().transpose() << std::endl;
-    // exit(1);
-    // CheckDdetFIDF(F);
-    // material->CalcP(F);
-    // cFourOrderTensor dpdf_ana = material->CalcDPDF(F);
-    exit(1);
-}
+
 int main(int argc, char **argv)
 {
-    test_material();
-    exit(1);
 
     std::string conf = "";
     ParseArg(argc, argv, conf);

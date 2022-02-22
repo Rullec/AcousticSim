@@ -56,14 +56,15 @@ void tPerturb::UpdatePerturbPos(const tVector &cur_camera_pos, const tVector &di
     if (target_goal.hasNaN() == true)
     {
         SIM_WARN("ray has no intersection with the rect range, please "
-                  "scale the plane");
+                 "scale the plane");
         return;
     }
     mGoalPos = target_goal;
     tVector cur_perturb_pos = CalcPerturbPos();
     mPerturbForce = (mGoalPos - cur_perturb_pos) * 10;
-    // std::cout << "[update] cur perturb pos = " << cur_perturb_pos.transpose()
-    //           << " goal pos = " << goal_pos.transpose() << std::endl;
+    // std::cout << "[update] cur perturb pos = " << cur_perturb_pos.transpose() << std::endl;
+    // std::cout << "[update] goal pos = " << mGoalPos.transpose() << std::endl;
+    // std::cout << "[update] perturb force = " << mPerturbForce.transpose() << std::endl;
 }
 #include "sim/BaseObject.h"
 tVector tPerturb::CalcPerturbPos() const

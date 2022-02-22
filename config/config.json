@@ -4,18 +4,33 @@
         {
             "object_name": "soft_body",
             "object_type": "SoftBody",
+            "material_type.stvk": "STVK",
+            "material_type": "NEO_HOOKEAN",
+            "init_translation": [
+                0,
+                0.2,
+                0
+            ],
+            "init_rotation": [
+                0,
+                0,
+                0
+            ],
             // "tet_path": "./data/tetmesh/single_tet/tet.1",
-            "tet_path": "./data/tetmesh/cube/cube.1",
-            // "tet_path": "./data/tetmesh/cube_v146/cube_v146.1",
-            "rayleigh_damping_a": 5,
-            "rayleigh_damping_b": 100,
-            "friction" : 1,
-            "collision_k" : 1e3,
+            // "tet_path": "./data/tetmesh/cube/cube.1",
+            // "tet_path": "./data/tetmesh/cube_v38/cube_v38.1",
+            "tet_path": "./data/tetmesh/cube_v146/cube_v146.1",
+            "rayleigh_damping_a": 10,
+            "rayleigh_damping_b": 0,
+            "friction": 0,
+            "youngs": 2e4,
+            "poisson_ratio": 0.7,
+            "collision_k": 1000,
             "rho": 1000
         }
     ],
-    "window_height": 600,
-    "window_width": 800,
+    "window_height": 800,
+    "window_width": 1000,
     "enable_draw": true,
     "enable_only_exporting_cutted_window": true,
     "pause_at_first": false,

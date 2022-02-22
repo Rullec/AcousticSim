@@ -11,6 +11,8 @@ set(
     softbody/FourOrderTensor.cpp
     softbody/ThreeOrderTensor.cpp
     softbody/NeoHookeanMaterial.cpp
+    softbody/StvkMaterial.cpp
+    softbody/MaterialBuilder.cpp
     softbody/BaseMaterial.cpp
     SimObjectBuilder.cpp
 )

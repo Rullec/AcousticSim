@@ -3,22 +3,10 @@
 #include "utils/TetUtil.h"
 #include "geometries/Tetrahedron.h"
 #include "geometries/Primitives.h"
+#include "sim/softbody/BaseMaterial.h"
+#include "sim/softbody/MaterialBuilder.h"
 #include <iostream>
 extern const tVector gGravity;
-float gMu = 5e2;
-float gLambda = 0.5;
-
-std::string gMaterialModelTypeStr[eMaterialModelType::NUM_OF_MATERIAL_MODEL] =
-    {
-        "LINEAR_ELASTICITY",
-        "COROTATED",
-        "FIX_COROTATED",
-        "STVK",
-        "NEO_HOOKEAN"};
-std::string BuildMaterialTypeStr(eMaterialModelType type)
-{
-    return gMaterialModelTypeStr[type];
-}
 
 cSoftBody::cSoftBody(int id) : cBaseObject(eObjectType::SOFTBODY_TYPE, id)
 {
@@ -28,6 +16,24 @@ cSoftBody::~cSoftBody()
 {
 }
 
+void cSoftBody::InitTetTransform(const Json::Value &conf)
+{
+    mInitTranslation = cJsonUtil::ReadVectorJson(
+                           cJsonUtil::ParseAsValue("init_translation", conf))
+                           .segment(0, 3);
+    mInitRotation = cJsonUtil::ReadVectorJson(
+                        cJsonUtil::ParseAsValue("init_rotation", conf))
+                        .segment(0, 3);
+    tMatrix transform = cMathUtil::AxisAngleToRotmat(cMathUtil::Expand(mInitRotation, 0));
+    transform.block(0, 3, 3, 1) = mInitTranslation.segment(0, 3);
+    std::cout << "[debug] apply init rotation(AA) = " << mInitRotation.transpose() << std::endl;
+    std::cout << "[debug] apply init translation = " << mInitTranslation.transpose() << std::endl;
+    for (auto &v : mVertexArrayShared)
+    {
+        v->mPos[3] = 1;
+        v->mPos = transform * v->mPos;
+    }
+}
 /**
  * \brief           create and allocate the softbody data
 */
@@ -42,7 +48,8 @@ void cSoftBody::Init(const Json::Value &conf)
                       mEdgeArrayShared,
                       mTriangleArrayShared,
                       mTetArrayShared);
-    mMaterial = eMaterialModelType::STVK;
+    InitTetTransform(conf);
+    mMaterial = BuildMaterial(conf);
     mRayleighDamplingA = cJsonUtil::ParseAsFloat("rayleigh_damping_a", conf);
     mRayleighDamplingB = cJsonUtil::ParseAsFloat("rayleigh_damping_b", conf);
     SIM_INFO("rayleight damping a {} b {}", mRayleighDamplingA, mRayleighDamplingB);
@@ -195,11 +202,11 @@ int cSoftBody::GetNumOfVertices() const
 */
 void cSoftBody::Update(float dt)
 {
-    dt = 5e-3;
     UpdateDeformationGradient();
     UpdateExtForce();
     UpdateIntForce();
     SolveForNextPos(dt);
+    mUserForce.setZero();
 }
 
 void cSoftBody::UpdateExtForce()
@@ -227,7 +234,7 @@ void cSoftBody::UpdateExtForce()
             force[1] = normal_force_amp;
             force[0] = friction_dir[0] * friction_force_amp;
             force[2] = friction_dir[2] * friction_force_amp;
-
+            // std::cout << "[col] force " << force.transpose() << " on v" << i << std::endl;
             mExtForce.segment(3 * i, 3) = force;
         }
     }
@@ -400,45 +407,59 @@ void cSoftBody::ApplyUserPerturbForceOnce(tPerturb *pert)
     mUserForce.setZero();
     int tri_id = pert->mAffectedTriId;
     tVector3d bary = pert->mBarycentricCoords;
-    tVector3d force = pert->GetPerturbForce().cast<double>().segment(0, 3) * 100;
+    tVector3d force = pert->GetPerturbForce().cast<double>().segment(0, 3) * 10;
     int v0 = mTriangleArrayShared[tri_id]->mId0;
     int v1 = mTriangleArrayShared[tri_id]->mId1;
     int v2 = mTriangleArrayShared[tri_id]->mId2;
     mUserForce.segment(3 * v0, 3) += force * bary[0];
     mUserForce.segment(3 * v1, 3) += force * bary[1];
     mUserForce.segment(3 * v2, 3) += force * bary[2];
-    // std::cout << "[user] apply user force on soft body " << force.transpose() << std::endl;
+    std::cout << "[user] apply user force on soft body " << force.transpose() << std::endl;
 }
 
 /**
  * \brief           return material type
 */
-eMaterialModelType cSoftBody::GetMaterial() const
+cBaseMaterialPtr cSoftBody::GetMaterial() const
 {
     return this->mMaterial;
 }
 
+eMaterialType cSoftBody::GetMaterialType() const
+{
+    return this->mMaterial->GetType();
+}
 /**
  * \brief           update imgui
 */
 #include "imgui.h"
 void cSoftBody::UpdateImGUi()
 {
-    static int item_cur_idx = mMaterial;
 
+    static int item_cur_idx = GetMaterial()->GetType();
+    auto old_idx = item_cur_idx;
+    std::vector<std::string> items_sto = {};
     std::vector<const char *> items = {};
-    for (int i = 0; i < eMaterialModelType::NUM_OF_MATERIAL_MODEL; i++)
+    for (int i = 0; i < eMaterialType::NUM_OF_MATERIAL_MODEL; i++)
     {
+        // auto res = BuildMaterialTypeStr(static_cast<eMaterialType>(i));
+        // std::cout
+        //     << res << std::endl;
+        // items_sto.push_back(res);
         items.push_back(gMaterialModelTypeStr[i].c_str());
     }
 
     ImGui::Combo("Material", &item_cur_idx, items.data(), items.size());
-    ImGui::SliderFloat("dampingA", &mRayleighDamplingA, 0, 50);
-    ImGui::SliderFloat("dampingB", &mRayleighDamplingB, 0, 500);
+    ImGui::SliderFloat("dampingA", &mRayleighDamplingA, 0, 10);
+    ImGui::SliderFloat("dampingB", &mRayleighDamplingB, 0, 1);
     ImGui::SliderFloat("friction", &mFrictionCoef, 0, 1);
     ImGui::SliderFloat("collisionK", &mCollisionK, 0, 2e3);
-    ImGui::SliderFloat("Mu", &gMu, 0.0, 1e5);
-    mMaterial = static_cast<eMaterialModelType>(item_cur_idx);
+    // ImGui::SliderFloat("Mu", &gMu, 0.0, 1e5);
+    if (old_idx != item_cur_idx)
+    {
+        // rebuild the material
+        mMaterial = BuildDefaultMaterial(static_cast<eMaterialType>(item_cur_idx));
+    }
 }
 
 // #include "sim/softbody/SoftBody.h"
@@ -462,7 +483,7 @@ void cSoftBody::UpdateIntForce()
         const tMatrix3d &F = mF[i];
         // 1.3 get P(F) in linear elasticity
 
-        P.noalias() = CalcPK1(F);
+        P.noalias() = mMaterial->CalcP(F);
         // 1.4 calculate force on nodes
         tMatrix3d H = -W * P * mInvDm[i].transpose();
         // std::cout << "tet " << i << " H = \n"
@@ -489,7 +510,7 @@ tVectorXd cSoftBody::CalcTetIntForce(size_t tet_id)
     const tMatrix3d &F = mF[tet_id];
     // 1.3 get P(F) in linear elasticity
 
-    tMatrix3d P = CalcPK1(F);
+    tMatrix3d P = mMaterial->CalcP(F);
     // 1.4 calculate force on nodes
     tMatrix3d H = -W * P * mInvDm[tet_id].transpose();
     // std::cout << "tet " << i << " H = \n"
@@ -541,7 +562,7 @@ tVectorXd cSoftBody::CalcTetIntForceBySelectionMatrix(size_t tet_id)
     const tMatrix3d &F = mF[tet_id];
     // 1.3 get P(F) in linear elasticity
 
-    tMatrix3d P = CalcPK1(F);
+    tMatrix3d P = mMaterial->CalcP(F);
     tMatrixXd Sd, Sb;
     GetSelectionMatrix(Sd, Sb);
     tVectorXd int_force = -W * Sd * P * mInvDm[tet_id].transpose() * Sb;
@@ -551,76 +572,76 @@ tVectorXd cSoftBody::CalcTetIntForceBySelectionMatrix(size_t tet_id)
 /**
  * \brief       Given deformation gradient F, calculate P(F)
 */
-tMatrix3d CalcPK1(const tMatrix3d &F)
-{
-    // tMatrix3d P = tMatrix3d::Zero();
-    // tMatrix3d I = tMatrix3d::Identity();
+// tMatrix3d CalcPK1(const tMatrix3d &F)
+// {
+// tMatrix3d P = tMatrix3d::Zero();
+// tMatrix3d I = tMatrix3d::Identity();
 
-    // switch (mMaterial)
-    // {
-    // // case eMaterialModelType::COROTATED:
-    // // {
-    // //     P.setZero();
-    // //     break;
-    // // }
-    // case eMaterialModelType::LINEAR_ELASTICITY:
-    // {
-    //     /*
-    //         P(F) = \mu * (FT + F -2I) + \lambda * tr(F - I) I
-    //     */
-    //     P.noalias() = gMu * (F.transpose() + F - 2 * I) + gLambda * (F - I).trace() * I;
-    //     break;
-    // }
-    // // case eMaterialModelType::FIX_COROTATED:
-    // // {
-    // //     P.setZero();
-    // //     break;
-    // // }
-    // case eMaterialModelType::STVK:
-    // {
-    //     tMatrix3d E = 0.5 * (F.transpose() * F - I);
-    //     P = F * (2 * gMu * E + gLambda * E.trace() * I);
-    //     break;
-    // }
-    // case eMaterialModelType::NEO_HOOKEAN:
-    // {
-    //     /*
-    //     P(F) = mu * F - mu * F^{-T} + lambda * log(I3) / 2 * F^{-T}
-    //     */
-    //     double I3 = 100;
-    //     tMatrix3d F_inv_T = F.inverse().transpose();
-    //     P.noalias() = gMu * (F - F_inv_T) + gLambda * std::log(I3) / 2 * F_inv_T;
-    //     break;
-    // }
-    // default:
-    // {
-    //     SIM_ERROR("do not support material model {}", BuildMaterialTypeStr(mMaterial));
-    //     exit(1);
-    // }
-    // break;
-    // }
-    // return P;
+// switch (mMaterial)
+// {
+// // case eMaterialModelType::COROTATED:
+// // {
+// //     P.setZero();
+// //     break;
+// // }
+// case eMaterialModelType::LINEAR_ELASTICITY:
+// {
+//     /*
+//         P(F) = \mu * (FT + F -2I) + \lambda * tr(F - I) I
+//     */
+//     P.noalias() = gMu * (F.transpose() + F - 2 * I) + gLambda * (F - I).trace() * I;
+//     break;
+// }
+// // case eMaterialModelType::FIX_COROTATED:
+// // {
+// //     P.setZero();
+// //     break;
+// // }
+// case eMaterialModelType::STVK:
+// {
+//     tMatrix3d E = 0.5 * (F.transpose() * F - I);
+//     P = F * (2 * gMu * E + gLambda * E.trace() * I);
+//     break;
+// }
+// case eMaterialModelType::NEO_HOOKEAN:
+// {
+//     /*
+//     P(F) = mu * F - mu * F^{-T} + lambda * log(I3) / 2 * F^{-T}
+//     */
+//     double I3 = 100;
+//     tMatrix3d F_inv_T = F.inverse().transpose();
+//     P.noalias() = gMu * (F - F_inv_T) + gLambda * std::log(I3) / 2 * F_inv_T;
+//     break;
+// }
+// default:
+// {
+//     SIM_ERROR("do not support material model {}", BuildMaterialTypeStr(mMaterial));
+//     exit(1);
+// }
+// break;
+// }
+// return P;
 
-    tMatrix3d P = CalcPK1_part1(F) + CalcPK1_part2(F);
-    return P;
-}
+//     tMatrix3d P = CalcPK1_part1(F) + CalcPK1_part2(F);
+//     return P;
+// }
 
-tMatrix3d CalcGreenStrain(const tMatrix3d &F)
-{
-    tMatrix3d I = tMatrix3d::Identity();
-    return 0.5 * (F.transpose() * F - I);
-}
-tMatrix3d CalcPK1_part1(const tMatrix3d &F)
-{
-    tMatrix3d E = CalcGreenStrain(F);
-    return 2 * gMu * F * E;
-}
+// tMatrix3d CalcGreenStrain(const tMatrix3d &F)
+// {
+//     tMatrix3d I = tMatrix3d::Identity();
+//     return 0.5 * (F.transpose() * F - I);
+// }
+// tMatrix3d CalcPK1_part1(const tMatrix3d &F)
+// {
+//     tMatrix3d E = CalcGreenStrain(F);
+//     return 2 * gMu * F * E;
+// }
 
-tMatrix3d CalcPK1_part2(const tMatrix3d &F)
-{
-    tMatrix3d E = CalcGreenStrain(F);
-    return gLambda * E.trace() * F;
-}
+// tMatrix3d CalcPK1_part2(const tMatrix3d &F)
+// {
+//     tMatrix3d E = CalcGreenStrain(F);
+//     return gLambda * E.trace() * F;
+// }
 
 void cSoftBody::Reset()
 {

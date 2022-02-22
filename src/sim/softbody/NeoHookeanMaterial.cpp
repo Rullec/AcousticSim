@@ -35,6 +35,11 @@ cFourOrderTensor CalcNumericalDerivaitve_MatrixWRTMatrix(tForwardCalcFunc func, 
     return res;
 }
 
+cNeoHookeanMaterial::cNeoHookeanMaterial() : cBaseMaterial(eMaterialType::NEO_HOOKEAN)
+{
+
+}
+
 void cNeoHookeanMaterial::Init(const Json::Value &conf)
 {
     mMu = cJsonUtil::ParseAsDouble("youngs", conf);

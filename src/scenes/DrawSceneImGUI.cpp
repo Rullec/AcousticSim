@@ -51,7 +51,11 @@ debug_report(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType,
 }
 // #endif // IMGui_VULKAN_DEBUG_REPORT
 
-cDrawSceneImGui::cDrawSceneImGui() { mSceneIsTheLastRenderPass = false; }
+cDrawSceneImGui::cDrawSceneImGui()
+{
+    mSceneIsTheLastRenderPass = false;
+    mCurFPS = 0;
+}
 
 cDrawSceneImGui::~cDrawSceneImGui() {}
 
@@ -314,7 +318,17 @@ void cDrawSceneImGui::Update(double dt)
     // update the simulation scene
     cTimeUtil::Begin("fps_measure");
     cDrawScene::Update(dt);
-    mCurFPS = 1e3 / cTimeUtil::End("fps_measure", true);
+    float shift_perc = 0.99;
+    if (mCurFPS < 1e-6)
+    {
+        // first
+        mCurFPS = 1e3 / cTimeUtil::End("fps_measure", true);
+    }
+    else
+    {
+
+        mCurFPS = shift_perc * mCurFPS + (1 - shift_perc) * (1e3 / cTimeUtil::End("fps_measure", true));
+    }
 }
 
 /**

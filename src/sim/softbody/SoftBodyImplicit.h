@@ -15,9 +15,9 @@ protected:
     virtual void CheckDFDx();
     virtual void CheckDFDF();
     virtual void CheckDEDF();
-    virtual void CheckDPDF();
-    virtual void CheckDPDF_part1();
-    virtual void CheckDPDF_part2();
+    // virtual void CheckDPDF();
+    // virtual void CheckDPDF_part1();
+    // virtual void CheckDPDF_part2();
     virtual void CheckDPDx();
     virtual void CheckElementStiffnessMat();
     virtual void CheckGlobalStiffnessMat();

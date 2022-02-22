@@ -1,6 +1,6 @@
 #pragma once
 #include "sim/BaseObject.h"
-
+#include "sim/softbody/BaseMaterial.h"
 /**
  * \brief           softbody object (mostly based on 3D FEM)
 */
@@ -9,19 +9,12 @@ struct tTriangle;
 struct tEdge;
 struct tVertex;
 struct tTet;
+
 SIM_DECLARE_PTR(tTriangle);
 SIM_DECLARE_PTR(tEdge);
 SIM_DECLARE_PTR(tVertex);
 SIM_DECLARE_PTR(tTet);
-enum eMaterialModelType
-{
-    LINEAR_ELASTICITY = 0,
-    COROTATED,
-    FIX_COROTATED,
-    STVK,
-    NEO_HOOKEAN,
-    NUM_OF_MATERIAL_MODEL
-};
+SIM_DECLARE_CLASS_AND_PTR(cBaseMaterial);
 
 class cSoftBody : public cBaseObject
 {
@@ -41,7 +34,8 @@ public:
     virtual int GetNumOfVertices() const override;
     virtual void SetVerticesPos(const tVectorXd &pos);
     virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
-    virtual eMaterialModelType GetMaterial() const;
+    virtual cBaseMaterialPtr GetMaterial() const;
+    virtual eMaterialType GetMaterialType() const;
     virtual void UpdateImGUi() override;
     virtual void Reset() override;
 
@@ -58,14 +52,16 @@ protected:
     tVectorXd mInvLumpedMassMatrixDiag;                        // row-diagnozation-lumped mass matrix
     tVectorXd mInitTetVolume;
     double mRho; // the volume density [SI] kg/m^3
-    eMaterialModelType mMaterial;
+    cBaseMaterialPtr mMaterial;
     float mRayleighDamplingA, mRayleighDamplingB; // rayleigh damping for mass mat and stiffness mat
     float mFrictionCoef, mCollisionK;
+    tVector3d mInitRotation, mInitTranslation;
     virtual void InitInvDm();
     virtual void InitPos();
     virtual void InitDiagLumpedMassMatrix();
     virtual void InitTetVolume();
     virtual void InitForceVector();
+    virtual void InitTetTransform(const Json::Value & root);
     virtual void UpdateIntForce();
     virtual tVectorXd CalcTetIntForce(size_t tet_id);
     virtual tVectorXd CalcTetIntForceBySelectionMatrix(size_t tet_id);
@@ -85,9 +81,8 @@ protected:
 
 SIM_DECLARE_PTR(cSoftBody);
 
-extern std::string BuildMaterialTypeStr(eMaterialModelType type);
-tMatrix3d CalcGreenStrain(const tMatrix3d &F);
-tMatrix3d CalcPK1(const tMatrix3d &F);
-tMatrix3d CalcPK1_part1(const tMatrix3d &F);
-tMatrix3d CalcPK1_part2(const tMatrix3d &F);
-extern float gMu, gLambda;
+// tMatrix3d CalcGreenStrain(const tMatrix3d &F);
+// tMatrix3d CalcPK1(const tMatrix3d &F);
+// tMatrix3d CalcPK1_part1(const tMatrix3d &F);
+// tMatrix3d CalcPK1_part2(const tMatrix3d &F);
+// extern float gMu, gLambda;

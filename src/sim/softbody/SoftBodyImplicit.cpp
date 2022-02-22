@@ -5,7 +5,7 @@
 #include "sim/softbody/ThreeOrderTensor.h"
 #include "sim/softbody/FourOrderTensor.h"
 cFourOrderTensor CalcDEDF(const tMatrix3d &F);
-cFourOrderTensor CalcDPDF(const tMatrix3d &F);
+// cFourOrderTensor CalcDPDF(const tMatrix3d &F);
 cFourOrderTensor CalcDPDF_part1(const tMatrix3d &F);
 cFourOrderTensor CalcDPDF_part2(const tMatrix3d &F);
 cFourOrderTensor CalcDTrEIDF(const tMatrix3d &F);
@@ -13,6 +13,7 @@ cFourOrderTensor CalcDFDF(const tMatrix3d &F);
 
 typedef std::function<tMatrixXd(const tMatrixXd &)> tForwardCalcFunc;
 extern cFourOrderTensor CalcNumericalDerivaitve_MatrixWRTMatrix(tForwardCalcFunc func, const tMatrixXd &X_raw, const tVector2i output_dims, float eps = 1e-5);
+
 cSoftBodyImplicit::cSoftBodyImplicit(int id_) : cSoftBody(id_)
 {
 }
@@ -24,11 +25,16 @@ cSoftBodyImplicit::~cSoftBodyImplicit()
 void cSoftBodyImplicit::Update(float dt)
 {
     dt = 5e-3;
+    // std::cout << "user force " << mUserForce.norm() << std::endl;
     UpdateDeformationGradient();
+    // CheckDPDx();
+    // this->CheckElementStiffnessMat();
+    // CheckGlobalStiffnessMat();
     UpdateExtForce();
     mGlobalStiffnessMatrix.noalias() = CalcGlobalStiffnessMatrix();
     UpdateIntForce();
     SolveForNextPos(dt);
+    mUserForce.setZero();
 }
 void cSoftBodyImplicit::Init(const Json::Value &conf)
 {
@@ -44,7 +50,7 @@ void cSoftBodyImplicit::Init(const Json::Value &conf)
     // CheckDPDF_part2();
     // CheckSelectionMat();
     // CheckElementStiffnessMat();
-    CheckGlobalStiffnessMat();
+    // CheckGlobalStiffnessMat();
     // CheckDPDF();
     // CheckDFDF();
 }
@@ -59,10 +65,11 @@ tEigenArr<tMatrix3d> cSoftBodyImplicit::CalcDFDx(int ele_id)
     return dfdx;
 }
 
-cFourOrderTensor CalcDPDF(const tMatrix3d &F)
-{
-    return CalcDPDF_part1(F) + CalcDPDF_part2(F);
-}
+// cFourOrderTensor CalcDPDF(const tMatrix3d &F)
+// {
+    
+//     return CalcDPDF_part1(F) + CalcDPDF_part2(F);
+// }
 
 void cSoftBodyImplicit::UpdateIntForce()
 {
@@ -221,6 +228,7 @@ void cSoftBodyImplicit::CheckDFDF()
     //               << DFDF_ana << std::endl;
     // }
 }
+extern tMatrix3d CalcGreenStrain(const tMatrix3d &F);
 void cSoftBodyImplicit::CheckDEDF()
 {
     // CalcDPDF();
@@ -246,50 +254,50 @@ void cSoftBodyImplicit::CheckDEDF()
     }
 }
 
-void cSoftBodyImplicit::CheckDPDF_part2()
-{
-    tMatrix3d F = tMatrix3d::Random();
-    // 1. check dPdF (P is PK1)
-    auto dPdF_part2_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part2, F, tVector2i(3, 3)).ExpandToMatrix();
+// void cSoftBodyImplicit::CheckDPDF_part2()
+// {
+    // tMatrix3d F = tMatrix3d::Random();
+    // // 1. check dPdF (P is PK1)
+    // auto dPdF_part2_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part2, F, tVector2i(3, 3)).ExpandToMatrix();
 
-    auto dPdF_part2_ana = CalcDPDF_part2(F).ExpandToMatrix();
-    auto dPdF_part2_diff = (dPdF_part2_ana - dPdF_part2_num) / (2 * gMu);
-    double dPdF_part2_diff_norm = dPdF_part2_diff.norm();
-    std::cout << "dPdF_part2_diff_norm = " << dPdF_part2_diff_norm << std::endl;
-    if (dPdF_part2_diff_norm > 1e-4)
-    {
-        std::cout << "dPdF_part2_num = \n"
-                  << dPdF_part2_num << std::endl;
-        std::cout << "dPdF_part2_ana = \n"
-                  << dPdF_part2_ana << std::endl;
-        std::cout << "dPdF_part2_diff = \n"
-                  << dPdF_part2_diff << std::endl;
-        exit(1);
-    }
-}
-void cSoftBodyImplicit::CheckDPDF() {}
-void cSoftBodyImplicit::CheckDPDF_part1()
-{
-    tMatrix3d F = tMatrix3d::Random();
-    // 1. check dPdF (P is PK1)
-    auto dPdF_part1_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part1, F, tVector2i(3, 3)).ExpandToMatrix();
+    // auto dPdF_part2_ana = CalcDPDF_part2(F).ExpandToMatrix();
+    // auto dPdF_part2_diff = (dPdF_part2_ana - dPdF_part2_num) / (2 * gMu);
+    // double dPdF_part2_diff_norm = dPdF_part2_diff.norm();
+    // std::cout << "dPdF_part2_diff_norm = " << dPdF_part2_diff_norm << std::endl;
+    // if (dPdF_part2_diff_norm > 1e-4)
+    // {
+    //     std::cout << "dPdF_part2_num = \n"
+    //               << dPdF_part2_num << std::endl;
+    //     std::cout << "dPdF_part2_ana = \n"
+    //               << dPdF_part2_ana << std::endl;
+    //     std::cout << "dPdF_part2_diff = \n"
+    //               << dPdF_part2_diff << std::endl;
+    //     exit(1);
+    // }
+// }
+// void cSoftBodyImplicit::CheckDPDF() {}
+// void cSoftBodyImplicit::CheckDPDF_part1()
+// {
+//     tMatrix3d F = tMatrix3d::Random();
+//     // 1. check dPdF (P is PK1)
+//     auto dPdF_part1_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part1, F, tVector2i(3, 3)).ExpandToMatrix();
 
-    auto dPdF_part1_ana = CalcDPDF_part1(F).ExpandToMatrix();
-    auto dPdF_part1_diff = (dPdF_part1_ana - dPdF_part1_num) / (2 * gMu);
-    double dPdF_part1_diff_norm = dPdF_part1_diff.norm();
-    std::cout << "dPdF_part1_diff_norm = " << dPdF_part1_diff_norm << std::endl;
-    if (dPdF_part1_diff_norm > 1e-4)
-    {
-        std::cout << "dPdF_part1_num = \n"
-                  << dPdF_part1_num << std::endl;
-        std::cout << "dPdF_part1_ana = \n"
-                  << dPdF_part1_ana << std::endl;
-        std::cout << "dPdF_part1_diff = \n"
-                  << dPdF_part1_diff << std::endl;
-        exit(1);
-    }
-    // std::cout << "dPdF_part1 shape = " << dPdF_part1_num.GetShape().transpose() << std::endl;
-}
+//     auto dPdF_part1_ana = CalcDPDF_part1(F).ExpandToMatrix();
+//     auto dPdF_part1_diff = (dPdF_part1_ana - dPdF_part1_num) / (2 * gMu);
+//     double dPdF_part1_diff_norm = dPdF_part1_diff.norm();
+//     std::cout << "dPdF_part1_diff_norm = " << dPdF_part1_diff_norm << std::endl;
+//     if (dPdF_part1_diff_norm > 1e-4)
+//     {
+//         std::cout << "dPdF_part1_num = \n"
+//                   << dPdF_part1_num << std::endl;
+//         std::cout << "dPdF_part1_ana = \n"
+//                   << dPdF_part1_ana << std::endl;
+//         std::cout << "dPdF_part1_diff = \n"
+//                   << dPdF_part1_diff << std::endl;
+//         exit(1);
+//     }
+//     // std::cout << "dPdF_part1 shape = " << dPdF_part1_num.GetShape().transpose() << std::endl;
+// }
 void cSoftBodyImplicit::InitDDsDxTensor()
 {
     mDDsDxTensor_const.resize(12, tMatrix3d::Zero());
@@ -312,30 +320,26 @@ void cSoftBodyImplicit::InitDDsDxTensor()
     }
 }
 
-/**
- * \brief           calc dE/dF
- *      For more details, please check note "矩阵对矩阵求导" 中二次型的情况
-*/
-cFourOrderTensor CalcDEDF(const tMatrix3d &F)
-{
-    tMatrix3d FT = F.transpose();
-    cFourOrderTensor deriv(3, 3, 3, 3);
-    for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-            for (int k = 0; k < 3; k++)
-                for (int l = 0; l < 3; l++)
-                {
-                    if (l == j)
-                    {
-                        deriv(k, l)(i, j) += 0.5 * FT(k, i);
-                    }
-                    if (k == j)
-                    {
-                        deriv(k, l)(i, j) += 0.5 * F(i, l);
-                    }
-                }
-    return deriv;
-}
+// cFourOrderTensor CalcDEDF(const tMatrix3d &F)
+// {
+//     tMatrix3d FT = F.transpose();
+//     cFourOrderTensor deriv(3, 3, 3, 3);
+//     for (int i = 0; i < 3; i++)
+//         for (int j = 0; j < 3; j++)
+//             for (int k = 0; k < 3; k++)
+//                 for (int l = 0; l < 3; l++)
+//                 {
+//                     if (l == j)
+//                     {
+//                         deriv(k, l)(i, j) += 0.5 * FT(k, i);
+//                     }
+//                     if (k == j)
+//                     {
+//                         deriv(k, l)(i, j) += 0.5 * F(i, l);
+//                     }
+//                 }
+//     return deriv;
+// }
 
 cFourOrderTensor CalcDFDF(const tMatrix3d &F)
 {
@@ -353,33 +357,25 @@ cFourOrderTensor CalcDFDF(const tMatrix3d &F)
     return deriv;
 }
 
-/**
- * \brief               calculate dPdF part 1
- *      For more details, please check note "FEM Course 第三部分 离散化 刚度矩阵计算"
-*/
-cFourOrderTensor CalcDPDF_part1(const tMatrix3d &F)
-{
-    cFourOrderTensor DFDF = CalcDFDF(F);
-    tMatrix3d E = CalcGreenStrain(F);
-    cFourOrderTensor DEDF = CalcDEDF(F);
-    DFDF.TensorMatrixProductWithoutCopy(0, 1, E);
-    DEDF.MatrixTensorProductWithoutCopy(0, 1, F);
-    cFourOrderTensor deriv = (DFDF + DEDF) * 2 * gMu;
-    return deriv;
-}
+// cFourOrderTensor CalcDPDF_part1(const tMatrix3d &F)
+// {
+//     cFourOrderTensor DFDF = CalcDFDF(F);
+//     tMatrix3d E = CalcGreenStrain(F);
+//     cFourOrderTensor DEDF = CalcDEDF(F);
+//     DFDF.TensorMatrixProductWithoutCopy(0, 1, E);
+//     DEDF.MatrixTensorProductWithoutCopy(0, 1, F);
+//     cFourOrderTensor deriv = (DFDF + DEDF) * 2 * gMu;
+//     return deriv;
+// }
 
-/**
- * \brief               calculate dPdF part 1
- *      For more details, please check note "FEM Course 第三部分 离散化 刚度矩阵计算"
-*/
-cFourOrderTensor CalcDPDF_part2(const tMatrix3d &F)
-{
-    tMatrix3d E = CalcGreenStrain(F);
-    cFourOrderTensor DTrEIDF = CalcDTrEIDF(F),
-                     trE_DFDF = CalcDFDF(F) * E.trace();
-    DTrEIDF.TensorMatrixProductWithoutCopy(0, 1, F);
-    return (DTrEIDF + trE_DFDF) * gLambda;
-}
+// cFourOrderTensor CalcDPDF_part2(const tMatrix3d &F)
+// {
+//     // tMatrix3d E = CalcGreenStrain(F);
+//     // cFourOrderTensor DTrEIDF = CalcDTrEIDF(F),
+//     //                  trE_DFDF = CalcDFDF(F) * E.trace();
+//     // DTrEIDF.TensorMatrixProductWithoutCopy(0, 1, F);
+//     // return (DTrEIDF + trE_DFDF) * gLambda;
+// }
 
 cFourOrderTensor CalcDTrEIDF(const tMatrix3d &F)
 {
@@ -510,7 +506,8 @@ tEigenArr<tMatrix3d> GetTTensor()
 */
 tMatrixXd cSoftBodyImplicit::CalcElementStiffnessMatrix(int tet_id)
 {
-    cThreeOrderTensor dPdx = CalcDPDx(CalcDPDF(mF[tet_id]), CalcDFDx(tet_id));
+    
+    cThreeOrderTensor dPdx = CalcDPDx(mMaterial->CalcDPDF(mF[tet_id]), CalcDFDx(tet_id));
 
     dPdx.TensorMatrixProductWithoutCopy(0, 1, mInvDm[tet_id].transpose());
 
@@ -531,12 +528,13 @@ void cSoftBodyImplicit::CheckDPDx()
     UpdateDeformationGradient();
     int tet_id = 0;
 
-    cThreeOrderTensor dPdx_ana = CalcDPDx(CalcDPDF(mF[tet_id]), CalcDFDx(tet_id));
+    cThreeOrderTensor dPdx_ana = CalcDPDx(mMaterial->CalcDPDF(mF[tet_id]), CalcDFDx(tet_id));
 
     // 1. calculate P_old
     tVectorXd tet_pos = GetTetVerticesPos(tet_id, mXcur);
     UpdateDeformationGradientForTet(tet_id);
-    tMatrix3d P_old = CalcPK1(mF[tet_id]);
+    
+    tMatrix3d P_old = mMaterial->CalcP(mF[tet_id]);
 
     double eps = 1e-9;
     for (size_t i = 0; i < 12; i++)
@@ -549,7 +547,7 @@ void cSoftBodyImplicit::CheckDPDx()
         UpdateDeformationGradientForTet(tet_id);
 
         // 3. calculate P new
-        tMatrix3d P_new = CalcPK1(mF[tet_id]);
+        tMatrix3d P_new = mMaterial->CalcP(mF[tet_id]);
 
         // 2. calculate dPdx_num_component
         tMatrix3d dPdx_num_comp = (P_new - P_old) / eps;

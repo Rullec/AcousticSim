@@ -540,6 +540,21 @@ void cDrawScene::Init(const std::string &conf_path)
  */
 void cDrawScene::Update(double dt)
 {
+    // update the perturb
+    if (mSimScene != nullptr)
+    {
+        // update perturb
+        tVector cursor_pos = CalcCursorPointWorldPos();
+        tVector perturb_ori = GetPerturbOrigin(cursor_pos);
+        tVector dir = cursor_pos - perturb_ori;
+        dir[3] = 0;
+        dir.normalize();
+        // mPerturb->UpdatePerturb(camera_pos, dir);
+        mSimScene->UpdatePerturbPos(perturb_ori, dir);
+        // std::cout << "now perturb force = "
+        //           << mPerturb->GetPerturbForce().transpose() << std::endl;
+    }
+
     // cTimeUtil::Begin("sim_step");
     mSimScene->Update(dt);
     mSimScene->UpdateRenderingResource();
@@ -567,21 +582,6 @@ void cDrawScene::CursorMove(int xpos, int ypos)
     else if (mMiddleButtonPress)
     {
         mCamera->MiddleKeyMove(xpos, ypos);
-    }
-
-    // update the perturb
-    if (mSimScene != nullptr)
-    {
-        // update perturb
-        tVector cursor_pos = CalcCursorPointWorldPos();
-        tVector perturb_ori = GetPerturbOrigin(cursor_pos);
-        tVector dir = cursor_pos - perturb_ori;
-        dir[3] = 0;
-        dir.normalize();
-        // mPerturb->UpdatePerturb(camera_pos, dir);
-        mSimScene->UpdatePerturbPos(perturb_ori, dir);
-        // std::cout << "now perturb force = "
-        //           << mPerturb->GetPerturbForce().transpose() << std::endl;
     }
 
     mSimScene->CursorMove(xpos, ypos);

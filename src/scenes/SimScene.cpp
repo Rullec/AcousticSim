@@ -64,7 +64,8 @@ void cSimScene::Init(const std::string &conf_path)
 
     InitDrawBuffer();
     InitRaycaster(root);
-    mSimStateMachine->SimulatorInitDone(eSimState::SIMSTATE_PAUSE);
+
+    mSimStateMachine->SimulatorInitDone(cJsonUtil::ParseAsBool("pause_at_first", root) == true ? eSimState::SIMSTATE_PAUSE : eSimState::SIMSTATE_RUN);
 }
 void cSimScene::BuildObjects(const Json::Value &obj_conf_)
 {
@@ -159,6 +160,7 @@ void cSimScene::Update(double delta_time)
  */
 void cSimScene::UpdateObjects()
 {
+
     // 1. update perturb on objects if possible
     if (mPerturb != nullptr)
     {
@@ -355,6 +357,7 @@ bool cSimScene::CreatePerturb(tRay *ray)
 
     mPerturb->mObject = res.mObject;
     mPerturb->mAffectedTriId = res.mLocalTriangleId;
+    std::cout << "[debug] affect id = " << res.mLocalTriangleId << std::endl;
     const auto &ver_array = mPerturb->mObject->GetVertexArray();
     const auto &tri_array = mPerturb->mObject->GetTriangleArray();
 
@@ -365,10 +368,10 @@ bool cSimScene::CreatePerturb(tRay *ray)
             ver_array[tri_array[res.mLocalTriangleId]->mId1]->mPos,
             ver_array[tri_array[res.mLocalTriangleId]->mId2]->mPos)
             .segment(0, 3);
-    // std::cout
-    //     << "uv = "
-    //     << ver_array[tri_array[res.mLocalTriangleId]->mId0]->muv.transpose()
-    //     << " vid = " << tri_array[res.mLocalTriangleId]->mId0 << std::endl;
+    std::cout
+        << "uv = "
+        << ver_array[tri_array[res.mLocalTriangleId]->mId0]->muv.transpose()
+        << " vid = " << tri_array[res.mLocalTriangleId]->mId0 << std::endl;
     SIM_ASSERT(mPerturb->mBarycentricCoords.hasNaN() == false);
     mPerturb->InitTangentRect(-1 * ray->mDir);
     mPerturb->UpdatePerturbPos(ray->mOrigin, ray->mDir);
