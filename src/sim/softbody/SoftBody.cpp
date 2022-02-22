@@ -212,7 +212,7 @@ void cSoftBody::Update(float dt)
 void cSoftBody::UpdateExtForce()
 {
     int num_of_v = this->mVertexArrayShared.size();
-    double ground_height = 1e-2;
+    double ground_height = 1e-3;
     double k = mCollisionK;
     float KinectFrictionCoef = mFrictionCoef;
     // mExtForce.fill(5);
