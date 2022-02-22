@@ -22,15 +22,18 @@ protected:
     virtual void CheckElementStiffnessMat();
     virtual void CheckGlobalStiffnessMat();
 
-    
-    virtual void SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_vertices_pos);
+        virtual void SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_vertices_pos);
 
     virtual void UpdateIntForce() override;
     virtual void SolveForNextPos(float dt) override;
+    virtual void SolveForNextPosSparse(float dt);
     virtual tMatrixXd CalcElementStiffnessMatrix(int tet_id);
     virtual tMatrixXd CalcGlobalStiffnessMatrix();
-    virtual void InitDDsDxTensor();
+    virtual tSparseMat CalcGlobalStiffnessSparseMatrix();
 
+    virtual void InitDDsDxTensor();
+    virtual void UpdateImGui() override;
     tEigenArr<tMatrix3d> mDDsDxTensor_const; // tensor C_{ijk} for d(Ds)/dx
     tMatrixXd mGlobalStiffnessMatrix;
+    tSparseMat mGlobalStiffnessSparseMatrix;
 };

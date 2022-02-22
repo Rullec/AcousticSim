@@ -71,7 +71,7 @@ public:
     void ChangeTriangleColor(int tri_id, const tVector3f &color);
     virtual void CalcAABB(tVector &min, tVector &max) const;
     double CalcTotalArea() const;
-    virtual void UpdateImGUi();
+    virtual void UpdateImGui();
     virtual void Reset() = 0;
 protected:
     float mColorAlpha = 1.0;

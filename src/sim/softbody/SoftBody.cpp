@@ -433,7 +433,7 @@ eMaterialType cSoftBody::GetMaterialType() const
  * \brief           update imgui
 */
 #include "imgui.h"
-void cSoftBody::UpdateImGUi()
+void cSoftBody::UpdateImGui()
 {
 
     static int item_cur_idx = GetMaterial()->GetType();

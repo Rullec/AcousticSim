@@ -186,7 +186,7 @@ double cBaseObject::CalcTotalArea() const
     return total_area;
 }
 
-void cBaseObject::UpdateImGUi()
+void cBaseObject::UpdateImGui()
 {
     
 }

@@ -473,6 +473,6 @@ void cSimScene::UpdateImGui()
     ImGui::Text("simulation state: %s", name.c_str());
     for (auto &obj : this->mObjectList)
     {
-        obj->UpdateImGUi();
+        obj->UpdateImGui();
     }
 }

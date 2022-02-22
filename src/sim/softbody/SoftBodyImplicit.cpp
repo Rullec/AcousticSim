@@ -1,4 +1,5 @@
 #include "SoftBodyImplicit.h"
+#include "utils/TimeUtil.hpp"
 #include <iostream>
 #include "utils/LogUtil.h"
 #include "geometries/Tetrahedron.h"
@@ -22,18 +23,40 @@ cSoftBodyImplicit::~cSoftBodyImplicit()
 {
 }
 
+typedef std::pair<std::string, float> tTimeRecms;
+static std::vector<tTimeRecms> gProfRec;
 void cSoftBodyImplicit::Update(float dt)
 {
+    gProfRec.clear();
     dt = 5e-3;
-    // std::cout << "user force " << mUserForce.norm() << std::endl;
+    cTimeUtil::Begin("update_F");
     UpdateDeformationGradient();
-    // CheckDPDx();
-    // this->CheckElementStiffnessMat();
-    // CheckGlobalStiffnessMat();
+    gProfRec.push_back(tTimeRecms("update_F", cTimeUtil::End("update_F", true)));
+
     UpdateExtForce();
-    mGlobalStiffnessMatrix.noalias() = CalcGlobalStiffnessMatrix();
+
+    // cTimeUtil::Begin("update_K_dense");
+    // mGlobalStiffnessMatrix.noalias() = CalcGlobalStiffnessMatrix();
+    // cTimeUtil::End("update_K_dense");
+
+    cTimeUtil::Begin("update_K_sparse");
+    mGlobalStiffnessSparseMatrix = CalcGlobalStiffnessSparseMatrix();
+    // std::cout << "K diff = " << (mGlobalStiffnessMatrix - sparse_mat).norm() << std::endl;
+    gProfRec.push_back(tTimeRecms("update_K_sparse", cTimeUtil::End("update_K_sparse", true)));
+
+    cTimeUtil::Begin("update_fint");
     UpdateIntForce();
-    SolveForNextPos(dt);
+    gProfRec.push_back(tTimeRecms("update_fint", cTimeUtil::End("update_fint", true)));
+
+    // cTimeUtil::Begin("solve_pos_dense");
+    // SolveForNextPos(dt);
+    // cTimeUtil::End("solve_pos_dense");
+
+    cTimeUtil::Begin("solve_pos_sparse");
+    SolveForNextPosSparse(dt);
+    gProfRec.push_back(tTimeRecms("solve_pos_sparse", cTimeUtil::End("solve_pos_sparse", true)));
+
+    SyncPosToVectorArray();
     mUserForce.setZero();
 }
 void cSoftBodyImplicit::Init(const Json::Value &conf)
@@ -67,7 +90,7 @@ tEigenArr<tMatrix3d> cSoftBodyImplicit::CalcDFDx(int ele_id)
 
 // cFourOrderTensor CalcDPDF(const tMatrix3d &F)
 // {
-    
+
 //     return CalcDPDF_part1(F) + CalcDPDF_part2(F);
 // }
 
@@ -81,7 +104,6 @@ void cSoftBodyImplicit::UpdateIntForce()
 
 void cSoftBodyImplicit::SolveForNextPos(float dt)
 {
-
     tVectorXd MassDiag = mInvLumpedMassMatrixDiag.cwiseInverse();
 
     tMatrixXd A = dt * (mRayleighDamplingB - dt) * this->mGlobalStiffnessMatrix;
@@ -89,6 +111,30 @@ void cSoftBodyImplicit::SolveForNextPos(float dt)
 
     tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) + dt * (mExtForce + mIntForce + mGravityForce + mUserForce);
     tVectorXd vel = A.inverse() * b;
+    mXprev = mXcur;
+    mXcur = dt * vel + mXcur;
+    if (mXcur.hasNaN())
+    {
+        SIM_ERROR("Xcur hasNan, exit");
+        exit(1);
+    }
+}
+#include <Eigen/IterativeLinearSolvers>
+void cSoftBodyImplicit::SolveForNextPosSparse(float dt)
+{
+    tVectorXd MassDiag = mInvLumpedMassMatrixDiag.cwiseInverse();
+
+    tSparseMat A = dt * (mRayleighDamplingB - dt) * this->mGlobalStiffnessSparseMatrix;
+    // std::cout << "A.diagonal() = " << A.diagonal().size() << std::endl;
+    // std::cout << "MassDiag = " << MassDiag.size() << std::endl;
+    A.diagonal() += (1 + mRayleighDamplingA * dt) * MassDiag;
+
+    tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) + dt * (mExtForce + mIntForce + mGravityForce + mUserForce);
+    // tVectorXd vel = A.inverse() * b;
+
+    Eigen::ConjugateGradient<tSparseMat, Eigen::Upper> solver;
+    tVectorXd vel = solver.compute(A).solve(b);
+
     mXprev = mXcur;
     mXcur = dt * vel + mXcur;
     if (mXcur.hasNaN())
@@ -256,24 +302,24 @@ void cSoftBodyImplicit::CheckDEDF()
 
 // void cSoftBodyImplicit::CheckDPDF_part2()
 // {
-    // tMatrix3d F = tMatrix3d::Random();
-    // // 1. check dPdF (P is PK1)
-    // auto dPdF_part2_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part2, F, tVector2i(3, 3)).ExpandToMatrix();
+// tMatrix3d F = tMatrix3d::Random();
+// // 1. check dPdF (P is PK1)
+// auto dPdF_part2_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part2, F, tVector2i(3, 3)).ExpandToMatrix();
 
-    // auto dPdF_part2_ana = CalcDPDF_part2(F).ExpandToMatrix();
-    // auto dPdF_part2_diff = (dPdF_part2_ana - dPdF_part2_num) / (2 * gMu);
-    // double dPdF_part2_diff_norm = dPdF_part2_diff.norm();
-    // std::cout << "dPdF_part2_diff_norm = " << dPdF_part2_diff_norm << std::endl;
-    // if (dPdF_part2_diff_norm > 1e-4)
-    // {
-    //     std::cout << "dPdF_part2_num = \n"
-    //               << dPdF_part2_num << std::endl;
-    //     std::cout << "dPdF_part2_ana = \n"
-    //               << dPdF_part2_ana << std::endl;
-    //     std::cout << "dPdF_part2_diff = \n"
-    //               << dPdF_part2_diff << std::endl;
-    //     exit(1);
-    // }
+// auto dPdF_part2_ana = CalcDPDF_part2(F).ExpandToMatrix();
+// auto dPdF_part2_diff = (dPdF_part2_ana - dPdF_part2_num) / (2 * gMu);
+// double dPdF_part2_diff_norm = dPdF_part2_diff.norm();
+// std::cout << "dPdF_part2_diff_norm = " << dPdF_part2_diff_norm << std::endl;
+// if (dPdF_part2_diff_norm > 1e-4)
+// {
+//     std::cout << "dPdF_part2_num = \n"
+//               << dPdF_part2_num << std::endl;
+//     std::cout << "dPdF_part2_ana = \n"
+//               << dPdF_part2_ana << std::endl;
+//     std::cout << "dPdF_part2_diff = \n"
+//               << dPdF_part2_diff << std::endl;
+//     exit(1);
+// }
 // }
 // void cSoftBodyImplicit::CheckDPDF() {}
 // void cSoftBodyImplicit::CheckDPDF_part1()
@@ -506,7 +552,6 @@ tEigenArr<tMatrix3d> GetTTensor()
 */
 tMatrixXd cSoftBodyImplicit::CalcElementStiffnessMatrix(int tet_id)
 {
-    
     cThreeOrderTensor dPdx = CalcDPDx(mMaterial->CalcDPDF(mF[tet_id]), CalcDFDx(tet_id));
 
     dPdx.TensorMatrixProductWithoutCopy(0, 1, mInvDm[tet_id].transpose());
@@ -533,7 +578,7 @@ void cSoftBodyImplicit::CheckDPDx()
     // 1. calculate P_old
     tVectorXd tet_pos = GetTetVerticesPos(tet_id, mXcur);
     UpdateDeformationGradientForTet(tet_id);
-    
+
     tMatrix3d P_old = mMaterial->CalcP(mF[tet_id]);
 
     double eps = 1e-9;
@@ -626,4 +671,57 @@ tMatrixXd cSoftBodyImplicit::CalcGlobalStiffnessMatrix()
         }
     }
     return global_K;
+}
+
+tSparseMat cSoftBodyImplicit::CalcGlobalStiffnessSparseMatrix()
+{
+    size_t num_of_v = this->mVertexArrayShared.size();
+    std::vector<tTriplet> tripletList = {};
+    tSparseMat mat(3 * num_of_v, 3 * num_of_v);
+    tripletList.reserve(GetNumOfTets() * 4 * 4 * 9);
+    OMP_PARALLEL_FOR
+    for (int tet_id = 0; tet_id < GetNumOfTets(); tet_id++)
+    {
+        std::vector<tTriplet> sub_triples = {};
+        // std::cout << "omp num thread = " << omp_get_num_threads() << std::endl;
+        auto tet = mTetArrayShared[tet_id];
+        tMatrixXd ele_K = CalcElementStiffnessMatrix(tet_id);
+        for (size_t i = 0; i < 4; i++)
+        {
+            size_t global_vi_idx = tet->mVertexId[i];
+            for (size_t j = 0; j < 4; j++)
+            {
+                size_t global_vj_idx = tet->mVertexId[j];
+
+                const tMatrix3d &ele_K_part = ele_K.block(3 * i, 3 * j, 3, 3);
+                size_t i3 = 3 * global_vi_idx, j3 = 3 * global_vj_idx;
+                sub_triples.push_back(tTriplet(i3, j3, ele_K_part(0, 0)));
+                sub_triples.push_back(tTriplet(i3, j3 + 1, ele_K_part(0, 1)));
+                sub_triples.push_back(tTriplet(i3, j3 + 2, ele_K_part(0, 2)));
+
+                sub_triples.push_back(tTriplet(i3 + 1, j3, ele_K_part(1, 0)));
+                sub_triples.push_back(tTriplet(i3 + 1, j3 + 1, ele_K_part(1, 1)));
+                sub_triples.push_back(tTriplet(i3 + 1, j3 + 2, ele_K_part(1, 2)));
+
+                sub_triples.push_back(tTriplet(i3 + 2, j3, ele_K_part(2, 0)));
+                sub_triples.push_back(tTriplet(i3 + 2, j3 + 1, ele_K_part(2, 1)));
+                sub_triples.push_back(tTriplet(i3 + 2, j3 + 2, ele_K_part(2, 2)));
+            }
+        }
+
+#pragma omp critical
+        tripletList.insert(tripletList.end(), sub_triples.begin(), sub_triples.end());
+    }
+
+    mat.setFromTriplets(tripletList.begin(), tripletList.end());
+    return mat;
+}
+#include <imgui.h>
+void cSoftBodyImplicit::UpdateImGui()
+{
+    cSoftBody::UpdateImGui();
+    for (auto &x : gProfRec)
+    {
+        ImGui::Text("%s %d ms", x.first.c_str(), int(x.second));
+    }
 }

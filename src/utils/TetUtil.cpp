@@ -226,11 +226,11 @@ void cTetUtil::LoadTet(const std::string &path,
                         edge_vec[edge_id]->mTriangleId1 = f_id;
                 }
             }
-            printf("triangle %d contains node %d %d %d\n",
-                   f_id,
-                   cur_t->mId0,
-                   cur_t->mId1,
-                   cur_t->mId2);
+            // printf("triangle %d contains node %d %d %d\n",
+            //        f_id,
+            //        cur_t->mId0,
+            //        cur_t->mId1,
+            //        cur_t->mId2);
             tri_vec.push_back(cur_t);
         }
     }
@@ -288,7 +288,7 @@ void cTetUtil::LoadTet(const std::string &path,
                     cur_t->mVertexId[1],
                     cur_t->mVertexId[0]);
             tet_vec.push_back(cur_t);
-            std::cout << "tet triangle = " << cur_t->mTriangleId.transpose() << std::endl;
+            // std::cout << "tet triangle = " << cur_t->mTriangleId.transpose() << std::endl;
         }
     }
     // exit(1);

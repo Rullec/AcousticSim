@@ -36,7 +36,7 @@ public:
     virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
     virtual cBaseMaterialPtr GetMaterial() const;
     virtual eMaterialType GetMaterialType() const;
-    virtual void UpdateImGUi() override;
+    virtual void UpdateImGui() override;
     virtual void Reset() override;
 
 protected:
