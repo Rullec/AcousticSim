@@ -17,13 +17,13 @@
                 0
             ],
             // "tet_path": "./data/tetmesh/single_tet/tet.1",
-            // "tet_path": "./data/tetmesh/cube/cube.1",
+            "tet_path": "./data/tetmesh/cube/cube.1",
             // "tet_path": "./data/tetmesh/cube_v38/cube_v38.1",
-            "tet_path": "./data/tetmesh/cube_v146/cube_v146.1",
+            // "tet_path": "./data/tetmesh/cube_v146/cube_v146.1",
             "rayleigh_damping_a": 10,
             "rayleigh_damping_b": 0,
             "friction": 0,
-            "youngs": 2e4,
+            "youngs": 1e7,
             "poisson_ratio": 0.7,
             "collision_k": 1000,
             "rho": 1000

@@ -14,6 +14,7 @@ set(
     softbody/StvkMaterial.cpp
     softbody/MaterialBuilder.cpp
     softbody/BaseMaterial.cpp
+    AcousticSoftBody.cpp
     SimObjectBuilder.cpp
 )
 

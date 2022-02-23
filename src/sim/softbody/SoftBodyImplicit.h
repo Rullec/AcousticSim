@@ -9,6 +9,9 @@ public:
     virtual ~cSoftBodyImplicit();
     virtual void Update(float dt) override;
     virtual void Init(const Json::Value &conf) override;
+    virtual tSparseMat GetGlobalStiffnessMatrix() const;
+    virtual tVectorXd GetMassMatrixDiag();
+    virtual tVector2f GetRayleightDamping();
 
 protected:
     virtual tEigenArr<tMatrix3d> CalcDFDx(int ele_id);
@@ -22,7 +25,7 @@ protected:
     virtual void CheckElementStiffnessMat();
     virtual void CheckGlobalStiffnessMat();
 
-        virtual void SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_vertices_pos);
+    virtual void SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_vertices_pos);
 
     virtual void UpdateIntForce() override;
     virtual void SolveForNextPos(float dt) override;
@@ -34,6 +37,6 @@ protected:
     virtual void InitDDsDxTensor();
     virtual void UpdateImGui() override;
     tEigenArr<tMatrix3d> mDDsDxTensor_const; // tensor C_{ijk} for d(Ds)/dx
-    tMatrixXd mGlobalStiffnessMatrix;
+    // tMatrixXd mGlobalStiffnessMatrix;
     tSparseMat mGlobalStiffnessSparseMatrix;
 };

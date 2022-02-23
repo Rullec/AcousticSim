@@ -63,7 +63,6 @@ void cSoftBodyImplicit::Init(const Json::Value &conf)
 {
     InitDDsDxTensor();
     cSoftBody::Init(conf);
-
     // CheckDPDx();
     // exit(1);
     // CheckDFDx();
@@ -104,20 +103,20 @@ void cSoftBodyImplicit::UpdateIntForce()
 
 void cSoftBodyImplicit::SolveForNextPos(float dt)
 {
-    tVectorXd MassDiag = mInvLumpedMassMatrixDiag.cwiseInverse();
+    // tVectorXd MassDiag = mInvLumpedMassMatrixDiag.cwiseInverse();
 
-    tMatrixXd A = dt * (mRayleighDamplingB - dt) * this->mGlobalStiffnessMatrix;
-    A.diagonal() += (1 + mRayleighDamplingA * dt) * MassDiag;
+    // tMatrixXd A = dt * (mRayleighDamplingB - dt) * this->mGlobalStiffnessMatrix;
+    // A.diagonal() += (1 + mRayleighDamplingA * dt) * MassDiag;
 
-    tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) + dt * (mExtForce + mIntForce + mGravityForce + mUserForce);
-    tVectorXd vel = A.inverse() * b;
-    mXprev = mXcur;
-    mXcur = dt * vel + mXcur;
-    if (mXcur.hasNaN())
-    {
-        SIM_ERROR("Xcur hasNan, exit");
-        exit(1);
-    }
+    // tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) + dt * (mExtForce + mIntForce + mGravityForce + mUserForce);
+    // tVectorXd vel = A.inverse() * b;
+    // mXprev = mXcur;
+    // mXcur = dt * vel + mXcur;
+    // if (mXcur.hasNaN())
+    // {
+    //     SIM_ERROR("Xcur hasNan, exit");
+    //     exit(1);
+    // }
 }
 #include <Eigen/IterativeLinearSolvers>
 void cSoftBodyImplicit::SolveForNextPosSparse(float dt)
@@ -724,4 +723,17 @@ void cSoftBodyImplicit::UpdateImGui()
     {
         ImGui::Text("%s %d ms", x.first.c_str(), int(x.second));
     }
+}
+
+tSparseMat cSoftBodyImplicit::GetGlobalStiffnessMatrix() const
+{
+    return mGlobalStiffnessSparseMatrix;
+}
+tVectorXd cSoftBodyImplicit::GetMassMatrixDiag()
+{
+    return mInvLumpedMassMatrixDiag.cwiseInverse();
+}
+tVector2f cSoftBodyImplicit::GetRayleightDamping()
+{
+    return tVector2f(mRayleighDamplingA, mRayleighDamplingB);
 }

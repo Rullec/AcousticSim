@@ -3,6 +3,8 @@
 #include "sim/BaseObject.h"
 #include "sim/softbody/SoftBody.h"
 #include "sim/softbody/SoftBodyImplicit.h"
+#include "sim/AcousticSoftBody.h"
+
 cBaseObjectPtr BuildSimObj(const Json::Value &conf, int id_)
 {
     eObjectType type = cBaseObject::BuildObjectType(cJsonUtil::ParseAsString("object_type", conf));
@@ -17,7 +19,8 @@ cBaseObjectPtr BuildSimObj(const Json::Value &conf, int id_)
     case eObjectType::SOFTBODY_TYPE:
     {
         // object = std::make_shared<cSoftBody>(id_);
-        object = std::make_shared<cSoftBodyImplicit>(id_);
+        // object = std::make_shared<cSoftBodyImplicit>(id_);
+        object = std::make_shared<cAcousticSoftBody>(id_);
         break;
     }
     default:
