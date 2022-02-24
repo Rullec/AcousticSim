@@ -79,7 +79,7 @@ protected:
     std::string mObjName;
     eObjectType mType;
     bool mEnableDrawBuffer; // enable to open draw buffer
-    // std::vector<tVertex *> mVertexArray;
+    // std::vector<tVertexPtr > mVertexArray;
     // std::vector<tEdge *> mEdgeArray;
     // std::vector<tTriangle *> mTriangleArray;
     std::vector<tVertexPtr> mVertexArrayShared;

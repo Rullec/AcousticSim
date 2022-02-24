@@ -74,7 +74,7 @@ protected:
         mEdgesDrawBuffer; // buffer to triangle buffer drawing (should use index
                           // buffer to improve the velocity)
     std::vector<tRay *> mRayArray;
-    // std::vector<tVertex *> mVertexArray;     // total vertices
+    // std::vector<tVertexPtr > mVertexArray;     // total vertices
     // std::vector<tEdge *> mEdgeArray;         // total edges
     // std::vector<tTriangle *> mTriangleArray; // total triangles
 

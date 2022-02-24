@@ -16,9 +16,12 @@ ma_device device;
 cAudioOutputPtr gAudioOutput = nullptr;
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
-    float *buf = static_cast<float *>(pOutput);
-    gAudioOutput->SetContent(frameCount, buf);
-    (void)pInput;
+    if (gAudioOutput != nullptr)
+    {
+        float *buf = static_cast<float *>(pOutput);
+        gAudioOutput->SetContent(frameCount, buf);
+        (void)pInput;
+    }
 }
 
 static int gCurFrame = 0;

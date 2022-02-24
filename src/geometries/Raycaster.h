@@ -31,7 +31,7 @@ public:
     explicit cRaycaster();
     virtual void Init(const Json::Value &conf);
     // virtual void AddResources(const std::vector<tTriangle *> triangles,
-    //                           const std::vector<tVertex *> vertices);
+    //                           const std::vector<tVertexPtr > vertices);
     virtual void AddResources(cBaseObjectPtr object);
     tRaycastResult RayCast(const tRay *ray) const;
     virtual void CalcDepthMap(const tMatrix2i &cast_range_window, int height,

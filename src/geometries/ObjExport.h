@@ -16,13 +16,13 @@
 // {
 // public:
 //     static bool ExportObj(std::string export_path,
-//                           const std::vector<tVertex *> &vertices_array,
+//                           const std::vector<tVertexPtr > &vertices_array,
 //                           const std::vector<tTriangle *> &triangles_array);
 // };
 class cObjExporter
 {
 public:
     static bool ExportObj(std::string export_path,
-                          const std::vector<tVertex *> &vertices_array,
+                          const std::vector<tVertexPtr > &vertices_array,
                           const std::vector<tTriangle *> &triangles_array, bool silent = false);
 };

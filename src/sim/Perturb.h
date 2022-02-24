@@ -23,7 +23,7 @@ struct tPerturb
     cBaseObjectPtr mObject;
     int mAffectedTriId; // triangle id
     // int mAffectedVerticesId[3];
-    // tVertex *mAffectedVertices[3];
+    // tVertexPtr mAffectedVertices[3];
     tVector3d mBarycentricCoords; // barycentric coordinates of raw raycast
                                   // point on the affected triangle
 protected:

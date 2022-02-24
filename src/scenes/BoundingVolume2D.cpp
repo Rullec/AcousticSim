@@ -18,7 +18,7 @@ tTriangle2D::tTriangle2D(int id_, const tVector2f &p0, const tVector2f &p1,
 
 cBoundVolume2D::cBoundVolume2D()
 {
-    mTriangleArray.clear();
+    mTriangleArrayShared.clear();
     mGridArray.clear();
     mAABBMin = tVector2f::Ones() * 1e9;
     mAABBMax = -tVector2f::Ones() * 1e9;
@@ -35,8 +35,8 @@ void cBoundVolume2D::AddTriangle(const tVector2f &pos0, const tVector2f &pos1,
                                  const tVector2f &pos2)
 {
     auto tri =
-        std::make_shared<tTriangle2D>(mTriangleArray.size(), pos0, pos1, pos2);
-    mTriangleArray.push_back(tri);
+        std::make_shared<tTriangle2D>(mTriangleArrayShared.size(), pos0, pos1, pos2);
+    mTriangleArrayShared.push_back(tri);
     UpdateAABB(pos0);
     UpdateAABB(pos1);
     UpdateAABB(pos2);
@@ -65,9 +65,9 @@ void cBoundVolume2D::InitVolume()
     }
 
     // 2. dispatch grid
-    for (int tri_id = 0; tri_id < mTriangleArray.size(); tri_id++)
+    for (int tri_id = 0; tri_id < mTriangleArrayShared.size(); tri_id++)
     {
-        auto t = mTriangleArray[tri_id];
+        auto t = mTriangleArrayShared[tri_id];
         for (auto &cur_grid : mGridArray)
         {
             if ((true == cur_grid->IsInsideAABB(t->pos0)) ||

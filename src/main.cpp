@@ -153,8 +153,8 @@ extern void CheckDJDF(const tMatrix3d &F);
 
 int main(int argc, char **argv)
 {
-    gAudioOutput =  std::make_shared<cAudioOutput>();
-    gAudioOutput->Init();
+    // gAudioOutput =  std::make_shared<cAudioOutput>();
+    // gAudioOutput->Init();
     std::string conf = "";
     ParseArg(argc, argv, conf);
 

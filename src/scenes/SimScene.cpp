@@ -31,9 +31,9 @@ eSceneType cSimScene::BuildSceneType(const std::string &str)
 
 cSimScene::cSimScene()
 {
-    // mTriangleArray.clear();
-    // mEdgeArray.clear();
-    // mVertexArray.clear();
+    // mTriangleArrayShared.clear();
+    // mEdgeArrayShared.clear();
+    // mVertexArrayShared.clear();
 
     mPerturb = nullptr;
     mSimStateMachine = std::make_shared<tSimStateMachine>();
@@ -292,15 +292,15 @@ int cSimScene::CalcEdgesDrawBuffer(int st /* = 0 */)
 
 cSimScene::~cSimScene()
 {
-    // for (auto x : mVertexArray)
+    // for (auto x : mVertexArrayShared)
     //     delete x;
-    // mVertexArray.clear();
+    // mVertexArrayShared.clear();
     // for (auto &x : mTriangleArray)
     //     delete x;
-    // mTriangleArray.clear();
+    // mTriangleArrayShared.clear();
     // for (auto &x : mEdgeArray)
     //     delete x;
-    // mEdgeArray.clear();
+    // mEdgeArrayShared.clear();
 }
 
 /**

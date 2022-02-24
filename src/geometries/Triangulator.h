@@ -36,13 +36,13 @@ protected:
     // static void
     // BuildGeometry_UniformSquare(const tVector2d &mesh_shape,
     //                             const tVector2i &subdivision,
-    //                             std::vector<tVertex *> &vertices_array,
+    //                             std::vector<tVertexPtr > &vertices_array,
     //                             std::vector<tEdge *> &edges_array,
     //                             std::vector<tTriangle *> &triangles_array);
     // static void
     // BuildGeometry_SkewTriangle(const tVector2d &mesh_shape,
     //                            const tVector2i &subdivision,
-    //                            std::vector<tVertex *> &vertices_array,
+    //                            std::vector<tVertexPtr > &vertices_array,
     //                            std::vector<tEdge *> &edges_array,
     //                            std::vector<tTriangle *> &triangles_array);
     static void BuildGeometry_UniformTriangle(
