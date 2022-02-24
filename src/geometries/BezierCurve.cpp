@@ -1,6 +1,7 @@
 #include "BezierCurve.h"
 #include "utils/DefUtil.h"
 #include "utils/LogUtil.h"
+#include "utils/RenderUtil.h"
 #include <iostream>
 tVectorXd GetLinspace(float low, float high, int num_of_points)
 {
@@ -14,10 +15,6 @@ tVectorXd GetLinspace(float low, float high, int num_of_points)
     return res;
 }
 
-extern void CalcEdgeDrawBufferSingle(const tVector &v0, const tVector &v1,
-                                     const tVector &edge_normal,
-                                     Eigen::Map<tVectorXf> &buffer, int &st_pos,
-                                     const tVector &color);
 
 cBezierCurve::cBezierCurve(int num_of_div, const tVector2d &A,
                            const tVector2d &B, const tVector2d &C,
@@ -42,7 +39,7 @@ cBezierCurve::cBezierCurve(int num_of_div, const tVector2d &A,
         tVector st_pos = tVector(0, mPointList(0, i), mPointList(1, i), 0);
         tVector ed_pos =
             tVector(0, mPointList(0, i + 1), mPointList(1, i + 1), 0);
-        CalcEdgeDrawBufferSingle(st_pos, ed_pos, tVector::Zero(), map, st,
+        cRenderUtil::CalcEdgeDrawBufferSingle(st_pos, ed_pos, tVector::Zero(), map, st,
                                  BLACK_COLOR);
     }
 }

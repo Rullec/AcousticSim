@@ -5,7 +5,7 @@
 #include "utils/FileUtil.h"
 #include "utils/JsonUtil.h"
 #include "utils/LogUtil.h"
-#include "utils/ColorUtil.h"
+#include "utils/RenderUtil.h"
 
 const std::string gClothTypeStr[eClothType::NUM_OF_CLOTH_TYPE] = {
     "semi_implicit", "implicit", "pbd", "pd", "linctex", "empty", "fem"};
@@ -53,43 +53,12 @@ void cBaseCloth::Init(const Json::Value &conf)
 
 void cBaseCloth::Reset() { SetPos(mClothInitPos); }
 #include <iostream>
-void CalcTriangleDrawBufferSingle(tVertexPtr v0, tVertexPtr v1, tVertexPtr v2,
-                                  Eigen::Map<tVectorXf> &buffer, int &st_pos)
-{
-    buffer.segment(st_pos, 3) = v0->mPos.segment(0, 3).cast<float>();
-    buffer.segment(st_pos + 3, 4) = v0->mColor.cast<float>();
-    // buffer[st_pos + 6] = 0.5;
-    buffer.segment(st_pos + 7, 3) = v0->mNormal.segment(0, 3).cast<float>();
-
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-    buffer.segment(st_pos, 3) = v1->mPos.segment(0, 3).cast<float>();
-    buffer.segment(st_pos + 3, 4) = v1->mColor.cast<float>();
-    // buffer[st_pos + 6] = 0.5;
-    buffer.segment(st_pos + 7, 3) = v1->mNormal.segment(0, 3).cast<float>();
-
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-    buffer.segment(st_pos, 3) = v2->mPos.segment(0, 3).cast<float>();
-    buffer.segment(st_pos + 3, 4) = v2->mColor.cast<float>();
-    buffer.segment(st_pos + 7, 3) = v2->mNormal.segment(0, 3).cast<float>();
-    // buffer[st_pos + 6] = 0.5;
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-}
-extern void CalcEdgeDrawBufferSingle(tVertexPtr v0, tVertexPtr v1,
-                              const tVector &edge_normal,
-                              Eigen::Map<tVectorXf> &buffer, int &st_pos,
-                              const tVector &color);
-
-extern void CalcEdgeDrawBufferSingle(const tVector &v0, const tVector &v1,
-                              const tVector &edge_normal,
-                              Eigen::Map<tVectorXf> &buffer, int &st_pos,
-                              const tVector &color);
-
 void cBaseCloth::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
                                         int &st) const
 {
     for (auto &tri : mTriangleArrayShared)
     {
-        CalcTriangleDrawBufferSingle(this->mVertexArrayShared[tri->mId0],
+        cRenderUtil::CalcTriangleDrawBufferSingle(this->mVertexArrayShared[tri->mId0],
                                      this->mVertexArrayShared[tri->mId1],
                                      this->mVertexArrayShared[tri->mId2], res, st);
     }
@@ -147,7 +116,7 @@ void cBaseCloth::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
             // std::cout << "[warn] failed to determine the edge color\n";
         }
         // 2. calculate the edge draw position
-        CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
+        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
                                  normal, res, st, cur_color);
     }
 }

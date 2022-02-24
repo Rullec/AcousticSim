@@ -1,10 +1,10 @@
 #include "sim/cloth/ClothBuilder.h"
 #include "sim/cloth/BaseCloth.h"
 #include "sim/cloth/FEMCloth.h"
-#include "sim/cloth/ImplicitCloth.h"
-#include "sim/cloth/PBDCloth.h"
-#include "sim/cloth/PDCloth.h"
-#include "sim/cloth/SemiCloth.h"
+// #include "sim/cloth/ImplicitCloth.h"
+// #include "sim/cloth/PBDCloth.h"
+// #include "sim/cloth/PDCloth.h"
+// #include "sim/cloth/SemiCloth.h"
 #include "utils/JsonUtil.h"
 #include <iostream>
 #include <string>
@@ -20,24 +20,24 @@ cBaseClothPtr BuildCloth(Json::Value conf, int obj_id)
     // case eClothType::IMPLICIT_CLOTH :
     //     S
     //     break;
-    case eClothType::SEMI_IMPLICIT_CLOTH:
-        ptr = std::make_shared<cSemiCloth>(obj_id);
-        break;
-    case eClothType::PBD_CLOTH:
-        ptr = std::make_shared<cPBDCloth>(obj_id);
-        break;
-    case eClothType::IMPLICIT_CLOTH:
-        ptr = std::make_shared<cImplicitCloth>(obj_id);
-        break;
-    case eClothType::PD_CLOTH:
-        ptr = std::make_shared<cPDCloth>(obj_id);
-        break;
+    // case eClothType::SEMI_IMPLICIT_CLOTH:
+    //     ptr = std::make_shared<cSemiCloth>(obj_id);
+    //     break;
+    // case eClothType::PBD_CLOTH:
+    //     ptr = std::make_shared<cPBDCloth>(obj_id);
+    //     break;
+    // case eClothType::IMPLICIT_CLOTH:
+    //     ptr = std::make_shared<cImplicitCloth>(obj_id);
+    //     break;
+    // case eClothType::PD_CLOTH:
+    //     ptr = std::make_shared<cPDCloth>(obj_id);
+    //     break;
     case eClothType::FEM_CLOTH:
         ptr = std::make_shared<cFEMCloth>(obj_id);
         break;
     default:
-        std::cout << "pbd type = " << eClothType::PBD_CLOTH
-                  << " cur type = " << type << std::endl;
+        // std::cout << "pbd type = " << eClothType::PBD_CLOTH
+        //           << " cur type = " << type << std::endl;
         SIM_ERROR("unsupported cloth type enum {}", type);
         break;
     }

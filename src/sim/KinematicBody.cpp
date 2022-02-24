@@ -2,18 +2,11 @@
 #include "utils/JsonUtil.h"
 #include "utils/ObjUtil.h"
 #include "utils/DefUtil.h"
+#include "utils/RenderUtil.h"
 #include "geometries/Primitives.h"
 #include <iostream>
 std::string gBodyShapeStr[eKinematicBodyShape::NUM_OF_KINEMATIC_SHAPE] = {
     "plane", "cube", "sphere", "capsule", "custom"};
-extern void CalcTriangleDrawBufferSingle(tVertexPtr v0, tVertexPtr v1, tVertexPtr v2,
-                                         Eigen::Map<tVectorXf> &buffer,
-                                         int &st_pos);
-
-extern void CalcEdgeDrawBufferSingle(tVertexPtr v0, tVertexPtr v1,
-                                     const tVector &edge_normal,
-                                     Eigen::Map<tVectorXf> &buffer, int &st_pos,
-                                     const tVector &color);
 cKinematicBody::cKinematicBody(int id_)
     : cBaseObject(eObjectType::KINEMATICBODY_TYPE, id_)
 {
@@ -119,46 +112,6 @@ void cKinematicBody::Init(const Json::Value &value)
     // << std::endl;
 }
 
-void CalcEdgeDrawBufferSingle(tVertexPtr v0, tVertexPtr v1,
-                              const tVector &edge_normal,
-                              Eigen::Map<tVectorXf> &buffer, int &st_pos,
-                              const tVector &color)
-{
-
-    tVector3f bias_amp =
-        1e-4f * edge_normal.cast<float>().segment(0, 3); // 0.1 mm
-
-    // pos, color, normal
-    buffer.segment(st_pos, 3) = v0->mPos.segment(0, 3).cast<float>() + bias_amp;
-    buffer.segment(st_pos + 3, 4) = color.cast<float>();
-    buffer.segment(st_pos + 7, 3) = tVector3f(0, 0, 0);
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-
-    buffer.segment(st_pos, 3) = v1->mPos.segment(0, 3).cast<float>() + bias_amp;
-    buffer.segment(st_pos + 3, 4) = color.cast<float>();
-    buffer.segment(st_pos + 7, 3) = tVector3f(0, 0, 0);
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-}
-// void CalcEdgeDrawBufferSingle(tVertexPtr v0, tVertexPtr v1,
-//                               const tVector &edge_normal,
-//                               Eigen::Map<tVectorXf> &buffer, int &st_pos,
-//                               const tVector &color)
-// {
-
-//     tVector3f bias_amp =
-//         1e-4f * edge_normal.cast<float>().segment(0, 3); // 0.1 mm
-
-//     // pos, color, normal
-//     buffer.segment(st_pos, 3) = v0->mPos.segment(0, 3).cast<float>() + bias_amp;
-//     buffer.segment(st_pos + 3, 4) = color.cast<float>();
-//     buffer.segment(st_pos + 7, 3) = tVector3f(0, 0, 0);
-//     st_pos += RENDERING_SIZE_PER_VERTICE;
-
-//     buffer.segment(st_pos, 3) = v1->mPos.segment(0, 3).cast<float>() + bias_amp;
-//     buffer.segment(st_pos + 3, 4) = color.cast<float>();
-//     buffer.segment(st_pos + 7, 3) = tVector3f(0, 0, 0);
-//     st_pos += RENDERING_SIZE_PER_VERTICE;
-// }
 eKinematicBodyShape
 cKinematicBody::BuildKinematicBodyShape(std::string type_str)
 {
@@ -240,54 +193,12 @@ void cKinematicBody::SetMeshPos()
 
 // int cKinematicBody::GetDrawNumOfEdges() const { return mEdgeArrayShared.size(); }
 
-void CalcEdgeDrawBufferSingle(const tVector &v0, const tVector &v1,
-                              const tVector &edge_normal,
-                              Eigen::Map<tVectorXf> &buffer, int &st_pos,
-                              const tVector &color)
-{
-    tVector3f bias_amp =
-        1e-4f * edge_normal.cast<float>().segment(0, 3); // 0.1 mm
-    buffer.segment(st_pos, 3) = v0.segment(0, 3).cast<float>() + bias_amp;
-    buffer.segment(st_pos + 3, 4) = color.cast<float>();
-    // edge normal is zero
-    buffer.segment(st_pos + 7, 3) = tVector3f(0, 0, 0);
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-
-    buffer.segment(st_pos, 3) = v1.segment(0, 3).cast<float>() + bias_amp;
-    buffer.segment(st_pos + 3, 4) = color.cast<float>();
-    // edge normal is zero
-    buffer.segment(st_pos + 7, 3) = tVector3f(0, 0, 0);
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-}
-
-void CalcTriangleDrawBufferSingle(tVertexPtr v0, tVertexPtr v1, tVertexPtr v2,
-                                  Eigen::Map<tVectorXf> &buffer, int &st_pos)
-{
-    buffer.segment(st_pos, 3) = v0->mPos.segment(0, 3).cast<float>();
-    buffer.segment(st_pos + 3, 4) = v0->mColor.cast<float>();
-    // buffer[st_pos + 6] = 0.5;
-    buffer.segment(st_pos + 7, 3) = v0->mNormal.segment(0, 3).cast<float>();
-
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-    buffer.segment(st_pos, 3) = v1->mPos.segment(0, 3).cast<float>();
-    buffer.segment(st_pos + 3, 4) = v1->mColor.cast<float>();
-    // buffer[st_pos + 6] = 0.5;
-    buffer.segment(st_pos + 7, 3) = v1->mNormal.segment(0, 3).cast<float>();
-
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-    buffer.segment(st_pos, 3) = v2->mPos.segment(0, 3).cast<float>();
-    buffer.segment(st_pos + 3, 4) = v2->mColor.cast<float>();
-    buffer.segment(st_pos + 7, 3) = v2->mNormal.segment(0, 3).cast<float>();
-    // buffer[st_pos + 6] = 0.5;
-    st_pos += RENDERING_SIZE_PER_VERTICE;
-}
-
 void cKinematicBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
                                             int &st) const
 {
     for (auto &x : mTriangleArrayShared)
     {
-        CalcTriangleDrawBufferSingle(mVertexArrayShared[x->mId0],
+        cRenderUtil::CalcTriangleDrawBufferSingle(mVertexArrayShared[x->mId0],
                                      mVertexArrayShared[x->mId1],
                                      mVertexArrayShared[x->mId2], res, st);
     }
@@ -309,7 +220,7 @@ void cKinematicBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
             normal /= 2;
         }
 
-        CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
+        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
                                  normal, res, st, black_color);
     }
 }

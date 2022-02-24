@@ -23,6 +23,7 @@ TetUtil.cpp
 DepthImageSaver.cpp
 MPIUtil.cpp
 StringUtil.cpp
+RenderUtil.cpp
 )
 
 target_link_libraries(utils_lib JSON ${MPI_CXX_LIBRARIES})

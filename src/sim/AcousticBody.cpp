@@ -29,8 +29,8 @@ void cAcousticBody::SolveVibration(
     }
 
     // solve decoupled linear system
-    auto output = "vib.txt";
-    std::ofstream fout(output);
+    // auto output = "vib.txt";
+    // std::ofstream fout(output);
     double dt = 2e-3;
     size_t steps = 1 / dt;
     sum_wave = tVectorXd::Zero(steps);
@@ -114,11 +114,11 @@ void cAcousticBody::SolveVibration(
             tVectorXd x_vec = tVectorXd(x_lst.size());
             for (size_t j = 0; j < x_vec.size(); j++)
                 x_vec[j] = x_lst[j];
-            fout << "dof " << i << " x vec = " << x_vec.transpose() << std::endl;
+            // fout << "dof " << i << " x vec = " << x_vec.transpose() << std::endl;
             sum_wave += x_vec;
         }
     }
-    fout << "sum wave now is = " << sum_wave.transpose() << std::endl;
-    fout.close();
-    std::cout << "write vibrations to " << output << std::endl;
+    // fout << "sum wave now is = " << sum_wave.transpose() << std::endl;
+    // fout.close();
+    // std::cout << "write vibrations to " << output << std::endl;
 }

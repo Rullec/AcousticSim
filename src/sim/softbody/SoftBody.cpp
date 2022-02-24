@@ -1,6 +1,7 @@
 #include "SoftBody.h"
 #include "utils/JsonUtil.h"
 #include "utils/TetUtil.h"
+#include "utils/RenderUtil.h"
 #include "geometries/Tetrahedron.h"
 #include "geometries/Primitives.h"
 #include "sim/softbody/BaseMaterial.h"
@@ -111,23 +112,18 @@ void cSoftBody::SyncPosToVectorArray()
             mXcur.segment(3 * i, 3).cast<double>();
     }
 }
-extern void CalcTriangleDrawBufferSingle(tVertexPtr v0, tVertexPtr v1, tVertexPtr v2,
-                                         Eigen::Map<tVectorXf> &buffer, int &st_pos);
 void cSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
                                        int &st) const
 {
     // std::cout << "caclulate triangle draw buffer " << mTriangleArrayShared.size() << std::endl;
     for (auto &x : mTriangleArrayShared)
     {
-        CalcTriangleDrawBufferSingle(mVertexArrayShared[x->mId0],
+        cRenderUtil::CalcTriangleDrawBufferSingle(mVertexArrayShared[x->mId0],
                                      mVertexArrayShared[x->mId1],
                                      mVertexArrayShared[x->mId2], res, st);
     }
 }
-extern void CalcEdgeDrawBufferSingle(tVertexPtr v0, tVertexPtr v1,
-                                     const tVector &edge_normal,
-                                     Eigen::Map<tVectorXf> &buffer, int &st_pos,
-                                     const tVector &color);
+
 void cSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                    int &st) const
 {
@@ -143,7 +139,7 @@ void cSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
             normal /= 2;
         }
 
-        CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
+        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
                                  normal, res, st, black_color);
     }
 }
