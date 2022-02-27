@@ -1,7 +1,9 @@
 set(CLOTH_SRC
     cloth/BaseCloth.cpp
     cloth/ClothBuilder.cpp
-    cloth/FEMCloth.cpp
+    cloth/BaraffCloth.cpp
+    cloth/BaraffMaterial.cpp
+    cloth/QBendingMaterial.cpp
     # cloth/ImplicitCloth.cpp
     # cloth/PBDCloth.cpp
     # cloth/PDCloth.cpp

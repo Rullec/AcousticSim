@@ -1,9 +1,8 @@
 #pragma once
 #include "utils/DefUtil.h"
-SIM_DECLARE_CLASS_AND_PTR(cBaseCloth)
-SIM_DECLARE_CLASS_AND_PTR(cSimScene)
+SIM_DECLARE_CLASS_AND_PTR(cBaseObject)
 namespace Json
 {
 class Value;
 };
-cBaseClothPtr BuildCloth(Json::Value conf, int obj_id);
+cBaseObjectPtr BuildCloth(Json::Value conf, int obj_id);

@@ -142,17 +142,16 @@ void test_cg()
     // std::cout << "inv x = " << inv_x.transpose() << std::endl;
     exit(1);
 }
-#include "sim/softbody/NeoHookeanMaterial.h"
-struct Foo
-{
-    Foo(int num) : num_(num) {}
-    void print_add(int i) const { std::cout << num_ + i << '\n'; }
-    int num_;
-};
-extern void CheckDJDF(const tMatrix3d &F);
+#include "sim/cloth/BaraffMaterial.h"
 
+#include "sim/cloth/QBendingMaterial.h"
 int main(int argc, char **argv)
 {
+    // auto mat = std::make_shared<cQBendingMaterial>();
+    // mat->CheckForce();
+    // mat->CheckStiffnessMatrix();
+    // cQBendingMaterial::CheckForce();
+    // exit(1);
     // gAudioOutput =  std::make_shared<cAudioOutput>();
     // gAudioOutput->Init();
     std::string conf = "";

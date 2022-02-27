@@ -1,6 +1,6 @@
 #include "sim/cloth/ClothBuilder.h"
 #include "sim/cloth/BaseCloth.h"
-#include "sim/cloth/FEMCloth.h"
+#include "sim/cloth/BaraffCloth.h"
 // #include "sim/cloth/ImplicitCloth.h"
 // #include "sim/cloth/PBDCloth.h"
 // #include "sim/cloth/PDCloth.h"
@@ -10,11 +10,11 @@
 #include <string>
 
 const std::string CLOTH_TYPE_KEY = "cloth_type";
-cBaseClothPtr BuildCloth(Json::Value conf, int obj_id)
+cBaseObjectPtr BuildCloth(Json::Value conf, int obj_id)
 {
     std::string cloth_type_str = cJsonUtil::ParseAsString(CLOTH_TYPE_KEY, conf);
     eClothType type = cBaseCloth::BuildClothType(cloth_type_str);
-    cBaseClothPtr ptr = nullptr;
+    cBaseObjectPtr ptr = nullptr;
     switch (type)
     {
     // case eClothType::IMPLICIT_CLOTH :
@@ -33,7 +33,7 @@ cBaseClothPtr BuildCloth(Json::Value conf, int obj_id)
     //     ptr = std::make_shared<cPDCloth>(obj_id);
     //     break;
     case eClothType::FEM_CLOTH:
-        ptr = std::make_shared<cFEMCloth>(obj_id);
+        ptr = std::make_shared<cBaraffCloth>(obj_id);
         break;
     default:
         // std::cout << "pbd type = " << eClothType::PBD_CLOTH

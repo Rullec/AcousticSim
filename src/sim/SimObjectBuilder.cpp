@@ -25,8 +25,7 @@ cBaseObjectPtr BuildSimObj(const Json::Value &conf, int id_)
     }
     case eObjectType::CLOTH_TYPE:
     {
-        auto result = BuildCloth(conf, id_);
-        // object = std::dynamic_pointer_cast<cBaseObject>(BuildCloth(conf, id_));
+        object = BuildCloth(conf, id_);
         break;
     }
     default:

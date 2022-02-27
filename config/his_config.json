@@ -2,31 +2,50 @@
     "scene_type": "sim",
     "obj_list": [
         {
-            "object_name": "soft_body",
-            "object_type": "SoftBody",
-            "material_type.stvk": "STVK",
-            "material_type": "NEO_HOOKEAN",
-            "init_translation": [
-                0,
-                0.2,
-                0
+            "object_name": "a_cloth",
+            "object_type": "Cloth",
+            "cloth_type": "fem",
+            "geometry_type": "regular_triangle",
+            "damping": 1e-5,
+            "default_timestep": 0.03333,
+            "cloth_size": [
+                0.1,
+                0.1
             ],
-            "init_rotation": [
-                0,
-                0,
-                0
+            "subdivision": [
+                1,
+                1
             ],
-            // "tet_path": "./data/tetmesh/single_tet/tet.1",
-            "tet_path": "./data/tetmesh/cube/cube.1",
-            // "tet_path": "./data/tetmesh/cube_v38/cube_v38.1",
-            // "tet_path": "./data/tetmesh/cube_v146/cube_v146.1",
-            "rayleigh_damping_a": 10,
+            "rayleigh_damping_a": 0,
             "rayleigh_damping_b": 0,
-            "friction": 0,
-            "youngs": 1e7,
-            "poisson_ratio": 0.7,
-            "collision_k": 1000,
-            "rho": 1000
+            "enable_cloth_from_obj": false,
+            "cloth_mass": 0.0062,
+            "cloth_density": 0.62,
+            "cloth_init_pos": [
+                0,
+                0.1,
+                0
+            ],
+            "cloth_uv_rotation": 0,
+            "cloth_init_orientation": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "constraints": {
+                "static_point": [
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0.1,
+                        0
+                    ]
+
+                ]
+            }
         }
     ],
     "window_height": 800,

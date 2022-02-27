@@ -34,7 +34,7 @@ public:
     virtual void ApplyPerturb(tPerturb *pert);
     virtual void Update(float dt) override;
     virtual void UpdatePos(double dt) = 0;
-    virtual void ApplyUserPerturbForceOnce(tPerturb *);
+    virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
     virtual void SetPos(const tVectorXd &newpos);
     virtual const tVectorXd &GetPos() const;
     virtual double GetDefaultTimestep() { return mIdealDefaultTimestep; }
@@ -45,7 +45,7 @@ public:
     virtual const tVectorXd &GetInitPos() const;
     virtual void MoveTranslation(const tVector3d &incremental_move);
     tVector CalcCOM() const;
-
+    
 protected:
     eClothType mClothType;
     cCollisionDetecterPtr mColDetecter;
@@ -56,9 +56,8 @@ protected:
     tVectorXd mInvMassMatrixDiag; // diag inv mass matrix
     std::string mGeometryType;
     double mDamping;                             // damping coeff
-    tVectorXd mIntForce;                         // internal force
-    tVectorXd mExtForce;                         // external force
-    tVectorXd mDampingForce;                     // external force
+    tVectorXd mIntForce, mGravityForce, mUserForce, mCollisionForce, mDampingForce;
+    
     bool mEnableClothFromObj;                    // the cloth mesh comes from obj or not
     std::string mClothObjPath;                   // if the cloth mesh comes from obj, the path
     tVectorXd mXpre, mXcur;                      // previous node position & current node position

@@ -1093,5 +1093,14 @@ tVector cMathUtil::CalcNormalFromPlane(const tVector &plane_equation)
 float cMathUtil::CalcTriangleArea(const tVector &p0, const tVector &p1,
                                   const tVector &p2)
 {
-    return 0.5 * ((p1 - p0).cross3(p2 - p0)).norm();
+    return cMathUtil::CalcTriangleArea3d(
+        p0.segment(0, 3),
+        p1.segment(0, 3),
+        p2.segment(0, 3));
+}
+
+float cMathUtil::CalcTriangleArea3d(const tVector3d &p0, const tVector3d &p1,
+                                  const tVector3d &p2)
+{
+    return 0.5 * ((p1 - p0).cross(p2 - p0)).norm();
 }

@@ -434,6 +434,8 @@ public:
     static tVector SampleFromPlane(const tVector &plane_equation);
     static float CalcTriangleArea(const tVector &p0, const tVector &p1,
                                   const tVector &p2);
+    static float CalcTriangleArea3d(const tVector3d &p0, const tVector3d &p1,
+                                  const tVector3d &p2);
     static int RandIntCategorical(const std::vector<double> &prop);
 
 private:
