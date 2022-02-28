@@ -147,10 +147,11 @@ void test_cg()
 #include "sim/cloth/QBendingMaterial.h"
 int main(int argc, char **argv)
 {
-    // auto mat = std::make_shared<cQBendingMaterial>();
-    // mat->CheckForce();
-    // mat->CheckStiffnessMatrix();
-    // cQBendingMaterial::CheckForce();
+    auto mat = std::make_shared<cBaraffMaterial>();
+    mat->CheckShearingForce();
+    // mat->CheckStretchForce();
+    exit(1);
+    // cQBendingMaterial::CheckStretchForce();
     // exit(1);
     // gAudioOutput =  std::make_shared<cAudioOutput>();
     // gAudioOutput->Init();

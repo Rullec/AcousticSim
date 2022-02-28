@@ -27,9 +27,9 @@ void cBaraffCloth::Init(const Json::Value &conf)
 
     // init material
     mMaterial = std::make_shared<cBaraffMaterial>();
-    mMaterial->SetK(1e5, 1e5);
-    mMaterial->CheckStiffnessMatrix();
-    mMaterial->CheckForce();
+    mMaterial->SetStretchK(1e5, 1e5);
+    mMaterial->CheckStretchStiffnessMatrix();
+    mMaterial->CheckStretchForce();
 
     // allocate forces
     {
@@ -176,7 +176,7 @@ void cBaraffCloth::CalcIntForce(const tVectorXd &xcur, tVectorXd &int_force) con
         uv_coords.row(1) = mVertexArrayShared[v_id[1]]->muv.cast<double>();
         uv_coords.row(2) = mVertexArrayShared[v_id[2]]->muv.cast<double>();
 
-        tVectorXd force = mMaterial->CalcForce(get_pos_mat(xcur, v_id[0], v_id[1], v_id[2]), uv_coords);
+        tVectorXd force = mMaterial->CalcStretchForce(get_pos_mat(xcur, v_id[0], v_id[1], v_id[2]), uv_coords);
 
         int_force.segment(3 * v_id[0], 3) += force.segment(0, 3);
         int_force.segment(3 * v_id[1], 3) += force.segment(3, 3);
@@ -266,7 +266,7 @@ void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
         uv_coords.row(1) = mVertexArrayShared[v_id[1]]->muv.cast<double>();
         uv_coords.row(2) = mVertexArrayShared[v_id[2]]->muv.cast<double>();
 
-        auto ele_K = mMaterial->CalcStiffMatrix(get_pos_mat(xcur, v_id[0], v_id[1], v_id[2]), uv_coords);
+        auto ele_K = mMaterial->CalcStretchStiffMatrix(get_pos_mat(xcur, v_id[0], v_id[1], v_id[2]), uv_coords);
 
         // 2. assemble
         for (size_t i = 0; i < 3; i++)

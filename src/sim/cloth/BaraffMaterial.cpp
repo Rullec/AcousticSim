@@ -8,8 +8,9 @@ cBaraffMaterial::cBaraffMaterial()
     mS(1, 0) = 1;
     mS(2, 1) = 1;
 
-    mK[0] = 1e4;
-    mK[1] = 1e4;
+    mKwarpweftshear[0] = 1e4;
+    mKwarpweftshear[1] = 1e4;
+    mKwarpweftshear[2] = 1e4;
 }
 
 /**
@@ -17,7 +18,7 @@ cBaraffMaterial::cBaraffMaterial()
  * where g_i = N_i \otimes n_i
  * For more details, please check the note "Baraff 内力和刚度矩阵计算(利用Kronecker简化).md"
 */
-tVector9d cBaraffMaterial::CalcForce(const tMatrix3d &pos, const tMatrix32d &rest_texture_coords) const
+tVector9d cBaraffMaterial::CalcStretchForce(const tMatrix3d &pos, const tMatrix32d &rest_texture_coords) const
 {
     // 1. calculate F and N
     // std::cout << "--------[calc force]------\n";
@@ -28,22 +29,22 @@ tVector9d cBaraffMaterial::CalcForce(const tMatrix3d &pos, const tMatrix32d &res
     //   << rest_texture_coords << std::endl;
     CalcFAndN(pos, rest_texture_coords, F, N);
     std::cout << "F = \n"
-      << F << std::endl;
+              << F << std::endl;
     // 2. calculate C
     tVector2f C = CalcC(F);
     std::cout << "C = "
-      << C.transpose() << std::endl;
+              << C.transpose() << std::endl;
     tMatrix32d n = Calcn(pos, N);
     tMatrixXd g = Calcg(N, n);
-    tVector9d int_force = (-mK[0] * C[0]) * g.col(0) + (-mK[1] * C[1]) * g.col(1);
+    tVector9d int_force = (-mKwarpweftshear[0] * C[0]) * g.col(0) + (-mKwarpweftshear[1] * C[1]) * g.col(1);
     // std::cout << "force = " << int_force.transpose() << std::endl;
     return int_force;
 }
 
-void cBaraffMaterial::SetK(double Kwarp, double Kweft)
+void cBaraffMaterial::SetStretchK(double Kwarp, double Kweft)
 {
-    this->mK[0] = Kwarp;
-    this->mK[1] = Kweft;
+    this->mKwarpweftshear[0] = Kwarp;
+    this->mKwarpweftshear[1] = Kweft;
 }
 // tMatrix9d cBaraffMaterial::CalcStiffMatrix(const tMatrix3d &pos, const tMatrix32d &rest_texture_coords) const
 // {
@@ -56,7 +57,7 @@ void cBaraffMaterial::SetK(double Kwarp, double Kweft)
  *      C is the "baraff stretch condition" = [|Wu| - Bu, |Wv| - Bv]
  *      K is the stiffness mat = diag(Kwarp, Kweft)
 */
-double cBaraffMaterial::CalcEnergy(const tMatrix3d &pos, const tMatrix32d &rest_texture_coords) const
+double cBaraffMaterial::CalcStretchEnergy(const tMatrix3d &pos, const tMatrix32d &rest_texture_coords) const
 {
     // 1. calculate F and N
     tMatrix32d F, N;
@@ -64,7 +65,7 @@ double cBaraffMaterial::CalcEnergy(const tMatrix3d &pos, const tMatrix32d &rest_
 
     // 2. calculate C
     tVector2f C = CalcC(F);
-    return 0.5 * (C[0] * C[0] * mK[0] + C[1] * C[1] * mK[1]);
+    return 0.5 * (C[0] * C[0] * mKwarpweftshear[0] + C[1] * C[1] * mKwarpweftshear[1]);
 }
 
 /**
@@ -131,45 +132,45 @@ tVectorXd MatToVec(const tMatrix3d &mat)
 /**
  * \breif           check the derivative of energy
 */
-void cBaraffMaterial::CheckForce()
+void cBaraffMaterial::CheckStretchForce()
 {
     tMatrix32d uv_coords = tMatrix32d::Random();
     tVectorXd pos_vec = tVectorXd::Random(9);
 
-    double e_old = CalcEnergy(VecToMat(pos_vec), uv_coords);
+    double e_old = CalcStretchEnergy(VecToMat(pos_vec), uv_coords);
     double eps = 1e-3;
     tVectorXd f_num = tVectorXd::Zero(pos_vec.size());
-    tVectorXd f_ana = CalcForce(VecToMat(pos_vec), uv_coords);
+    tVectorXd f_ana = CalcStretchForce(VecToMat(pos_vec), uv_coords);
     for (int i = 0; i < pos_vec.size(); i++)
 
     {
         pos_vec[i] += eps;
-        double e_new = CalcEnergy(VecToMat(pos_vec), uv_coords);
+        double e_new = CalcStretchEnergy(VecToMat(pos_vec), uv_coords);
         f_num[i] = -(e_new - e_old) / eps;
         pos_vec[i] -= eps;
     }
-    tVectorXd ana_diff = (f_num - f_ana) / mK.mean();
+    tVectorXd ana_diff = (f_num - f_ana) / mKwarpweftshear.segment(0, 2).mean();
     double ana_diff_norm = ana_diff.norm();
     std::cout << "f num = " << f_num.transpose() << std::endl;
     std::cout << "f ana = " << f_ana.transpose() << std::endl;
     std::cout << "ana_diff_norm = " << ana_diff_norm << std::endl;
 }
 
-void cBaraffMaterial::CheckStiffnessMatrix()
+void cBaraffMaterial::CheckStretchStiffnessMatrix()
 {
 
     tMatrix32d uv_coords = tMatrix32d::Random();
     tVectorXd pos_vec = tVectorXd::Random(9);
 
-    tVectorXd force_old = CalcForce(VecToMat(pos_vec), uv_coords);
+    tVectorXd force_old = CalcStretchForce(VecToMat(pos_vec), uv_coords);
     double eps = 1e-3;
     tMatrixXd K_num = tMatrixXd::Zero(pos_vec.size(), pos_vec.size());
-    tMatrixXd K_ana = CalcStiffMatrix(VecToMat(pos_vec), uv_coords);
+    tMatrixXd K_ana = CalcStretchStiffMatrix(VecToMat(pos_vec), uv_coords);
     for (int i = 0; i < pos_vec.size(); i++)
 
     {
         pos_vec[i] += eps;
-        tVectorXd force_new = CalcForce(VecToMat(pos_vec), uv_coords);
+        tVectorXd force_new = CalcStretchForce(VecToMat(pos_vec), uv_coords);
         K_num.col(i) = (force_new - force_old) / eps;
         pos_vec[i] -= eps;
     }
@@ -203,7 +204,7 @@ tMatrix9d KroneckerProduct(const tMatrix3d &a, const tMatrix3d &b)
  *              * [ (N_i * N_i^T ) \otimes P_i  ]
  *          )
 */
-tMatrix9d cBaraffMaterial::CalcStiffMatrix(const tMatrix3d &pos, const tMatrix32d &uv_coords) const
+tMatrix9d cBaraffMaterial::CalcStretchStiffMatrix(const tMatrix3d &pos, const tMatrix32d &uv_coords) const
 {
     tMatrix32d F, N;
     CalcFAndN(pos, uv_coords, F, N);
@@ -224,11 +225,11 @@ tMatrix9d cBaraffMaterial::CalcStiffMatrix(const tMatrix3d &pos, const tMatrix32
     tMatrix9d K = tMatrix9d::Zero();
     for (size_t i = 0; i < 2; i++)
     {
-        K.noalias() += mK[i] * (-g.col(i) * g.col(i).transpose() - C[i] / X_Ni_norm[i] *
+        K.noalias() += mKwarpweftshear[i] * (-g.col(i) * g.col(i).transpose() - C[i] / X_Ni_norm[i] *
 
-                                                                       KroneckerProduct(N.col(i) * N.col(i).transpose(), P[i])
+                                                                                    KroneckerProduct(N.col(i) * N.col(i).transpose(), P[i])
 
-                               );
+                                            );
     }
     return K;
 }
@@ -243,4 +244,89 @@ void cBaraffMaterial::CalcPi(const tMatrix32d &n, tMatrix3d &P0, tMatrix3d &P1) 
 {
     P0.noalias() = tMatrix3d::Identity() - n.col(0) * n.col(0).transpose();
     P1.noalias() = tMatrix3d::Identity() - n.col(1) * n.col(1).transpose();
+}
+
+void cBaraffMaterial::CheckShearingForce()
+{
+    tMatrix32d uv_coords = tMatrix32d::Random();
+    tVectorXd pos_vec = tVectorXd::Random(9);
+
+    double e_old = CalcShearingEnergy(VecToMat(pos_vec), uv_coords);
+    double eps = 1e-5;
+    tVectorXd f_num = tVectorXd::Zero(pos_vec.size());
+    tVectorXd f_ana = CalcShearingForce(VecToMat(pos_vec), uv_coords);
+    for (int i = 0; i < pos_vec.size(); i++)
+
+    {
+        pos_vec[i] += eps;
+        double e_new = CalcShearingEnergy(VecToMat(pos_vec), uv_coords);
+        f_num[i] = -(e_new - e_old) / eps;
+        pos_vec[i] -= eps;
+    }
+    tVectorXd ana_diff = (f_num - f_ana) / mKwarpweftshear.segment(0, 2).mean();
+    double ana_diff_norm = ana_diff.norm();
+    std::cout << "[shear] f num = " << f_num.transpose() << std::endl;
+    std::cout << "[shear] f ana = " << f_ana.transpose() << std::endl;
+    std::cout << "[shear] ana_diff_norm = " << ana_diff_norm << std::endl;
+}
+
+void cBaraffMaterial::CheckShearingStiffnessMatrix()
+{
+}
+
+void cBaraffMaterial::SetSheaingK(double Kshear)
+{
+    mKwarpweftshear[2] = Kshear;
+}
+
+/**
+ * \biref               f = -k_i C_i' g_i'
+*/
+tVector9d cBaraffMaterial::CalcShearingForce(const tMatrix3d &pos, const tMatrix32d &uv_coords) const
+{
+    // 1. calculate F‘ and N’
+    tMatrix32d F_prime, N_prime;
+    CalcFAndN_shearing(pos, uv_coords, F_prime, N_prime);
+    // 2. calculate C_prime
+    tVector2f C_prime = CalcC(F_prime);
+    tMatrix32d n_prime = Calcn(pos, N_prime);
+    tMatrixXd g_prime = Calcg(N_prime, n_prime);
+    // tVector9d int_force = (-mKwarpweftshear[0] * C[0]) * g.col(0) + (-mKwarpweftshear[1] * C[1]) * g.col(1);
+    std::cout << "F' = \n" << F_prime << std::endl;
+    std::cout << "C' = \n" << C_prime << std::endl;
+    std::cout << "n' = \n" << n_prime << std::endl;
+    std::cout << "g' = \n" << g_prime << std::endl;
+    tVector9d int_force = -mKwarpweftshear[2] * (C_prime[0] * g_prime.col(0) + C_prime[1] * g_prime.col(1));
+    return int_force;
+}
+
+tMatrix9d cBaraffMaterial::CalcShearingStiffMatrix(const tMatrix3d &pos, const tMatrix32d &rest_texture_coords) const
+{
+    return tMatrix9d::Zero();
+}
+
+void cBaraffMaterial::CalcFAndN_shearing(const tMatrix3d &pos, const tMatrix32d &uv_coords, tMatrix32d &F_prime, tMatrix32d &N_prime) const
+{
+    tMatrix2d DmInv = tMatrix2d::Zero();
+    DmInv.col(0) = uv_coords.row(1) - uv_coords.row(0);
+    DmInv.col(1) = uv_coords.row(2) - uv_coords.row(0);
+
+    DmInv = DmInv.inverse().eval();
+
+    tMatrix2d R_neg45 = cMathUtil::RotMat2D(-M_PI / 4);
+    // 2. calculate N' = S * Dminv * R^{-45}
+    N_prime.noalias() = mS * DmInv * R_neg45;
+
+    // 3. calculate F' = X * N'
+    F_prime.noalias() = pos * N_prime;
+}
+
+double cBaraffMaterial::CalcShearingEnergy(const tMatrix3d &pos, const tMatrix32d &uv_coords) const
+{
+    tMatrix32d F, N;
+    CalcFAndN_shearing(pos, uv_coords, F, N);
+
+    // 2. calculate C
+    tVector2f C = CalcC(F);
+    return 0.5 * (C[0] * C[0] * mKwarpweftshear[2] + C[1] * C[1] * mKwarpweftshear[2]);
 }
