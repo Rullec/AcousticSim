@@ -6,6 +6,8 @@
 
 # )
 
+find_package(GLFW3 REQUIRED)
+
 
 add_library(
     scenes_lib

@@ -1,3 +1,17 @@
+# -------------------enable openmp---------------------
+set(USE_OPENMP ON)
+if(USE_OPENMP)
+    if(WIN32)
+        add_definitions(/openmp -DUSE_OPENMP)
+        message(STATUS "we use openmp")
+    else()
+        find_package(OpenMP REQUIRED)
+        link_directories(${OpenMP_LIBRARY_DIR})
+    endif()
+else()
+    message(STATUS "we dont use openmp")
+endif()
+
 set(CLOTH_SRC
     cloth/BaseCloth.cpp
     cloth/ClothBuilder.cpp
@@ -36,3 +50,4 @@ set(
 )
 
 add_library(sim_lib ${SIM_SRC})
+# target_link_libraries(sim_lib OpenMP::OpenMP_CXX)

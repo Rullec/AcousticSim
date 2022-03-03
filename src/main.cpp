@@ -121,29 +121,7 @@ void ParseArg(int argc, char *argv[], std::string &config_path)
     SIM_INFO("conf path {}", config_path);
 }
 
-#include "CGSolver.h"
-void test_cg()
-{
-    int dims = 1000;
-    tMatrixXd A = tMatrixXd::Random(dims, dims);
-    A = A.transpose() * A;
-    tVectorXd b = tVectorXd::Random(dims);
-    cTimeUtil::Begin("cg");
-    tVectorXd x = cCGSolver::Solve(A, b);
-    cTimeUtil::End("cg");
-    tVectorXd residual = A * x - b;
-    std::cout << "CG residual = " << residual.norm() << std::endl;
-    // std::cout << "CG x = " << x.transpose() << std::endl;
-    cTimeUtil::Begin("inv");
-    tVectorXd inv_x = A.inverse() * b;
-    cTimeUtil::End("inv");
-    tVectorXd inv_residual = A * inv_x - b;
-    std::cout << "inv residual = " << inv_residual.norm() << std::endl;
-    // std::cout << "inv x = " << inv_x.transpose() << std::endl;
-    exit(1);
-}
 #include "sim/cloth/BaraffMaterial.h"
-
 #include "sim/cloth/QBendingMaterial.h"
 
 void SparseMatVecProd(const tSparseMat &A, const tVectorXd &b, tVectorXd &res)

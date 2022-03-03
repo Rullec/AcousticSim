@@ -1,12 +1,30 @@
 
 cmake_minimum_required(VERSION 3.0.0)
-project(ClothSim VERSION 0.1.0)
+project(ClothSim VERSION 0.1.0 LANGUAGES CUDA CXX)
 
+enable_language(CUDA)
+include(CheckLanguage)
+check_language(CUDA)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_DEBUG_POSTFIX "d")
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(configure_movecmd)
 include_directories(./includes)
 include_directories(./imgui)
+include_directories(./src)
+
+message(STATUS "cuda compiler: " ${CMAKE_CUDA_COMPILER})
+message(STATUS "cuda compiler id: " ${CMAKE_CUDA_COMPILER})
+message(STATUS "cuda compiler version: " ${CMAKE_CUDA_COMPILER_VERSION})
+
+# cuda CXX version
+if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 11)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
 
 set(DLL_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/dlls)
 if(NOT EXISTS ${DLL_OUTPUT_DIR})
@@ -18,23 +36,11 @@ if(WIN32)
     link_directories(./lib)
 endif()
 
-find_package(Vulkan REQUIRED)
-if(Vulkan_FOUND)
-    include_directories(${Vulkan_INCLUDE_DIRS})
-else()
-    message(FATAL_ERROR "vulkan not found")
-endif()
-
-
-find_package(GLFW3 REQUIRED)
-include_directories(./src)
-find_package(OpenMP REQUIRED)
-link_directories(${OpenMP_LIBRARY_DIR})
 
 if(WIN32)
     add_definitions(-D _USE_MATH_DEFINES)
     add_definitions(-D _CRT_NO_VA_START_VALIDATION)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17 /bigobj")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}/bigobj")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4061 /wd4244 /wd4246 /wd4305 /wd4267 /wd4711 /wd4710 /wd4514 /wd4477")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /Zi")
@@ -43,26 +49,13 @@ if(WIN32)
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fsanitize=address")
     # add_definitions("/fsanitize=address")
 else()
-    add_definitions(-std=c++17)
+    # add_definitions(-std=c++17)
     # message(FATAL_ERROR add unix c++17 definitions)
     # ---------------------enable debug symbols---------------------
     add_definitions(-g)
 endif()
 
 
-# -------------------enable openmp---------------------
-set(USE_OPENMP ON)
-if(USE_OPENMP)
-    add_definitions(/openmp -DUSE_OPENMP)
-    message(STATUS "we use openmp")
-else()
-    message(STATUS "we dont use openmp")
-endif()
-
-# -------------------enable optix-----------------
-if(USE_OPTIX)
-    include(./cmake/configure_optix.cmake)
-endif()
 
 # ---------------------add address sanitzer---------------------
 # if(WIN32)
@@ -72,7 +65,12 @@ endif()
 #     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
 #     set (CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
 # endif()
-
+find_package(Vulkan REQUIRED)
+if(Vulkan_FOUND)
+    include_directories(${Vulkan_INCLUDE_DIRS})
+else()
+    message(FATAL_ERROR "vulkan not found")
+endif()
 
 add_subdirectory(./imgui)
 add_subdirectory(./src/utils)
@@ -82,10 +80,9 @@ add_subdirectory(./src/cameras)
 add_subdirectory(./src/scenes)
 
 set(my_libs ${scenes_lib} ${utils_lib} ${imgui_lib})
-set(libs ${Vulkan_LIBRARIES} ${GLFW3_LIBRARY} ${my_libs})
 
-add_executable(main ./src/main.cpp ./src/CGSolver.cpp)
-target_link_libraries(main ${libs} scenes_lib utils_lib geo_lib OpenMP::OpenMP_CXX)
+add_executable(main ./src/main.cpp)
+target_link_libraries(main ${libs} scenes_lib utils_lib geo_lib)
 
 if(WIN32)
     install(TARGETS main
