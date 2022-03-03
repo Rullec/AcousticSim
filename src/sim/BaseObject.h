@@ -35,7 +35,7 @@ struct tPerturb;
 SIM_DECLARE_PTR(tVertex);
 SIM_DECLARE_PTR(tEdge);
 SIM_DECLARE_PTR(tTriangle);
-class cBaseObject : std::enable_shared_from_this<cBaseObject>
+class cBaseObject : public std::enable_shared_from_this<cBaseObject>
 {
 public:
     inline static const std::string OBJECT_NAME_KEY = "object_name";
@@ -52,7 +52,7 @@ public:
                                     int &st) const = 0;
     virtual void Update(float dt) = 0;
     virtual void ApplyUserPerturbForceOnce(tPerturb *) = 0;
-
+    virtual void SetGravity(const tVector3d &g);
     // triangularize methods to visit the mesh data
     virtual int GetNumOfTriangles() const;
     virtual int GetNumOfEdges() const;
@@ -73,11 +73,13 @@ public:
     double CalcTotalArea() const;
     virtual void UpdateImGui();
     virtual void Reset() = 0;
+
 protected:
     float mColorAlpha = 1.0;
     int mObjId;
     std::string mObjName;
     eObjectType mType;
+    tVector3d mGravity;
     bool mEnableDrawBuffer; // enable to open draw buffer
     // std::vector<tVertexPtr > mVertexArray;
     // std::vector<tEdge *> mEdgeArray;

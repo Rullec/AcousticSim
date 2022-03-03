@@ -1,11 +1,12 @@
 #pragma once
 #include "sim/cloth/BaseCloth.h"
-
+#include "utils/SparseUtil.h"
 /**
  * \brief           Baraff cloth
  */
 
 SIM_DECLARE_CLASS_AND_PTR(cBaraffMaterial);
+SIM_DECLARE_CLASS_AND_PTR(cQBendingMaterial);
 typedef Eigen::Matrix<double, 3, 2> tMatrix32d;
 class cBaraffCloth : public cBaseCloth
 {
@@ -15,6 +16,8 @@ public:
     virtual void Init(const Json::Value &conf) override final;
     virtual void UpdatePos(double dt) override final;
     virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
+    virtual void UpdateImGui() override;
+
 protected:
     tMatrixXd mVertexMateralCoords; // cloth's material coordinates
     // tEigenArr<tMatrix32d> mF;       // deformation gradient
@@ -30,19 +33,24 @@ protected:
     // tEigenArr<tEigenArr<tMatrixXd>>
     //     mdFdx; // the gradient of deformation gradient
     cBaraffMaterialPtr mMaterial;
-    tVectorXd mMassMatDiag;
     tSparseMat mStiffnessMatrix;
-    double mRayleightA, mRayleightB;
+    float mRayleightA, mRayleightB;
+    tVector3f mStretchK, mBendingK; // warp weft bias
+    cQBendingMaterialPtr mBendingMaterial;
 
     virtual void InitBuffer();
     virtual void InitMass(const Json::Value &conf) override;
     virtual void InitMaterialCoords();
     virtual int GetSingleElementFreedom() const;
-    virtual void UpdateCollisionForce(tVectorXd & col_force);
+    virtual void UpdateCollisionForce(tVectorXd &col_force);
     virtual void CalcIntForce(const tVectorXd &xcur,
                               tVectorXd &int_force) const override final;
     // virtual void CalculateF(); // calculate deformation gradient
     virtual void CalcStiffnessMatrix(const tVectorXd &xcur,
                                      tSparseMat &K) const;
     virtual void SolveForNextPos(double dt);
+    virtual void CheckForce();
+    virtual double CalcEnergy(const tVectorXd &xcur);
+    virtual void Solve(const tSparseMat &A, const tVectorXd &b, tVectorXd &x, float threshold, int &iters, float &residual);
+    // virtual void CheckStiffnessMatrix();
 };

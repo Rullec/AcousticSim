@@ -327,7 +327,7 @@ void cDrawSceneImGui::Update(double dt)
     else
     {
 
-        mCurFPS = shift_perc * mCurFPS + (1 - shift_perc) * (1e3 / cTimeUtil::End("fps_measure", true));
+        mCurFPS = 1e3 / cTimeUtil::End("fps_measure", true);
     }
 }
 
@@ -336,7 +336,7 @@ void cDrawSceneImGui::Update(double dt)
 */
 void cDrawSceneImGui::UpdateSimImGui()
 {
-    ImVec2 init_window_size = ImVec2(400, 300);
+    ImVec2 init_window_size = ImVec2(300, 400);
     ImGui::SetNextWindowSize(init_window_size, ImGuiCond_FirstUseEver);
 
     ImGui::SetNextWindowPos(ImVec2(float(gWindowWidth) - init_window_size.x, 0),

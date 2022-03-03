@@ -145,16 +145,57 @@ void test_cg()
 #include "sim/cloth/BaraffMaterial.h"
 
 #include "sim/cloth/QBendingMaterial.h"
+
+void SparseMatVecProd(const tSparseMat &A, const tVectorXd &b, tVectorXd &res)
+{
+    if (res.size() != b.size())
+        res.resize(b.size());
+#pragma(omp parallel for num_threads(2))
+    for (int k = 0; k < A.outerSize(); ++k)
+    {
+        double sum = 0;
+        for (tSparseMat::InnerIterator it(A, k); it; ++it)
+        {
+            // std::cout << it.row() << "\t";
+            // std::cout << it.col() << "\t";
+            // std::cout << it.value() << std::endl;
+            sum += b[it.col()] * it.value();
+        }
+        res[k] = sum;
+    }
+    // return b;
+}
 int main(int argc, char **argv)
 {
-    auto mat = std::make_shared<cBaraffMaterial>();
-    mat->CheckShearingForce();
-    // mat->CheckStretchForce();
-    exit(1);
-    // cQBendingMaterial::CheckStretchForce();
+    Eigen::setNbThreads(15);
+    // {
+    //     int dims = 30000;
+    //     tSparseMat mat(dims, dims);
+    //     std::vector<tTriplet> trip;
+    //     trip.reserve(dims * dims);
+    //     for (int i = 0; i < dims; i++)
+    //         for (int j = 0; j < dims; j++)
+    //         {
+    //             if ((i * j) % 2 == 1)
+    //             {
+    //                 trip.push_back(tTriplet(i, j, 3.1));
+    //             }
+    //         }
+
+    //     mat.setFromTriplets(trip.begin(), trip.end());
+    //     tVectorXd b = tVectorXd::Ones(dims);
+    //     // std::cout << mat << std::endl;
+    //     tVectorXd res_self = tVectorXd::Zero(dims);
+    //     cTimeUtil::Begin("eigen");
+    //     tVectorXd res_eigen = mat * b;
+    //     cTimeUtil::End("eigen");
+    //     cTimeUtil::Begin("self");
+    //     SparseMatVecProd(mat, b, res_self);
+    //     cTimeUtil::End("self");
+    //     tVectorXd diff = res_eigen - res_self;
+    //     std::cout << "diff norm = " << diff.norm() << std::endl;
+    // }
     // exit(1);
-    // gAudioOutput =  std::make_shared<cAudioOutput>();
-    // gAudioOutput->Init();
     std::string conf = "";
     ParseArg(argc, argv, conf);
 
@@ -162,6 +203,7 @@ int main(int argc, char **argv)
 
     SimDraw(conf);
 
+    // _CrtDumpMemoryLeaks();
     return 0;
 }
 #include "scenes/DrawSceneImGUI.h"

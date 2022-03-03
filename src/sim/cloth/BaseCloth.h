@@ -53,7 +53,7 @@ protected:
     tVector2d mClothSizes;
     double mClothMass;            // SI key
     float mClothDensity;          // SI kg/m^2
-    tVectorXd mInvMassMatrixDiag; // diag inv mass matrix
+    tVectorXd mMassMatrixDiag; // diag inv mass matrix
     std::string mGeometryType;
     double mDamping;                             // damping coeff
     tVectorXd mIntForce, mGravityForce, mUserForce, mCollisionForce, mDampingForce;

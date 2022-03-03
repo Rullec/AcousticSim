@@ -1,6 +1,7 @@
 #include "ArcBallCamera.h"
 // #include "Utils/MathUtil.h"
 #include "utils/MathUtil.h"
+#include "utils/RotUtil.h"
 // cArcBallCamera::cArcBallCamera()
 // {
 //     mType = eCameraType::ARCBALL_CAMERA;
@@ -40,7 +41,7 @@ tMatrix4f cArcBallCamera::ViewMatrix()
     // std::cout << "rot angle = " << rot_angle << std::endl;
     // tVector axis_angle = tVector::Zero();
     // axis_angle.segment(0, 3) = mCamUp.normalized().cast<double>() *
-    // rot_angle; tMatrix3f rotmat = cMathUtil::AxisAngleToRotmat(axis_angle)
+    // rot_angle; tMatrix3f rotmat = cRotUtil::AxisAngleToRotmat(axis_angle)
     //                        .topLeftCorner<3, 3>()
     //                        .cast<float>();
     // mCamPos = rotmat * (mCamPos - mCamCenter) + mCamCenter;
@@ -112,7 +113,7 @@ void cArcBallCamera::MouseMove(float mouse_x, float mouse_y)
     tVector3f center_to_pos = mCamPos - mCamCenter;
 
     tMatrix3f rotmat =
-        cMathUtil::AxisAngleToRotmat(
+        cRotUtil::AxisAngleToRotmat(
             cMathUtil::Expand(
                 center_to_pos.normalized().cross(offset_vec_world), 0))
             .block(0, 0, 3, 3)

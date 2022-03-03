@@ -1,5 +1,6 @@
 #include "CameraBase.h"
 #include "utils/LogUtil.h"
+#include "utils/RotUtil.h"
 const std::string gSceneTypeStr[eCameraType::NUM_OF_CAMERA_TYPE] = {
     "fps_cam", "arcball_cam", "ortho_cam"};
 eCameraType CameraBase::BuildCameraTypeFromStr(std::string str)
@@ -147,7 +148,7 @@ void CameraBase::RotateAlongYAxis(double angle_deg)
     // keep the center
     tVector3f pos_to_center = this->mCamCenter - this->mCamPos;
     tVector3f new_pos_to_center =
-        cMathUtil::AxisAngleToRotmat(tVector(0, 1, 0, 0) * angle_deg *
+        cRotUtil::AxisAngleToRotmat(tVector(0, 1, 0, 0) * angle_deg *
                                      gDegreesToRadians)
             .block(0, 0, 3, 3)
             .cast<float>() *

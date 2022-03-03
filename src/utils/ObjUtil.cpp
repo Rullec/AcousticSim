@@ -1,4 +1,5 @@
 #include "utils/ObjUtil.h"
+#include "utils/RotUtil.h"
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "geometries/Primitives.h"
 #include "geometries/Triangulator.h"
@@ -272,7 +273,7 @@ void cObjUtil::BuildPlaneGeometryData(const double scale,
     // rotation
 
     tVector normal = cMathUtil::CalcNormalFromPlane(plane_equation);
-    tMatrix transform = cMathUtil::AxisAngleToRotmat(
+    tMatrix transform = cRotUtil::AxisAngleToRotmat(
         cMathUtil::CalcAxisAngleFromOneVectorToAnother(cur_normal, normal));
 
     // translation

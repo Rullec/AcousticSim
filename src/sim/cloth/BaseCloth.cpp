@@ -170,6 +170,7 @@ void cBaseCloth::SetPos(const tVectorXd &newpos)
     }
 }
 
+// extern tVector gGravity;
 const tVectorXd &cBaseCloth::GetPos() const { return this->mXcur; }
 void cBaseCloth::CalcExtForce(tVectorXd &ext_force) const
 {
@@ -180,7 +181,7 @@ void cBaseCloth::CalcExtForce(tVectorXd &ext_force) const
     for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
         ext_force.segment(3 * i, 3) +=
-            gGravity.segment(0, 3) * mVertexArrayShared[i]->mMass;
+            mGravity * mVertexArrayShared[i]->mMass;
     }
 
     // std::cout << "add ext noise\n";
@@ -285,14 +286,14 @@ void cBaseCloth::InitConstraint(const Json::Value &root)
                    mVertexArrayShared[mConstraint_StaticPointIds[i]]->muv[1]);
         }
     }
-    for (auto &i : mConstraint_StaticPointIds)
-    {
-        mInvMassMatrixDiag.segment(i * 3, 3).setZero();
-        // printf("[debug] constraint_static point id %d at ", i);
-        // exit(0);
-        // next_pos.segment(i * 3, 3) = mXcur.segment(i * 3, 3);
-        // std::cout << mXcur.segment(i * 3, 3).transpose() << std::endl;
-    }
+    // for (auto &i : mConstraint_StaticPointIds)
+    // {
+    //     mInvMassMatrixDiag.segment(i * 3, 3).setZero();
+    //     // printf("[debug] constraint_static point id %d at ", i);
+    //     // exit(0);
+    //     // next_pos.segment(i * 3, 3) = mXcur.segment(i * 3, 3);
+    //     // std::cout << mXcur.segment(i * 3, 3).transpose() << std::endl;
+    // }
 }
 #include "utils/ObjUtil.h"
 void MoveObjPos(std::vector<tVertexPtr> &mVertexArrayShared)
@@ -424,57 +425,57 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
             }
         }
 
-        mVertexArrayShared.clear();
-        mEdgeArrayShared.clear();
-        mTriangleArrayShared.clear();
-        {
-            auto v0 = std::make_shared<tVertex>();
-            v0->mColor = ColorBlue;
-            v0->mPos = tVector(0, 0.1, 0, 1);
-            v0->muv = tVector2f(0, 0);
+        // mVertexArrayShared.clear();
+        // mEdgeArrayShared.clear();
+        // mTriangleArrayShared.clear();
+        // {
+        //     auto v0 = std::make_shared<tVertex>();
+        //     v0->mColor = ColorBlue;
+        //     v0->mPos = tVector(0, 0.1, 0, 1);
+        //     v0->muv = tVector2f(0, 0);
 
-            auto v1 = std::make_shared<tVertex>();
-            v1->mColor = ColorBlue;
-            v1->mPos = tVector(0.1, 0.1, 0, 1);
-            v1->muv = tVector2f(0.1, 0);
+        //     auto v1 = std::make_shared<tVertex>();
+        //     v1->mColor = ColorBlue;
+        //     v1->mPos = tVector(0.1, 0.1, 0, 1);
+        //     v1->muv = tVector2f(0.1, 0);
 
-            auto v2 = std::make_shared<tVertex>();
-            v2->mColor = ColorBlue;
-            v2->mPos = tVector(0.05, 0.2, 0, 1);
-            v2->muv = tVector2f(0.05, 0.1);
-            mVertexArrayShared = {v0, v1, v2};
+        //     auto v2 = std::make_shared<tVertex>();
+        //     v2->mColor = ColorBlue;
+        //     v2->mPos = tVector(0.05, 0.2, 0, 1);
+        //     v2->muv = tVector2f(0.05, 0.1);
+        //     mVertexArrayShared = {v0, v1, v2};
 
-            auto e0 = std::make_shared<tEdge>();
-            e0->mId0 = 0;
-            e0->mId1 = 1;
-            e0->mTriangleId0 = 0;
-            auto e1 = std::make_shared<tEdge>();
-            e1->mId0 = 1;
-            e1->mId1 = 2;
-            e1->mTriangleId0 = 0;
-            
-            auto e2 = std::make_shared<tEdge>();
-            e2->mId0 = 2;
-            e2->mId1 = 0;
-            e2->mTriangleId0 = 0;
+        //     auto e0 = std::make_shared<tEdge>();
+        //     e0->mId0 = 0;
+        //     e0->mId1 = 1;
+        //     e0->mTriangleId0 = 0;
+        //     auto e1 = std::make_shared<tEdge>();
+        //     e1->mId0 = 1;
+        //     e1->mId1 = 2;
+        //     e1->mTriangleId0 = 0;
 
-            mEdgeArrayShared = {e0, e1, e2};
-            auto t = std::make_shared<tTriangle>();
-            t->mId0 = 0;
-            t->mId1 = 1;
-            t->mId2 = 2;
-            
-            mTriangleArrayShared = {t};
-        }
+        //     auto e2 = std::make_shared<tEdge>();
+        //     e2->mId0 = 2;
+        //     e2->mId1 = 0;
+        //     e2->mTriangleId0 = 0;
+
+        //     mEdgeArrayShared = {e0, e1, e2};
+        //     auto t = std::make_shared<tTriangle>();
+        //     t->mId0 = 0;
+        //     t->mId1 = 1;
+        //     t->mId2 = 2;
+
+        //     mTriangleArrayShared = {t};
+        // }
     }
 
     CalcNodePositionVector(mClothInitPos);
 
     // init the inv mass vector
-    mInvMassMatrixDiag.noalias() = tVectorXd::Zero(GetNumOfFreedom());
+    mMassMatrixDiag.noalias() = tVectorXd::Zero(GetNumOfFreedom());
     for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
-        mInvMassMatrixDiag.segment(i * 3, 3).fill(1.0 / mVertexArrayShared[i]->mMass);
+        mMassMatrixDiag.segment(i * 3, 3).fill(mVertexArrayShared[i]->mMass);
     }
 
     // update the normal information

@@ -3,6 +3,7 @@
 #include "utils/FileUtil.h"
 #include "utils/JsonUtil.h"
 #include "utils/ObjUtil.h"
+#include "utils/RotUtil.h"
 #include <iostream>
 #include <map>
 void cTriangulator::BuildGeometry(const Json::Value &config,
@@ -36,7 +37,7 @@ void cTriangulator::BuildGeometry(const Json::Value &config,
     // std::endl; std::cout << "cloth init orientation = " <<
     // cloth_init_orientation.transpose() << std::endl;
     tMatrix init_trans_mat =
-        cMathUtil::TransformMat(cloth_init_pos, cloth_init_orientation);
+        cRotUtil::TransformMat(cloth_init_pos, cloth_init_orientation);
     // std::cout << init_trans_mat << std::endl;
     // exit(0);
     Json::Value subdivision_json =
@@ -554,7 +555,7 @@ void cTriangulator::RotateMaterialCoordsAfterReset(
     // rad
 
     float cloth_uv_rotation = cloth_uv_rotation_ / 180.0 * M_PI;
-    tMatrix2f rot_mat = cMathUtil::RotMat2D(cloth_uv_rotation).cast<float>();
+    tMatrix2f rot_mat = cRotUtil::RotMat2D(cloth_uv_rotation).cast<float>();
     // std::cout << "angle = " << cloth_uv_rotation << ", rotmat = \n"
     //           << rot_mat << std::endl;
 
@@ -686,8 +687,8 @@ void cTriangulator::RotateMaterialCoords(float cur_uv_rot_deg,
 {
     // std::cout << "---------------------\n";
     tMatrix2f convert_mat =
-        (cMathUtil::RotMat2D(tar_uv_rot_deg / 180 * M_PI) *
-         cMathUtil::RotMat2D(cur_uv_rot_deg / 180 * M_PI).inverse())
+        (cRotUtil::RotMat2D(tar_uv_rot_deg / 180 * M_PI) *
+         cRotUtil::RotMat2D(cur_uv_rot_deg / 180 * M_PI).inverse())
             .cast<float>();
     // printf("begin to rot from %.1f to %.1f\n", cur_uv_rot_deg,
     // tar_uv_rot_deg); std::cout << "rotmat = " << convert_mat << std::endl;

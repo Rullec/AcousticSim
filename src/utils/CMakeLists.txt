@@ -17,10 +17,11 @@ MathUtil.cpp
 MathUtil2.cpp
 Rand.cpp
 TimeUtil.cpp
-SysUtil.cpp
+RotUtil.cpp
+# SysUtil.cpp
 ObjUtil.cpp
-TetUtil.cpp
-DepthImageSaver.cpp
+# TetUtil.cpp
+# DepthImageSaver.cpp
 MPIUtil.cpp
 StringUtil.cpp
 RenderUtil.cpp

@@ -38,7 +38,7 @@ if(WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4061 /wd4244 /wd4246 /wd4305 /wd4267 /wd4711 /wd4710 /wd4514 /wd4477")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /Zi")
-
+    add_definitions(/arch:AVX2)
     # use sanitzer
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fsanitize=address")
     # add_definitions("/fsanitize=address")
@@ -53,16 +53,7 @@ endif()
 # -------------------enable openmp---------------------
 set(USE_OPENMP ON)
 if(USE_OPENMP)
-    message(STATUS "openmp c flags ${OpenMP_C_FLAGS}")
-    message(STATUS "openmp cxx flags ${OpenMP_CXX_FLAGS}")
-    message(STATUS "openmp exe linker flags ${OpenMP_EXE_LINKER_FLAGS}")
-    add_compile_definitions(EnableOMP)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_OPENMP")
-    
+    add_definitions(/openmp -DUSE_OPENMP)
     message(STATUS "we use openmp")
 else()
     message(STATUS "we dont use openmp")
@@ -74,8 +65,14 @@ if(USE_OPTIX)
 endif()
 
 # ---------------------add address sanitzer---------------------
-# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
-# set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+# if(WIN32)
+#     message(STATUS "add address sanitizer")
+#     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fsanitize=address")
+# else()
+#     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
+#     set (CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
+# endif()
+
 
 add_subdirectory(./imgui)
 add_subdirectory(./src/utils)
@@ -91,26 +88,10 @@ add_executable(main ./src/main.cpp ./src/CGSolver.cpp)
 target_link_libraries(main ${libs} scenes_lib utils_lib geo_lib OpenMP::OpenMP_CXX)
 
 if(WIN32)
-    if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-        add_custom_command(
-            TARGET main POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E rename
-                ${CMAKE_CURRENT_BINARY_DIR}/Debug/main.exe
-                ${CMAKE_SOURCE_DIR}/main.exe
-        )
-    else()
-        add_custom_command(
-            TARGET main POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E rename
-                ${CMAKE_CURRENT_BINARY_DIR}/Release/main.exe
-                ${CMAKE_SOURCE_DIR}/main.exe
-        )
-    endif()
-else()
-    add_custom_command(
-        TARGET main POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E rename
-            ${CMAKE_CURRENT_BINARY_DIR}/main        
-            ${CMAKE_SOURCE_DIR}/main    
+    install(TARGETS main
+            RUNTIME
+            DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}
     )
+else()
+    move_release_to_src(main)
 endif()

@@ -118,7 +118,7 @@ void cLinctexCloth::InitConstraint(const Json::Value &root)
                       180 * M_PI;
         // angle = 0;
         // std::cout << "raw_angle = " << angle << std::endl;
-        tMatrix2f rotmat = cMathUtil::RotMat2D(angle).cast<float>();
+        tMatrix2f rotmat = cRotUtil::RotMat2D(angle).cast<float>();
         tMatrix2f rotmat_inv = rotmat.inverse();
         // std::cout << "rotmat = \n" << rotmat << std::endl;
         // std::cout << "rotmat inv = \n" << rotmat_inv << std::endl;
@@ -456,7 +456,7 @@ void cLinctexCloth::ApplyNoise(bool enable_y_random_rotation,
         // std::cout << "rotation angle = " << rotation_angle << std::endl;
     }
 
-    tMatrix mat = cMathUtil::EulerAnglesToRotMat(
+    tMatrix mat = cRotUtil::EulerAnglesToRotMat(
         tVector(0, rotation_angle, 0, 0), eRotationOrder::XYZ);
     for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
@@ -527,7 +527,7 @@ void cLinctexCloth::ApplyManualHoldNoise(const tVector2d &random_vector_xoz_,
 
     // 2.1 calculate the plane
     tVector2d principal_plane_normal_2d =
-        cMathUtil::RotMat2D(M_PI / 2) * principal_axis_2d;
+        cRotUtil::RotMat2D(M_PI / 2) * principal_axis_2d;
     tVector3d principal_plane_normal_3d = tVector3d(
         principal_plane_normal_2d[0], 0, principal_plane_normal_2d[1]);
 
@@ -555,9 +555,9 @@ void cLinctexCloth::ApplyManualHoldNoise(const tVector2d &random_vector_xoz_,
     //        "%.2f m\n",
     //        principal_axis_2d[0], principal_axis_2d[1], bending_angle_rad,
     //        one_side_gap);
-    tMatrix bending_mat_negative = cMathUtil::AxisAngleToRotmat(
+    tMatrix bending_mat_negative = cRotUtil::AxisAngleToRotmat(
         -cMathUtil::Expand(principal_axis_3d, 0) * bending_angle_rad);
-    tMatrix bending_mat_positive = cMathUtil::AxisAngleToRotmat(
+    tMatrix bending_mat_positive = cRotUtil::AxisAngleToRotmat(
         cMathUtil::Expand(principal_axis_3d, 0) * bending_angle_rad);
 
     // 4. fold the vertices
@@ -641,7 +641,7 @@ void cLinctexCloth::ApplyMultiFoldsNoise(int num_of_folds, double max_amp)
         double amp = cMathUtil::RandDouble(0, max_amp);
         // double amp = cMathUtil::RandDoubleNorm(0.1, 0.1);
         tVector fold_dir =
-            cMathUtil::AxisAngleToRotmat(tVector(0, 1, 0, 0) * angle) *
+            cRotUtil::AxisAngleToRotmat(tVector(0, 1, 0, 0) * angle) *
             tVector(1, 0, 0, 0);
         // printf("[debug] angle %d = %.3f, dir = ", i, angle);
         fold_st_angle_array.push_back(angle);

@@ -13,6 +13,7 @@ cBaseObject::cBaseObject(eObjectType type, int id_) : mType(type), mObjId(id_)
 {
     mObjName = "";
     mEnableDrawBuffer = true;
+    mGravity.setZero();
 }
 
 /**
@@ -188,5 +189,9 @@ double cBaseObject::CalcTotalArea() const
 
 void cBaseObject::UpdateImGui()
 {
-    
+}
+
+void cBaseObject::SetGravity(const tVector3d &g)
+{
+    mGravity.noalias() = g;
 }

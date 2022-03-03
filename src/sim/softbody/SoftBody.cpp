@@ -7,7 +7,7 @@
 #include "sim/softbody/BaseMaterial.h"
 #include "sim/softbody/MaterialBuilder.h"
 #include <iostream>
-extern const tVector gGravity;
+// extern const tVector gGravity;
 
 cSoftBody::cSoftBody(int id) : cBaseObject(eObjectType::SOFTBODY_TYPE, id)
 {
@@ -25,7 +25,7 @@ void cSoftBody::InitTetTransform(const Json::Value &conf)
     mInitRotation = cJsonUtil::ReadVectorJson(
                         cJsonUtil::ParseAsValue("init_rotation", conf))
                         .segment(0, 3);
-    tMatrix transform = cMathUtil::AxisAngleToRotmat(cMathUtil::Expand(mInitRotation, 0));
+    tMatrix transform = cRotUtil::AxisAngleToRotmat(cMathUtil::Expand(mInitRotation, 0));
     transform.block(0, 3, 3, 1) = mInitTranslation.segment(0, 3);
     std::cout << "[debug] apply init rotation(AA) = " << mInitRotation.transpose() << std::endl;
     std::cout << "[debug] apply init translation = " << mInitTranslation.transpose() << std::endl;
@@ -80,7 +80,7 @@ void cSoftBody::InitForceVector()
     mGravityForce.noalias() = tVectorXd::Zero(3 * num_of_v);
     for (int i = 0; i < num_of_v; i++)
     {
-        mGravityForce.segment(3 * i, 3) = gGravity.segment(0, 3).cast<double>() / mInvLumpedMassMatrixDiag[3 * i];
+        // mGravityForce.segment(3 * i, 3) = gGravity.segment(0, 3).cast<double>() / mInvLumpedMassMatrixDiag[3 * i];
     }
 }
 void cSoftBody::InitPos()

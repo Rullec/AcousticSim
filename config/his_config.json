@@ -7,23 +7,33 @@
             "cloth_type": "fem",
             "geometry_type": "regular_triangle",
             "damping": 1e-5,
-            "default_timestep": 0.03333,
+            "default_timestep": 1e-2,
             "cloth_size": [
-                0.1,
-                0.1
+                0.3,
+                0.3
             ],
             "subdivision": [
-                1,
-                1
+                100,
+                100
+            ],
+            "cloth_stretch_stiffness": [
+                1e-4,
+                1e-4,
+                1e-4
+            ],
+            "cloth_bending_stiffness": [
+                1e-4,
+                1e-4,
+                1e-4
             ],
             "rayleigh_damping_a": 0,
             "rayleigh_damping_b": 0,
             "enable_cloth_from_obj": false,
-            "cloth_mass": 0.0062,
-            "cloth_density": 0.62,
+            "cloth_mass": 3e-3,
+            "cloth_density": 0.3,
             "cloth_init_pos": [
                 0,
-                0.1,
+                0.2,
                 0
             ],
             "cloth_uv_rotation": 0,
@@ -33,17 +43,16 @@
                 0,
                 0
             ],
-            "constraints": {
+            "constraints.bak": {
                 "static_point": [
                     [
-                        0,
-                        0
+                        0.5,
+                        0.5
                     ],
                     [
-                        0.1,
-                        0
+                        -0.5,
+                        0.5
                     ]
-
                 ]
             }
         }
@@ -59,8 +68,8 @@
         "camera_type": "arcball_cam",
         "camera_pos": [
             0.0,
-            0.1,
-            0.5
+            0.5,
+            1.5
         ],
         "camera_focus": [
             0.0,

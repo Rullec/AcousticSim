@@ -3,6 +3,7 @@
 #include "utils/ObjUtil.h"
 #include "utils/DefUtil.h"
 #include "utils/RenderUtil.h"
+#include "utils/RotUtil.h"
 #include "geometries/Primitives.h"
 #include <iostream>
 std::string gBodyShapeStr[eKinematicBodyShape::NUM_OF_KINEMATIC_SHAPE] = {
@@ -235,7 +236,7 @@ tMatrix GetWorldTransform(const tVector &init_pos, const tVector &init_ori)
     tMatrix trans = tMatrix::Identity();
     trans.block(0, 3, 3, 1) = init_pos.segment(0, 3);
     trans.block(0, 0, 3, 3) =
-        cMathUtil::EulerAnglesToRotMat(init_ori, eRotationOrder::XYZ)
+        cRotUtil::EulerAnglesToRotMat(init_ori, eRotationOrder::XYZ)
             .topLeftCorner<3, 3>();
     return trans;
 }

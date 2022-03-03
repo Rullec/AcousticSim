@@ -4,6 +4,7 @@ set(CLOTH_SRC
     cloth/BaraffCloth.cpp
     cloth/BaraffMaterial.cpp
     cloth/QBendingMaterial.cpp
+    # cloth/BaraffMaterialOld.cpp
     # cloth/ImplicitCloth.cpp
     # cloth/PBDCloth.cpp
     # cloth/PDCloth.cpp
@@ -11,14 +12,14 @@ set(CLOTH_SRC
 )
 
 set(SOFTBODY_SRC
-    softbody/SoftBodyImplicit.cpp
-    softbody/SoftBody.cpp
-    softbody/FourOrderTensor.cpp
-    softbody/ThreeOrderTensor.cpp
-    softbody/NeoHookeanMaterial.cpp
-    softbody/StvkMaterial.cpp
-    softbody/MaterialBuilder.cpp
-    softbody/BaseMaterial.cpp
+    # softbody/SoftBodyImplicit.cpp
+    # softbody/SoftBody.cpp
+    # softbody/FourOrderTensor.cpp
+    # softbody/ThreeOrderTensor.cpp
+    # softbody/NeoHookeanMaterial.cpp
+    # softbody/StvkMaterial.cpp
+    # softbody/MaterialBuilder.cpp
+    # softbody/BaseMaterial.cpp
     # AcousticBody.cpp
     # AcousticSoftBody.cpp
 )
@@ -30,7 +31,7 @@ set(
     KinematicBody.cpp
     KinematicBodyBuilder.cpp
     Perturb.cpp
-    AudioOutput.cpp
+    # AudioOutput.cpp
     SimObjectBuilder.cpp
 )
 

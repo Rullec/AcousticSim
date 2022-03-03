@@ -239,7 +239,7 @@ int cSimScene::GetNumOfTriangles() const
 /**
  * \brief       external force
  */
-extern const tVector gGravity;
+// const tVector gGravity = tVector(0, -9.8, 0, 0);
 
 const tVectorXf &cSimScene::GetTriangleDrawBuffer()
 {

@@ -1,6 +1,6 @@
 #pragma once
 #include "SoftBody.h"
-
+#include "utils/SparseUtil.h"
 class cSoftBodyImplicit : public cSoftBody
 {
 public:
