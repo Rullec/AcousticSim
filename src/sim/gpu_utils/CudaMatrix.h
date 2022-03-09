@@ -1,0 +1,396 @@
+#pragma once
+#include "sim/gpu_utils/CudaDef.h"
+#include <cmath>
+#include <cstdlib>
+#include <iostream>
+#include <type_traits>
+// namespace HandyMatrix
+// {
+template <typename dtype, int N, int M> class tCudaMatrix
+{
+public:
+    static constexpr int mRandSeed = 0;
+    static constexpr int mRows = N;
+    static constexpr int mCols = M;
+    static constexpr int mElements = N * M;
+    dtype mData[mElements];
+    SIM_CUDA_CALLABLE explicit tCudaMatrix() { setZero(); }
+
+    SIM_CUDA_CALLABLE explicit tCudaMatrix(
+        const std::initializer_list<dtype> &list)
+    {
+        assert(list.size() == N * M);
+        int i = 0;
+        for (auto &res : list)
+            mData[i++] = res;
+        // for (int i = 0; i < N * M; i++)
+    }
+    SIM_CUDA_CALLABLE void setValue(const dtype &val)
+    {
+        // std::cout << "setvalue begin, val = " << val << "bytes = " <<
+        // sizeof(dtype) * mElements << std::endl;
+        for (int i = 0; i < mElements; i++)
+            mData[i] = val;
+    }
+    SIM_CUDA_CALLABLE void setRandom()
+    {
+        for (int i = 0; i < mElements; i++)
+        {
+            if (std::is_integral_v<dtype>)
+            {
+                mData[i] = static_cast<dtype>(rand());
+            }
+            else
+            {
+                // is floating point_v
+                mData[i] = static_cast<dtype>(rand() * 1.0 / RAND_MAX);
+            }
+        }
+    }
+    SIM_CUDA_CALLABLE void setZero()
+    {
+        // printf("---begin to set zero---\n");
+        std::memset(mData, 0, sizeof(dtype) * mElements);
+        // for (int i = 0; i < mElements; i++)
+        //     mData[i] = 0;
+        // printf("---end to set zero---\n");
+    }
+    SIM_CUDA_CALLABLE void setIdentity()
+    {
+        // printf("------begin to set I------\n");
+        static_assert(N == M);
+        this->setZero();
+        for (int i = 0; i < std::min(N, M); i++)
+        {
+            // printf("--!!!set %d %d = 1--\n", i, i);
+            (*this)(i, i) = 1;
+        }
+        // printf("------end to set I------\n");
+    }
+    SIM_CUDA_CALLABLE tCudaMatrix(const dtype &val)
+    {
+        // std::cout << "begin to set val " << val << std::endl;
+        setValue(val);
+        // // std::cout << "after to set val " << mData[0] << std::endl;
+    }
+    static SIM_CUDA_CALLABLE tCudaMatrix<dtype, M, N> Zero()
+    {
+        tCudaMatrix<dtype, M, N> mat;
+        return mat;
+    }
+    SIM_CUDA_CALLABLE dtype operator()(int i, int j) const
+    {
+        // printf("(%d, %d)\n", i, j);
+        assert(i >= 0 && i < N);
+        assert(j >= 0 && j < M);
+        return mData[j * mRows + i];
+    }
+    SIM_CUDA_CALLABLE dtype &operator()(int i, int j)
+    {
+        assert(i >= 0 && i < N);
+        assert(j >= 0 && j < M);
+        return mData[j * mRows + i];
+    }
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, M, N> transpose()
+    {
+        tCudaMatrix<dtype, M, N> res;
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < M; j++)
+            {
+                res(j, i) = (*this)(i, j);
+            }
+        return res;
+    }
+    SIM_CUDA_CALLABLE dtype operator[](int idx) const { return mData[idx]; }
+    SIM_CUDA_CALLABLE dtype &operator[](int idx) { return mData[idx]; }
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, 1> col(int idx) const
+    {
+        tCudaMatrix<dtype, N, 1> res;
+        for (int i = 0; i < N; i++)
+        {
+            res[i] = (*this)(i, idx);
+        }
+        return res;
+    }
+
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, 1, M> row(int idx) const
+    {
+        tCudaMatrix<dtype, 1, M> res;
+        for (int i = 0; i < M; i++)
+        {
+            res[i] = (*this)(idx, i);
+        }
+        return res;
+    }
+    SIM_CUDA_CALLABLE void setcol(const tCudaMatrix<dtype, N, 1> &target_col,
+                                  int col_id)
+    {
+        for (int i = 0; i < N; i++)
+        {
+            mData[col_id * mRows + i] = target_col[i];
+        }
+    }
+    SIM_CUDA_CALLABLE void setrow(const tCudaMatrix<dtype, 1, M> &target_col,
+                                  int row_id)
+    {
+        for (int col_id = 0; col_id < M; col_id++)
+        {
+            mData[col_id * mRows + row_id] = target_col[i];
+        }
+    }
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M> operator*(const dtype &val) const
+    {
+        tCudaMatrix<dtype, N, M> res = (*this);
+        for (int i = 0; i < mElements; i++)
+            res[i] *= val;
+        return res;
+    }
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M> operator/(const dtype &val) const
+    {
+        tCudaMatrix<dtype, N, M> res = (*this);
+        for (int i = 0; i < mElements; i++)
+            res[i] /= val;
+        return res;
+    }
+    // pre postioning negative
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M> operator-()
+    {
+        tCudaMatrix<dtype, N, M> negative = (*this);
+        for (int i = 0; i < mElements; i++)
+        {
+            negative.mData[i] *= -1;
+        }
+        return negative;
+    }
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M>
+    operator-(const tCudaMatrix<dtype, N, M> &another_mat)
+    {
+        tCudaMatrix<dtype, N, M> negative = (*this);
+        for (int i = 0; i < mElements; i++)
+        {
+            negative.mData[i] -= another_mat.mData[i];
+        }
+        return negative;
+    }
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M>
+    operator+(const tCudaMatrix<dtype, N, M> &another_mat)
+    {
+        tCudaMatrix<dtype, N, M> negative = (*this);
+        for (int i = 0; i < mElements; i++)
+        {
+            negative.mData[i] += another_mat.mData[i];
+        }
+        return negative;
+    }
+    SIM_CUDA_CALLABLE void
+    operator+=(const tCudaMatrix<dtype, N, M> &another_mat)
+    {
+
+        for (int i = 0; i < mElements; i++)
+        {
+            mData[i] += another_mat.mData[i];
+        }
+    }
+    SIM_CUDA_CALLABLE void
+    operator-=(const tCudaMatrix<dtype, N, M> &another_mat)
+    {
+
+        for (int i = 0; i < mElements; i++)
+        {
+            mData[i] -= another_mat.mData[i];
+        }
+    }
+
+    template <int K>
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, K>
+    operator*(const tCudaMatrix<dtype, M, K> &mat) const
+    {
+        // printf("N %d M %d K %d\n", N, M, K);
+        tCudaMatrix<dtype, N, K> res;
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < K; j++)
+            {
+                // printf("row %d and col %d\n",i, j);
+                res(i, j) = (*this).row(i).dot((mat.col(j)));
+            }
+        return res;
+    }
+    friend SIM_CUDA_CALLABLE std::ostream &
+    operator<<(std::ostream &fout, const tCudaMatrix<dtype, N, M> &mat)
+    {
+        for (int i = 0; i < N; i++)
+        {
+            for (int j = 0; j < M; j++)
+            {
+                fout << mat(i, j);
+                if (j != M - 1)
+                    fout << " ";
+            }
+            if (i != N - 1)
+                fout << std::endl;
+        }
+        return fout;
+    };
+    friend SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M>
+    operator*(dtype val, const tCudaMatrix<dtype, N, M> &mat)
+    {
+        tCudaMatrix<dtype, N, M> new_mat(mat);
+        for (int i = 0; i < new_mat.mElements; i++)
+            new_mat.mData[i] *= val;
+        return new_mat;
+    };
+
+    SIM_CUDA_CALLABLE dtype norm() const
+    {
+        dtype sum = 0;
+        for (int i = 0; i < N * M; i++)
+            sum += mData[i] * mData[i];
+        return std::sqrt(sum);
+    }
+
+    SIM_CUDA_CALLABLE void normalize()
+    {
+        dtype cur_norm = norm();
+        for (int i = 0; i < mElements; i++)
+            mData[i] /= cur_norm;
+        // val ;
+    }
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M> normalized() const
+    {
+        tCudaMatrix<dtype, N, M> new_value = (*this);
+        new_value.normalize();
+        return new_value;
+    }
+    template <int block_row, int block_col>
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, block_row, block_col>
+    block(int st_row, int st_col) const
+    {
+        tCudaMatrix<dtype, block_row, block_col> mat;
+        for (int i = st_row; i < st_row + block_row; i++)
+            for (int j = st_col; j < st_col + block_col; j++)
+            {
+                mat(i - st_row, j - st_col) = (*this)(st_row, st_col);
+            }
+        return mat;
+    }
+    template <int K, int L>
+    SIM_CUDA_CALLABLE void setBlock(int row_st, int col_st,
+                                    const tCudaMatrix<dtype, K, L> &new_block)
+    {
+        assert(row_st + K <= N);
+        assert(col_st + L <= M);
+        for (int i = 0; i < K; i++)
+            for (int j = 0; j < K; j++)
+            {
+                (*this)(row_st + i, col_st + j) = new_block(i, j);
+            }
+    }
+
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, N> inverse()
+    {
+        static_assert((N == 2 && M == 2));
+        tCudaMatrix<dtype, N, N> res;
+        dtype a = res[0], c = res[1], b = res[2], d = res[3];
+        dtype deno = 1.0 / (a * d - b * c);
+        res[0] = d * deno;
+        res[1] = -c * deno;
+        res[2] = -b * deno;
+        res[3] = a * deno;
+        return res;
+    }
+
+    template <int A, int B>
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, A * N, B * M>
+    KroneckerProduct(const tCudaMatrix<dtype, A, B> &mat)
+    {
+        tCudaMatrix<dtype, A * N, B * M> result;
+        // result.setBlock(0, 0, mat);
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < M; j++)
+            {
+                // printf("set from (%d, %d) block size (%d %d)\n", i * A, j *
+                // B,
+                //    A, B);
+                result.setBlock(i * A, j * B, mat * (*this)(i, j));
+            }
+        return result;
+    }
+    // ------------vector method--------------
+    template <int K>
+    SIM_CUDA_CALLABLE dtype dot(const tCudaMatrix<dtype, K, 1> &vec) const
+    {
+        static_assert(N == 1 || M == 1);
+        assert(N == K || M == K);
+        dtype sum = 0;
+        for (int i = 0; i < K; i++)
+        {
+            sum += vec[i] * mData[i];
+        }
+        return sum;
+    }
+    template <int K>
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, K, 1>
+    segment(int st, const tCudaMatrix<dtype, K, 1> &new_seg) const
+    {
+        assert(K <= N * M);
+        static_assert(N == 1 || M == 1); // a vecotr method
+        tCudaMatrix<dtype, K, 1> res;
+        for (int i = 0; i < K; i++)
+            res[i] = mData[i];
+        return res;
+    }
+
+    template <int K>
+    SIM_CUDA_CALLABLE void setSegment(int st,
+                                      const tCudaMatrix<dtype, K, 1> &new_seg)
+    {
+        assert(st + K < N * M);
+        for (int i = 0; i < K; i++)
+            mData[st + i] = new_seg[i];
+    }
+};
+
+/*
+1. define square matrix: Matrix2i, Matrix2f, Natrix3i, Matrix3f
+2. define vector: Vector2i, Vector2f, Vector3f, Vector3f
+3. define row vecotr: RowVector2i, RowVector2f...
+
+So we need an macro to define them all: Given
+1. data type (float), data type suffix (f)
+2. size
+*/
+
+#define CUDA_DECLARE_MATRIX(type, type_suffix, rows, cols)                     \
+    using tCudaMatrix##rows##cols##type_suffix = tCudaMatrix<type, rows, cols>;
+
+#define CUDA_DECLARE_SQR_MATRIX(type, type_suffix, size)                       \
+    using tCudaMatrix##size##type_suffix = tCudaMatrix<type, size, size>;
+
+#define CUDA_DECLARE_VECTOR(type, type_suffix, size)                           \
+    using tCudaVector##size##type_suffix = tCudaMatrix<type, size, 1>;
+
+#define CUDA_DECLARE_MATRIX_AND_VECTOR(type, type_suffix, size)                \
+    CUDA_DECLARE_VECTOR(type, type_suffix, size)                               \
+    CUDA_DECLARE_SQR_MATRIX(type, type_suffix, size)
+
+CUDA_DECLARE_MATRIX_AND_VECTOR(int, i, 2);
+CUDA_DECLARE_MATRIX_AND_VECTOR(int, i, 3);
+CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 2);
+CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 3);
+CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 4);
+// CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 9);
+CUDA_DECLARE_VECTOR(int, i, 12);
+CUDA_DECLARE_MATRIX(float, f, 3, 2);
+CUDA_DECLARE_MATRIX(float, f, 9, 2);
+using tCudaMatrix9f = tCudaMatrix<float, 9, 9>;
+using tCudaMatrix3f = tCudaMatrix<float, 3, 3>;
+
+// typedef tCudaMatrix<float, 1, 3> tCudaRowVector3f;
+// typedef tCudaMatrix<float, 3, 3> tCudaMatrix3f;
+// typedef tCudaMatrix<float, 1, 2> tCudaRowVector2f;
+// typedef tCudaMatrix<float, 2, 2> tCudaMatrix2f;
+// typedef tCudaMatrix<float, 9, 9> tCudaMatrix9f;
+// typedef tCudaMatrix<float, 3, 2> tCudaMatrix32f;
+
+// typedef tCudaMatrix<float, 3, 1> tCudaVector3f;
+// typedef tCudaMatrix<float, 2, 1> tCudaVector2f;

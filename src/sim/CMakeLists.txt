@@ -2,7 +2,7 @@
 set(USE_OPENMP ON)
 if(USE_OPENMP)
     if(WIN32)
-        add_definitions(/openmp -DUSE_OPENMP)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
         message(STATUS "we use openmp")
     else()
         find_package(OpenMP REQUIRED)
@@ -18,13 +18,19 @@ set(CLOTH_SRC
     cloth/BaraffCloth.cpp
     cloth/BaraffMaterial.cpp
     cloth/QBendingMaterial.cpp
-    # cloth/BaraffMaterialOld.cpp
-    # cloth/ImplicitCloth.cpp
+    cloth/BaraffClothGpu.cpp
+    cloth/BaraffClothGpu.cu
+    gpu_utils/CudaMemory.cpp
+    gpu_utils/CudaArray.cpp
+    gpu_utils/CudaELLMatrix.cpp
+    gpu_utils/CudaAsync.cu
+    # cloth/ImplicitCloth.cpp   
     # cloth/PBDCloth.cpp
     # cloth/PDCloth.cpp
     # cloth/SemiCloth.cpp
 )
 
+# add_executable(cuda_main cloth/BaraffClothGpu.cu)
 set(SOFTBODY_SRC
     # softbody/SoftBodyImplicit.cpp
     # softbody/SoftBody.cpp
@@ -50,4 +56,5 @@ set(
 )
 
 add_library(sim_lib ${SIM_SRC})
+# target_link_libraries(sim_lib)
 # target_link_libraries(sim_lib OpenMP::OpenMP_CXX)

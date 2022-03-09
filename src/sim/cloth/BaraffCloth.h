@@ -38,7 +38,7 @@ protected:
     tVector3f mStretchK, mBendingK; // warp weft bias
     cQBendingMaterialPtr mBendingMaterial;
 
-    virtual void InitBuffer();
+    // virtual void InitBuffer();
     virtual void InitMass(const Json::Value &conf) override;
     virtual void InitMaterialCoords();
     virtual int GetSingleElementFreedom() const;

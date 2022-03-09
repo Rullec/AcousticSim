@@ -9,7 +9,7 @@
 
 #include <iostream>
 const std::string gClothTypeStr[eClothType::NUM_OF_CLOTH_TYPE] = {
-    "semi_implicit", "implicit", "pbd", "pd", "linctex", "empty", "fem"};
+    "semi_implicit", "implicit", "pbd", "pd", "linctex", "empty", "fem", "fem_gpu"};
 cBaseCloth::cBaseCloth(eClothType cloth_type, int id_)
     : cBaseObject(eObjectType::CLOTH_TYPE, id_), mClothType(cloth_type)
 {
@@ -482,6 +482,7 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
     UpdateTriangleNormal();
     UpdateVertexNormalFromTriangleNormal();
     mXcur.noalias() = mClothInitPos;
+    mXpre.noalias() = mClothInitPos;
 }
 
 void cBaseCloth::InitMass(const Json::Value &conf)

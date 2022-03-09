@@ -38,13 +38,13 @@ endif()
 
 
 if(WIN32)
-    add_definitions(-D _USE_MATH_DEFINES)
-    add_definitions(-D _CRT_NO_VA_START_VALIDATION)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}/bigobj")
+    # add_definitions(-D _USE_MATH_DEFINES)
+    # add_definitions(-D _CRT_NO_VA_START_VALIDATION)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4061 /wd4244 /wd4246 /wd4305 /wd4267 /wd4711 /wd4710 /wd4514 /wd4477")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /Zi")
-    add_definitions(/arch:AVX2)
+    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
     # use sanitzer
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fsanitize=address")
     # add_definitions("/fsanitize=address")

@@ -7,6 +7,7 @@
 #include "utils/JsonUtil.h"
 #include "sim/Perturb.h"
 #include "imgui.h"
+
 int frame = 0;
 cBaraffCloth::cBaraffCloth(int id_) : cBaseCloth(eClothType::FEM_CLOTH, id_)
 {
@@ -25,7 +26,8 @@ void cBaraffCloth::Init(const Json::Value &conf)
     cBaseCloth::Init(conf);
     mXcur.noalias() = mClothInitPos;
     mXpre.noalias() = mClothInitPos;
-    InitBuffer();
+    // InitBuffer();
+    InitMaterialCoords();
 
     // init material
     // mMaterial = std::make_shared<cBaraffMaterial>();
@@ -132,23 +134,22 @@ void cBaraffCloth::ApplyUserPerturbForceOnce(tPerturb *pert)
     }
 }
 
-/**
- * \brief       Init FEM buffer,
- */
-void cBaraffCloth::InitBuffer()
-{
-    // int element_size = this->GetSingleElementFreedom();
-    // int num_of_triangles = GetNumOfTriangles();
-    // mF.resize(num_of_triangles, tMatrix32d::Zero());
-    // mJ.noalias() = tVectorXd::Zero(num_of_triangles);
-    // mPK1.resize(num_of_triangles, tMatrixXd::Zero(element_size, element_size));
-    // mdFdx.resize(
-    //     num_of_triangles,
-    //     tEigenArr<tMatrixXd>(element_size,
-    //                          tMatrixXd::Zero(element_size, element_size)));
+// /**
+//  * \brief       Init FEM buffer,
+//  */
+// void cBaraffCloth::InitBuffer()
+// {
+//     // int element_size = this->GetSingleElementFreedom();
+//     // int num_of_triangles = GetNumOfTriangles();
+//     // mF.resize(num_of_triangles, tMatrix32d::Zero());
+//     // mJ.noalias() = tVectorXd::Zero(num_of_triangles);
+//     // mPK1.resize(num_of_triangles, tMatrixXd::Zero(element_size, element_size));
+//     // mdFdx.resize(
+//     //     num_of_triangles,
+//     //     tEigenArr<tMatrixXd>(element_size,
+//     //                          tMatrixXd::Zero(element_size, element_size)));
 
-    InitMaterialCoords();
-}
+// }
 
 /**
  * \brief           Init matrix coords

@@ -1,0 +1,1059 @@
+// /**
+//  * 公司：凌笛数码
+//  * 版权信息：凌笛数码所有
+//  * 描述：布料仿真
+//  * 作者：王振东
+//  * 日期：2018/11/27
+//  *
+//  */
+
+// /** **************************************************************************************
+//  * tSimVector
+//  * @copyright Linctex
+//  * This class is suitable for small vectors, E. G., size 2, 3, 4, 5, 6...
+//  * For vector of size 2, 3 and 4, tSimVector2/3/4, child classes of tSimVector,
+//  * can be used. This class is designed firstly for convenience and then for
+//  * efficiency.
+//  * ****************************************************************************************/
+
+// #pragma once
+
+// #include <cassert>
+// #include <cmath>
+// #include <xmmintrin.h>
+// // #include "SePreDefine.h"
+// #include "CudaDef.h"
+
+// #ifdef __CUDACC__
+// #include <cuda_fp16.h>
+// #endif
+
+// // SIM_NAMESPACE_BEGIN
+
+// #define SIM_VEC2_ALIGN(Type)                                                   \
+//     SIM_ALIGN(SIM_MIN(sizeof(Type) * 2, 16)) //!	Maximum align bits
+//                                              //!-> 64.
+// #define SIM_VEC4_ALIGN(Type)                                                   \
+//     SIM_ALIGN(SIM_MAX(sizeof(Type) * 4, 16)) //!	Maximum align bits
+//                                              //!-> 64.
+
+// /*************************************************************************
+// *****************************    SDVector    *****************************
+// *************************************************************************/
+
+// enum VecDescription : int
+// {
+//     CUDA_VEC3 = -2,
+//     SIMD_VEC3 = -1,
+//     VEC2_XY = 2,
+//     VEC3_XYZ = 3,
+//     VEC4_XYZW = 4
+// };
+
+// template <typename Type, int N> struct tSimVector;
+// template <typename Type> using tSimVector2 = tSimVector<Type, VEC2_XY>;
+// template <typename Type> using tSimVector3 = tSimVector<Type, VEC3_XYZ>;
+// template <typename Type> using tSimVector4 = tSimVector<Type, VEC4_XYZW>;
+// template <typename Type> using CuVector3 = tSimVector<Type, CUDA_VEC3>;
+
+// /*************************************************************************
+// *****************************    SDVector    *****************************
+// *************************************************************************/
+
+// template <typename Type, int N> struct tSimVector
+// {
+//     static constexpr int Elements = N;
+
+//     Type m_data[N];
+
+//     SIM_CUDA_CALLABLE tSimVector()
+//     {
+//         for (int i = 0; i < N; ++i)
+//             m_data[i] = 0;
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector(Type scalar)
+//     {
+//         for (int i = 0; i < N; ++i)
+//             m_data[i] = scalar;
+//     }
+
+//     SIM_CUDA_CALLABLE const Type &operator[](unsigned int i) const
+//     {
+//         assert(i < Elements);
+//         return m_data[i];
+//     }
+
+//     SIM_CUDA_CALLABLE Type &operator[](unsigned int i)
+//     {
+//         assert(i < Elements);
+//         return m_data[i];
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator+(const tSimVector &a) const
+//     {
+//         tSimVector ans;
+//         for (int i = 0; i < N; ++i)
+//             ans[i] = m_data[i] + a[i];
+//         return ans;
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator-(const tSimVector &a) const
+//     {
+//         tSimVector ans;
+//         for (int i = 0; i < N; ++i)
+//             ans[i] = m_data[i] - a[i];
+//         return ans;
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator*(const Type scalar) const
+//     {
+//         tSimVector ans;
+//         for (int i = 0; i < N; ++i)
+//             ans[i] = m_data[i] * scalar;
+//         return ans;
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator/(const Type scalar) const
+//     {
+//         Type invScalar = Type(1) / scalar;
+//         tSimVector ans;
+//         for (int i = 0; i < N; ++i)
+//             ans[i] = m_data[i] * invScalar;
+//         return ans;
+//     }
+
+//     SIM_CUDA_CALLABLE void operator+=(const tSimVector &a)
+//     {
+//         for (int i = 0; i < N; ++i)
+//             m_data[i] += a[i];
+//     }
+
+//     SIM_CUDA_CALLABLE void operator-=(const tSimVector &a)
+//     {
+//         for (int i = 0; i < N; ++i)
+//             m_data[i] -= a[i];
+//     }
+
+//     friend SIM_CUDA_CALLABLE tSimVector operator*(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return a * scalar;
+//     }
+
+//     SIM_CUDA_CALLABLE Type Dot(const tSimVector<Type, N> &rhs) const
+//     {
+//         Type sum = 0;
+//         for (int i = 0; i < N; ++i)
+//             sum += m_data[i] * rhs.values[i];
+//         return sum;
+//     }
+
+//     SIM_CUDA_CALLABLE Type Sum() const
+//     {
+//         Type sum = 0;
+//         for (int i = 0; i < N; ++i)
+//             sum += m_data[i];
+//         return sum;
+//     }
+
+//     SIM_CUDA_CALLABLE Type SqrLength() const
+//     {
+//         Type sum = 0;
+//         for (int i = 0; i < N; ++i)
+//             sum += m_data[i] * m_data[i];
+//         return sum;
+//     }
+
+//     SIM_CUDA_CALLABLE Type Length() const { return std::sqrt(SqrLength()); }
+
+//     SIM_CUDA_CALLABLE tSimVector<Type, N> Normalized() const
+//     {
+//         return (*this) / Length();
+//     }
+
+//     SIM_CUDA_CALLABLE void Normalize() { (*this) /= Length(); }
+// };
+
+// /*************************************************************************
+// ****************************    SDVector2    *****************************
+// *************************************************************************/
+
+// template <class Type> struct SIM_VEC2_ALIGN(Type) tSimVector<Type, VEC2_XY>
+// {
+//     static constexpr int Elements = 2;
+
+//     using value_type = Type;
+
+//     union
+//     {
+//         struct
+//         {
+//             Type x, y;
+//         };
+//         struct
+//         {
+//             Type values[2];
+//         };
+//     };
+
+//     SIM_CUDA_CALLABLE tSimVector() {}
+//     SIM_CUDA_CALLABLE tSimVector(Type s1, Type s2) : x(s1), y(s2) {}
+//     SIM_CUDA_CALLABLE explicit tSimVector(Type scalar) : x(scalar), y(scalar) {}
+
+//     SIM_CUDA_CALLABLE void operator+=(Type scalar)
+//     {
+//         x += scalar;
+//         y += scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator-=(Type scalar)
+//     {
+//         x -= scalar;
+//         y -= scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator*=(Type scalar)
+//     {
+//         x *= scalar;
+//         y *= scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator/=(Type scalar)
+//     {
+//         x /= scalar;
+//         y /= scalar;
+//     }
+
+//     SIM_CUDA_CALLABLE void operator+=(const tSimVector &a)
+//     {
+//         x += a.x;
+//         y += a.y;
+//     }
+//     SIM_CUDA_CALLABLE void operator-=(const tSimVector &a)
+//     {
+//         x -= a.x;
+//         y -= a.y;
+//     }
+//     SIM_CUDA_CALLABLE void operator*=(const tSimVector &a)
+//     {
+//         x *= a.x;
+//         y *= a.y;
+//     }
+//     SIM_CUDA_CALLABLE void operator/=(const tSimVector &a)
+//     {
+//         x /= a.x;
+//         y /= a.y;
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator+(Type scalar) const
+//     {
+//         return tSimVector(x + scalar, y + scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator-(Type scalar) const
+//     {
+//         return tSimVector(x - scalar, y - scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator*(Type scalar) const
+//     {
+//         return tSimVector(x * scalar, y * scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator/(Type scalar) const
+//     {
+//         return tSimVector(x / scalar, y / scalar);
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator+(const tSimVector &a) const
+//     {
+//         return tSimVector(x + a.x, y + a.y);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator-(const tSimVector &a) const
+//     {
+//         return tSimVector(x - a.x, y - a.y);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator*(const tSimVector &a) const
+//     {
+//         return tSimVector(x * a.x, y * a.y);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator/(const tSimVector &a) const
+//     {
+//         return tSimVector(x / a.x, y / a.y);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator+(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar + a.x, scalar + a.y);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator-(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar - a.x, scalar - a.y);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator*(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar * a.x, scalar * a.y);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator/(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar / a.x, scalar / a.y);
+//     }
+
+//     template <typename OtherType>
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector2<OtherType> &vec2)
+//         : x(static_cast<Type>(vec2.x)), y(static_cast<Type>(vec2.y))
+//     {
+//     }
+//     template <typename OtherType>
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector3<OtherType> &vec3)
+//         : x(static_cast<Type>(vec3.x)), y(static_cast<Type>(vec3.y))
+//     {
+//     }
+//     template <typename OtherType>
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector4<OtherType> &vec4)
+//         : x(static_cast<Type>(vec4.x)), y(static_cast<Type>(vec4.y))
+//     {
+//     }
+
+//     SIM_CUDA_CALLABLE const Type &operator[](unsigned int i) const
+//     {
+//         assert(i < Elements);
+//         return values[i];
+//     }
+//     SIM_CUDA_CALLABLE Type &operator[](unsigned int i)
+//     {
+//         assert(i < Elements);
+//         return values[i];
+//     }
+
+//     SIM_CUDA_CALLABLE Type Cross(const tSimVector2<Type> &a) const
+//     {
+//         return (x * a.y) - (y * a.x);
+//     }
+//     SIM_CUDA_CALLABLE Type Dot(const tSimVector2<Type> &a) const
+//     {
+//         return (x * a.x) + (y * a.y);
+//     }
+//     SIM_CUDA_CALLABLE void Normalize() const { (*this) /= Length(); }
+//     SIM_CUDA_CALLABLE Type Length() const { return std::sqrt(SqrLength()); }
+//     SIM_CUDA_CALLABLE Type SqrLength() const { return (x * x) + (y * y); }
+//     SIM_CUDA_CALLABLE Type Sum() const { return x + y; }
+// };
+
+// /*************************************************************************
+// ****************************    SDVector3    *****************************
+// *************************************************************************/
+
+// template <class Type> struct tSimVector<Type, VEC3_XYZ>
+// {
+//     static constexpr int Elements = 3;
+
+//     using value_type = Type;
+
+//     union
+//     {
+//         struct
+//         {
+//             Type x, y, z;
+//         };
+//         struct
+//         {
+//             Type values[3];
+//         };
+//     };
+
+//     SIM_CUDA_CALLABLE tSimVector() {}
+//     SIM_CUDA_CALLABLE explicit tSimVector(Type scalar)
+//         : x(scalar), y(scalar), z(scalar)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE tSimVector(Type s1, Type s2, Type s3)
+//         : x(s1), y(s2), z(s3)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE explicit tSimVector(Type s1,
+//                                           const tSimVector2<Type> &vec2)
+//         : x(s1), y(vec2.x), z(vec2.y)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector2<Type> &vec2,
+//                                           Type s3)
+//         : x(vec2.x), y(vec2.y), z(s3)
+//     {
+//     }
+
+//     SIM_CUDA_CALLABLE void operator+=(const tSimVector &a)
+//     {
+//         x += a.x;
+//         y += a.y;
+//         z += a.z;
+//     }
+//     SIM_CUDA_CALLABLE void operator-=(const tSimVector &a)
+//     {
+//         x -= a.x;
+//         y -= a.y;
+//         z -= a.z;
+//     }
+//     SIM_CUDA_CALLABLE Type SqrLength() const
+//     {
+//         return x * x + y * y + z * z;
+//     }
+
+//     SIM_CUDA_CALLABLE Type Length() const { return std::sqrt(SqrLength()); }
+
+//     SIM_CUDA_CALLABLE tSimVector<Type, VEC3_XYZ> Normalized() const
+//     {
+//         return (*this) / Length();
+//     }
+
+//     SIM_CUDA_CALLABLE void operator*=(const tSimVector &a)
+//     {
+//         x *= a.x;
+//         y *= a.y;
+//         z *= a.z;
+//     }
+//     SIM_CUDA_CALLABLE void operator/=(const tSimVector &a)
+//     {
+//         x /= a.x;
+//         y /= a.y;
+//         z /= a.z;
+//     }
+
+//     SIM_CUDA_CALLABLE void operator+=(Type scalar)
+//     {
+//         x += scalar;
+//         y += scalar;
+//         z += scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator-=(Type scalar)
+//     {
+//         x -= scalar;
+//         y -= scalar;
+//         z -= scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator*=(Type scalar)
+//     {
+//         x *= scalar;
+//         y *= scalar;
+//         z *= scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator/=(Type scalar)
+//     {
+//         x /= scalar;
+//         y /= scalar;
+//         z /= scalar;
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator+(const tSimVector &a) const
+//     {
+//         return tSimVector(x + a.x, y + a.y, z + a.z);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator-(const tSimVector &a) const
+//     {
+//         return tSimVector(x - a.x, y - a.y, z - a.z);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator*(const tSimVector &a) const
+//     {
+//         return tSimVector(x * a.x, y * a.y, z * a.z);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator/(const tSimVector &a) const
+//     {
+//         return tSimVector(x / a.x, y / a.y, z / a.z);
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator+(Type scalar) const
+//     {
+//         return tSimVector(x + scalar, y + scalar, z + scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator-(Type scalar) const
+//     {
+//         return tSimVector(x - scalar, y - scalar, z - scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator*(Type scalar) const
+//     {
+//         return tSimVector(x * scalar, y * scalar, z * scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator/(Type scalar) const
+//     {
+//         return tSimVector(x / scalar, y / scalar, z / scalar);
+//     }
+
+//     friend SIM_CUDA_CALLABLE tSimVector operator+(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar + a.x, scalar + a.y, scalar + a.z);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator-(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar - a.x, scalar - a.y, scalar - a.z);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator*(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar * a.x, scalar * a.y, scalar * a.z);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator/(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar / a.x, scalar / a.y, scalar / a.z);
+//     }
+
+//     template <typename OtherType>
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector2<OtherType> &vec2)
+//         : x(static_cast<Type>(vec2.x)), y(static_cast<Type>(vec2.y)),
+//           z(static_cast<Type>(0))
+//     {
+//     }
+//     template <typename OtherType>
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector3<OtherType> &vec3)
+//         : x(static_cast<Type>(vec3.x)), y(static_cast<Type>(vec3.y)),
+//           z(static_cast<Type>(vec3.z))
+//     {
+//     }
+//     template <typename OtherType>
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector4<OtherType> &vec4)
+//         : x(static_cast<Type>(vec4.x)), y(static_cast<Type>(vec4.y)),
+//           z(static_cast<Type>(vec4.z))
+//     {
+//     }
+
+//     SIM_CUDA_CALLABLE const Type &operator[](unsigned int i) const
+//     {
+//         assert(i < Elements);
+//         return values[i];
+//     }
+//     SIM_CUDA_CALLABLE Type &operator[](unsigned int i)
+//     {
+//         assert(i < Elements);
+//         return values[i];
+//     }
+// };
+
+// /*************************************************************************
+// ****************************    SDVector4    *****************************
+// *************************************************************************/
+
+// template <class Type> struct SIM_VEC4_ALIGN(Type) tSimVector<Type, VEC4_XYZW>
+// {
+//     static constexpr int Elements = 4;
+
+//     using value_type = Type;
+
+//     union
+//     {
+//         struct
+//         {
+//             Type values[4];
+//         };
+//         struct
+//         {
+//             Type x, y, z, w;
+//         };
+//         struct
+//         {
+//             tSimVector3<Type> xyz;
+//         };
+//     };
+
+//     SIM_CUDA_CALLABLE tSimVector() {}
+//     SIM_CUDA_CALLABLE explicit tSimVector(Type scalar)
+//         : x(scalar), y(scalar), z(scalar), w(scalar)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE tSimVector(Type s1, Type s2, Type s3, Type s4)
+//         : x(s1), y(s2), z(s3), w(s4)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE explicit tSimVector(Type s1, Type s2,
+//                                           const tSimVector2<Type> &vec2)
+//         : x(s1), y(s2), z(vec2.x), w(vec2.y)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE explicit tSimVector(Type s1,
+//                                           const tSimVector2<Type> &vec2,
+//                                           Type s4)
+//         : x(s1), y(vec2.x), z(vec2.y), w(s4)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector2<Type> &vec2,
+//                                           Type s3, Type s4)
+//         : x(vec2.x), y(vec2.y), z(s3), w(s4)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector2<Type> &vec2a,
+//                                           const tSimVector2<Type> &vec2b)
+//         : x(vec2a.x), y(vec2a.y), z(vec2b.x), w(vec2b.y)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector3<Type> &vec3,
+//                                           Type s4)
+//         : x(vec3.x), y(vec3.y), z(vec3.z), w(s4)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE explicit tSimVector(Type s1,
+//                                           const tSimVector3<Type> &vec3)
+//         : x(s1), y(vec3.x), z(vec3.y), w(vec3.z)
+//     {
+//     }
+
+//     SIM_CUDA_CALLABLE void operator+=(const tSimVector &a)
+//     {
+//         x += a.x;
+//         y += a.y;
+//         z += a.z;
+//         w += a.w;
+//     }
+//     SIM_CUDA_CALLABLE void operator-=(const tSimVector &a)
+//     {
+//         x -= a.x;
+//         y -= a.y;
+//         z -= a.z;
+//         w -= a.w;
+//     }
+//     SIM_CUDA_CALLABLE void operator*=(const tSimVector &a)
+//     {
+//         x *= a.x;
+//         y *= a.y;
+//         z *= a.z;
+//         w *= a.w;
+//     }
+//     SIM_CUDA_CALLABLE void operator/=(const tSimVector &a)
+//     {
+//         x /= a.x;
+//         y /= a.y;
+//         z /= a.z;
+//         w /= a.w;
+//     }
+
+//     SIM_CUDA_CALLABLE void operator+=(Type scalar)
+//     {
+//         x += scalar;
+//         y += scalar;
+//         z += scalar;
+//         w += scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator-=(Type scalar)
+//     {
+//         x -= scalar;
+//         y -= scalar;
+//         z -= scalar;
+//         w -= scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator*=(Type scalar)
+//     {
+//         x *= scalar;
+//         y *= scalar;
+//         z *= scalar;
+//         w *= scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator/=(Type scalar)
+//     {
+//         x /= scalar;
+//         y /= scalar;
+//         z /= scalar;
+//         w /= scalar;
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator+(const tSimVector &a) const
+//     {
+//         return tSimVector(x + a.x, y + a.y, z + a.z, w + a.w);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator-(const tSimVector &a) const
+//     {
+//         return tSimVector(x - a.x, y - a.y, z - a.z, w - a.w);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator*(const tSimVector &a) const
+//     {
+//         return tSimVector(x * a.x, y * a.y, z * a.z, w * a.w);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator/(const tSimVector &a) const
+//     {
+//         return tSimVector(x / a.x, y / a.y, z / a.z, w / a.w);
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator+(Type scalar) const
+//     {
+//         return tSimVector(x + scalar, y + scalar, z + scalar, w + scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator-(Type scalar) const
+//     {
+//         return tSimVector(x - scalar, y - scalar, z - scalar, w - scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator*(Type scalar) const
+//     {
+//         return tSimVector(x * scalar, y * scalar, z * scalar, w * scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator/(Type scalar) const
+//     {
+//         return tSimVector(x / scalar, y / scalar, z / scalar, w / scalar);
+//     }
+
+//     friend SIM_CUDA_CALLABLE tSimVector operator+(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar + a.x, scalar + a.y, scalar + a.z,
+//                           scalar + a.w);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator-(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar - a.x, scalar - a.y, scalar - a.z,
+//                           scalar - a.w);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator*(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar * a.x, scalar * a.y, scalar * a.z,
+//                           scalar * a.w);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator/(Type scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar / a.x, scalar / a.y, scalar / a.z,
+//                           scalar / a.w);
+//     }
+
+//     template <typename OtherType>
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector2<OtherType> &vec2)
+//         : x(static_cast<Type>(vec2.x)), y(static_cast<Type>(vec2.y)),
+//           z(static_cast<Type>(0)), w(static_cast<Type>(0))
+//     {
+//     }
+//     template <typename OtherType>
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector3<OtherType> &vec3)
+//         : x(static_cast<Type>(vec3.x)), y(static_cast<Type>(vec3.y)),
+//           z(static_cast<Type>(vec3.z)), w(static_cast<Type>(0))
+//     {
+//     }
+//     template <typename OtherType>
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector4<OtherType> &vec4)
+//         : x(static_cast<Type>(vec4.x)), y(static_cast<Type>(vec4.y)),
+//           z(static_cast<Type>(vec4.z)), w(static_cast<Type>(vec4.w))
+//     {
+//     }
+
+//     SIM_CUDA_CALLABLE const Type &operator[](unsigned int i) const
+//     {
+//         assert(i < Elements);
+//         return values[i];
+//     }
+//     SIM_CUDA_CALLABLE Type &operator[](unsigned int i)
+//     {
+//         assert(i < Elements);
+//         return values[i];
+//     }
+// };
+
+// /*************************************************************************
+// *****************************    CuFloat3    *****************************
+// *************************************************************************/
+
+// template <> struct SIM_VEC4_ALIGN(float) tSimVector<float, CUDA_VEC3>
+// {
+//     static constexpr int Elements = 3;
+
+//     using value_type = float;
+
+//     union
+//     {
+//         struct
+//         {
+//             float values[4];
+//         };
+//         struct
+//         {
+//             float x, y, z, w;
+//         };
+//         struct
+//         {
+//             tSimVector3<float> xyz;
+//         };
+//         struct
+//         {
+//             tSimVector4<float> xyzw;
+//         };
+//     };
+
+//     SIM_CUDA_CALLABLE tSimVector() {}
+//     SIM_CUDA_CALLABLE explicit tSimVector(float scalar)
+//         : xyzw(scalar, scalar, scalar, 0.0f)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE tSimVector(float s1, float s2, float s3)
+//         : xyzw(s1, s2, s3, 0.0f)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE tSimVector(float s1, float s2, float s3, float s4)
+//         : xyzw(s1, s2, s3, s4)
+//     {
+//     }
+
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector3<float> &vec3)
+//         : xyz(vec3), w(0.f)
+//     {
+//     }
+//     SIM_CUDA_CALLABLE explicit tSimVector(const tSimVector4<float> &vec4)
+//         : xyzw(vec4)
+//     {
+//     }
+
+//     SIM_CUDA_CALLABLE operator tSimVector3<float>() const { return xyz; }
+//     SIM_CUDA_CALLABLE operator tSimVector4<float>() const { return xyzw; }
+
+//     SIM_CUDA_CALLABLE void operator+=(const tSimVector &a)
+//     {
+//         x += a.x;
+//         y += a.y;
+//         z += a.z;
+//     }
+//     SIM_CUDA_CALLABLE void operator-=(const tSimVector &a)
+//     {
+//         x -= a.x;
+//         y -= a.y;
+//         z -= a.z;
+//     }
+//     SIM_CUDA_CALLABLE void operator*=(const tSimVector &a)
+//     {
+//         x *= a.x;
+//         y *= a.y;
+//         z *= a.z;
+//     }
+//     SIM_CUDA_CALLABLE void operator/=(const tSimVector &a)
+//     {
+//         x /= a.x;
+//         y /= a.y;
+//         z /= a.z;
+//     }
+
+//     SIM_CUDA_CALLABLE void operator/=(float scalar)
+//     {
+//         x /= scalar;
+//         y /= scalar;
+//         z /= scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator+=(float scalar)
+//     {
+//         x += scalar;
+//         y += scalar;
+//         z += scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator-=(float scalar)
+//     {
+//         x -= scalar;
+//         y -= scalar;
+//         z -= scalar;
+//     }
+//     SIM_CUDA_CALLABLE void operator*=(float scalar)
+//     {
+//         x *= scalar;
+//         y *= scalar;
+//         z *= scalar;
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator+(const tSimVector &a) const
+//     {
+//         return tSimVector(x + a.x, y + a.y, z + a.z);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator-(const tSimVector &a) const
+//     {
+//         return tSimVector(x - a.x, y - a.y, z - a.z);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator*(const tSimVector &a) const
+//     {
+//         return tSimVector(x * a.x, y * a.y, z * a.z);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator/(const tSimVector &a) const
+//     {
+//         return tSimVector(x / a.x, y / a.y, z / a.z);
+//     }
+
+//     SIM_CUDA_CALLABLE tSimVector operator/(float scalar) const
+//     {
+//         return tSimVector(x / scalar, y / scalar, z / scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator+(float scalar) const
+//     {
+//         return tSimVector(x + scalar, y + scalar, z + scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator-(float scalar) const
+//     {
+//         return tSimVector(x - scalar, y - scalar, z - scalar);
+//     }
+//     SIM_CUDA_CALLABLE tSimVector operator*(float scalar) const
+//     {
+//         return tSimVector(x * scalar, y * scalar, z * scalar);
+//     }
+
+//     friend SIM_CUDA_CALLABLE tSimVector operator/(float scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar / a.x, scalar / a.y, scalar / a.z);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator+(float scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar + a.x, scalar + a.y, scalar + a.z);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator-(float scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar - a.x, scalar - a.y, scalar - a.z);
+//     }
+//     friend SIM_CUDA_CALLABLE tSimVector operator*(float scalar,
+//                                                   const tSimVector &a)
+//     {
+//         return tSimVector(scalar * a.x, scalar * a.y, scalar * a.z);
+//     }
+
+//     SIM_CUDA_CALLABLE const float &operator[](unsigned int i) const
+//     {
+//         assert(i < 3);
+//         return values[i];
+//     }
+//     SIM_CUDA_CALLABLE float &operator[](unsigned int i)
+//     {
+//         assert(i < 3);
+//         return values[i];
+//     }
+
+//     SIM_CUDA_CALLABLE float Dot(const tSimVector &a) const
+//     {
+//         return (x * a.x) + (y * a.y) + (z * a.z);
+//     }
+//     SIM_CUDA_CALLABLE float SqrLength() const
+//     {
+//         return (x * x) + (y * y) + (z * z);
+//     }
+//     SIM_CUDA_CALLABLE void Normalize() { (*this) /= Length(); }
+//     SIM_CUDA_CALLABLE float Length() const { return std::sqrt(SqrLength()); }
+//     SIM_CUDA_CALLABLE float Sum() const { return x + y + z; }
+//     SIM_CUDA_CALLABLE tSimVector Cross(const tSimVector &a) const
+//     {
+//         return tSimVector(y * a.z - z * a.y, z * a.x - x * a.z,
+//                           x * a.y - y * a.x);
+//     }
+// };
+
+// /*************************************************************************
+// ****************************    Operators    *****************************
+// *************************************************************************/
+
+// template <typename Type, int N>
+// SIM_CUDA_CALLABLE_INLINE bool operator==(const tSimVector<Type, N> &a,
+//                                          const tSimVector<Type, N> &b)
+// {
+//     for (int i = 0; i < tSimVector<Type, N>::Elements; ++i)
+//     {
+//         if (a[i] != b[i])
+//             return false;
+//     }
+//     return true;
+// }
+// template <typename Type, int N>
+// SIM_CUDA_CALLABLE_INLINE bool operator!=(const tSimVector<Type, N> &a,
+//                                          const tSimVector<Type, N> &b)
+// {
+//     for (int i = 0; i < tSimVector<Type, N>::Elements; ++i)
+//     {
+//         if (a[i] != b[i])
+//             return true;
+//     }
+//     return false;
+// }
+// template <typename Type, int N>
+// SIM_CUDA_CALLABLE_INLINE tSimVector<Type, N> operator-(tSimVector<Type, N> a)
+// {
+//     for (int i = 0; i < tSimVector<Type, N>::Elements; ++i)
+//         a[i] = -a[i];
+//     return a;
+// }
+// template <typename Type, int N>
+// SIM_CUDA_CALLABLE_INLINE tSimVector<Type, N> operator!(tSimVector<Type, N> a)
+// {
+//     for (int i = 0; i < tSimVector<Type, N>::Elements; ++i)
+//         a[i] = !a[i];
+//     return a;
+// }
+// template <typename Type, int N>
+// SIM_CUDA_CALLABLE_INLINE tSimVector<Type, N> operator~(tSimVector<Type, N> a)
+// {
+//     for (int i = 0; i < tSimVector<Type, N>::Elements; ++i)
+//         a[i] = ~a[i];
+//     return a;
+// }
+
+// /*************************************************************************
+// ***************************    Type defines    ***************************
+// *************************************************************************/
+// // // bool
+// // typedef tSimVector2<bool>				tSimVecb2;
+// // // char
+// // typedef tSimVector2<char>				tSimVecChar2;
+// // typedef tSimVector3<char>				tSimVecChar3;
+// // typedef tSimVector4<char>				tSimVecChar4;
+// // typedef tSimVector<char, 5>			tSimVecChar5;
+// // typedef tSimVector<char, 6>			tSimVecChar6;
+// // // unsign char
+// // typedef tSimVector2<unsigned char>	UChar2;
+// // typedef tSimVector3<unsigned char>	UChar3;
+// // typedef tSimVector4<unsigned char>	UChar4;
+// // typedef tSimVector<unsigned char, 5>	UChar5;
+// // typedef tSimVector<unsigned char, 6>	UChar6;
+// // // short
+// // typedef tSimVector2<short>			Short2;
+// // typedef tSimVector3<short>			Short3;
+// // typedef tSimVector4<short>			Short4;
+// // typedef tSimVector<short, 5>			Short5;
+// // typedef tSimVector<short, 6>			Short6;
+// // // unsigned short
+// // typedef tSimVector2<unsigned short>	UShort2;
+// // typedef tSimVector3<unsigned short>	UShort3;
+// // typedef tSimVector4<unsigned short>	UShort4;
+// // typedef tSimVector<unsigned short, 5> UShort5;
+// // typedef tSimVector<unsigned short, 6> UShort6;
+// // int
+// typedef tSimVector2<int> tSimVector2i;
+// typedef tSimVector3<int> tSimVector3i;
+// typedef tSimVector4<int> tSimVector4i;
+// typedef tSimVector<int, 5> tSimVector5i;
+// typedef tSimVector<int, 6> tSimVector6i;
+// typedef tSimVector<int, 8> tSimVector8i;
+// typedef tSimVector<int, 12> tSimVector12i;
+// typedef tSimVector<int, 30> tSimVector30i;
+// // // unsigned int
+// // typedef tSimVector2<unsigned int>		UInt2;
+// // typedef tSimVector3<unsigned int>		UInt3;
+// // typedef tSimVector4<unsigned int>		UInt4;
+// // typedef tSimVector<unsigned int, 5>	UInt5;
+// // typedef tSimVector<unsigned int, 6>	UInt6;
+// // float
+// typedef tSimVector2<float> tSimVector2f;
+// typedef tSimVector3<float> tSimVector3f;
+// typedef tSimVector4<float> tSimVector4f;
+// typedef tSimVector<float, 5> tSimVector5f;
+// typedef tSimVector<float, 6> tSimVector6f;
+// typedef tSimVector<float, 9> tSimVector9f;
+// typedef tSimVector<float, 12> tSimVector12f;
+// // double
+// // typedef tSimVector2<double>			Double2;
+// // typedef tSimVector3<double>			Double3;
+// // typedef tSimVector4<double>			Double4;
+// // typedef tSimVector<double, 5>			Double5;
+// // typedef tSimVector<double, 6>			Double6;
+// // size_t
+// // typedef tSimVector2<size_t>			Size2;
+// // typedef tSimVector3<size_t>			Size3;
+// // typedef tSimVector4<size_t>			Size4;
+// // typedef tSimVector<size_t, 5>			Size5;
+// // typedef tSimVector<size_t, 6>			Size6;
+// /*
+// // SIMD-float3
+// typedef tSimVector<float, SIMD_VEC3>	Simd3f;*/
+// // CUDA-float3
+// typedef tSimVector<float, CUDA_VEC3> CuFloat3;
+
+// // half - GPU only
+// #ifdef __CUDACC__
+// typedef tSimVector3<__half> Half3;
+// #else
+// typedef tSimVector3<short> Half3; // just for compile reason,don't use it
+// #endif // __CUDACC__
+
+// // SIM_NAMESPACE_END
