@@ -33,11 +33,11 @@ protected:
     const tEigenArr<tTriplet> &GetStretchTriplet() const;
     void AddBendTriplet(tEigenArr<tTriplet> &) const;
     // tMatrixXd J, I_plus_dt2_Minv_L_inv; // vars used in fast simulation
-    tSparseMat J_sparse,
+    tSparseMatd J_sparse,
         I_plus_dt2_Minv_L_sparse; // vars used in fast simulation
-    Eigen::SparseLU<tSparseMat> I_plus_dt2_Minv_L_sparse_solver;
-    Eigen::SparseLU<tSparseMat> I_plus_dt2_Minv_L_sparse_fast_solver;
-    tSparseMat I_plus_dt2_Minv_L_sparse_fast; // vars used in fast
+    Eigen::SparseLU<tSparseMatd> I_plus_dt2_Minv_L_sparse_solver;
+    Eigen::SparseLU<tSparseMatd> I_plus_dt2_Minv_L_sparse_fast_solver;
+    tSparseMatd I_plus_dt2_Minv_L_sparse_fast; // vars used in fast
 
     double mPDContactForceKp, mPDContactForceKd, mPDContactForceFriction; // explicit normal / tangential contact force coeff
 };

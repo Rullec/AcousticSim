@@ -702,7 +702,7 @@ tVectorXd cBaraffMaterial::CalcTotalForce() const
     return total_force;
 }
 #include "utils/DefUtil.h"
-tSparseMat cBaraffMaterial::CalcTotalStiffnessMatrix()
+tSparseMatd cBaraffMaterial::CalcTotalStiffnessMatrix()
 {
 #define num_divide 15
     auto &tri_lst = mObject->GetTriangleArray();

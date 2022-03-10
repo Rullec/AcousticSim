@@ -123,7 +123,7 @@ void cSoftBodyImplicit::SolveForNextPosSparse(float dt)
 {
     tVectorXd MassDiag = mInvLumpedMassMatrixDiag.cwiseInverse();
 
-    tSparseMat A = dt * (mRayleighDamplingB - dt) * this->mGlobalStiffnessSparseMatrix;
+    tSparseMatd A = dt * (mRayleighDamplingB - dt) * this->mGlobalStiffnessSparseMatrix;
     // std::cout << "A.diagonal() = " << A.diagonal().size() << std::endl;
     // std::cout << "MassDiag = " << MassDiag.size() << std::endl;
     A.diagonal() += (1 + mRayleighDamplingA * dt) * MassDiag;
@@ -131,7 +131,7 @@ void cSoftBodyImplicit::SolveForNextPosSparse(float dt)
     tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) + dt * (mExtForce + mIntForce + mGravityForce + mUserForce);
     // tVectorXd vel = A.inverse() * b;
 
-    Eigen::ConjugateGradient<tSparseMat, Eigen::Upper> solver;
+    Eigen::ConjugateGradient<tSparseMatd, Eigen::Upper> solver;
     tVectorXd vel = solver.compute(A).solve(b);
 
     mXprev = mXcur;
@@ -672,11 +672,11 @@ tMatrixXd cSoftBodyImplicit::CalcGlobalStiffnessMatrix()
     return global_K;
 }
 
-tSparseMat cSoftBodyImplicit::CalcGlobalStiffnessSparseMatrix()
+tSparseMatd cSoftBodyImplicit::CalcGlobalStiffnessSparseMatrix()
 {
     size_t num_of_v = this->mVertexArrayShared.size();
     std::vector<tTriplet> tripletList = {};
-    tSparseMat mat(3 * num_of_v, 3 * num_of_v);
+    tSparseMatd mat(3 * num_of_v, 3 * num_of_v);
     tripletList.reserve(GetNumOfTets() * 4 * 4 * 9);
     OMP_PARALLEL_FOR
     for (int tet_id = 0; tet_id < GetNumOfTets(); tet_id++)
@@ -725,7 +725,7 @@ void cSoftBodyImplicit::UpdateImGui()
     }
 }
 
-tSparseMat cSoftBodyImplicit::GetGlobalStiffnessMatrix() const
+tSparseMatd cSoftBodyImplicit::GetGlobalStiffnessMatrix() const
 {
     return mGlobalStiffnessSparseMatrix;
 }

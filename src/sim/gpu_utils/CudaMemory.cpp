@@ -143,3 +143,38 @@ void cCudaMemory::Free()
 }
 
 size_t cCudaMemory::Bytes() const { return mNumOfBytes; }
+
+bool cCudaMemory::Read(void *pHost, size_t SizeBytes, size_t OffsetBytes) const
+{
+    cudaError_t err =
+        cudaMemcpy(pHost, (void *)((size_t)mpDevData + OffsetBytes), SizeBytes,
+                   cudaMemcpyDeviceToHost);
+
+    if (err != cudaSuccess)
+    {
+        printf("SDCudaMemory::Read() => %s.", cudaGetErrorString(err));
+
+        cudaGetLastError(); //!	pop last error
+
+        return false;
+    }
+
+    return true;
+}
+
+bool cCudaMemory::Write(const void *pHost, size_t SizeBytes, size_t OffsetBytes)
+{
+    cudaError_t err = cudaMemcpy((void *)((size_t)mpDevData + OffsetBytes),
+                                 pHost, SizeBytes, cudaMemcpyHostToDevice);
+
+    if (err != cudaSuccess)
+    {
+        printf("SDCudaMemory::Write() => %s.", cudaGetErrorString(err));
+
+        cudaGetLastError(); //!	pop last error
+
+        return false;
+    }
+
+    return true;
+}

@@ -27,7 +27,7 @@ public:
     virtual tMatrix9d GetStiffMatrix(int tri_id) const;
     virtual double CalcTotalEnergy() const;
     virtual tVectorXd CalcTotalForce() const;
-    virtual tSparseMat CalcTotalStiffnessMatrix();
+    virtual tSparseMatd CalcTotalStiffnessMatrix();
     virtual void CheckForce();
     virtual void CheckStiffnessMatrix();
 
@@ -56,7 +56,7 @@ protected:
     tEigenArr<tVector2d> mCLst, mCprimeLst;
     tEigenArr<tVector9d> mIntForceLst;
     tEigenArr<tMatrix9d> mKLst;
-    tSparseMat global_K_buf;
+    tSparseMatd global_K_buf;
     tEigenArr<tTriplet> total_triplets_buf = {};
     virtual void Allocate();
     virtual void InitN();

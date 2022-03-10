@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <cassert>
 #include <type_traits>
 // namespace HandyMatrix
 // {
@@ -25,6 +26,7 @@ public:
             mData[i++] = res;
         // for (int i = 0; i < N * M; i++)
     }
+    SIM_CUDA_CALLABLE size_t size() const { return mElements; }
     SIM_CUDA_CALLABLE void setValue(const dtype &val)
     {
         // std::cout << "setvalue begin, val = " << val << "bytes = " <<
@@ -73,16 +75,37 @@ public:
         setValue(val);
         // // std::cout << "after to set val " << mData[0] << std::endl;
     }
-    static SIM_CUDA_CALLABLE tCudaMatrix<dtype, M, N> Zero()
+    static SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M> Zero()
     {
-        tCudaMatrix<dtype, M, N> mat;
+        tCudaMatrix<dtype, N, M> mat;
         return mat;
     }
+    static SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M> Ones()
+    {
+        tCudaMatrix<dtype, N, M> mat;
+        mat.setValue(1);
+        return mat;
+    }
+    static SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M> Identity()
+    {
+        tCudaMatrix<dtype, N, M> mat;
+        mat.setIdentity();
+        return mat;
+    }
+
     SIM_CUDA_CALLABLE dtype operator()(int i, int j) const
     {
-        // printf("(%d, %d)\n", i, j);
-        assert(i >= 0 && i < N);
-        assert(j >= 0 && j < M);
+
+        if (false == (i >= 0 && i < N))
+        {
+            printf("visit (%d, %d) in mat size(%d, %d)\n", i, j, N, M);
+            assert(false);
+        }
+        if (false == (j >= 0 && j < M))
+        {
+            printf("visit (%d, %d) in mat size(%d, %d)\n", i, j, N, M);
+            assert(false);
+        }
         return mData[j * mRows + i];
     }
     SIM_CUDA_CALLABLE dtype &operator()(int i, int j)
@@ -231,6 +254,20 @@ public:
         }
         return fout;
     };
+    SIM_CUDA_CALLABLE void print() const
+    {
+        for (int i = 0; i < N; i++)
+        {
+            for (int j = 0; j < M; j++)
+            {
+                printf("%.5f", (*this)(i, j));
+                if (j != M - 1)
+                    printf(" ");
+            }
+            if (i != N - 1)
+                printf("\n");
+        }
+    }
     friend SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M>
     operator*(dtype val, const tCudaMatrix<dtype, N, M> &mat)
     {
@@ -266,10 +303,12 @@ public:
     block(int st_row, int st_col) const
     {
         tCudaMatrix<dtype, block_row, block_col> mat;
+        // printf("visit blocksize [%d, %d] st %d %d total size %d %d\n",
+        // block_row, block_col, st_row, st_col, N, M);
         for (int i = st_row; i < st_row + block_row; i++)
             for (int j = st_col; j < st_col + block_col; j++)
             {
-                mat(i - st_row, j - st_col) = (*this)(st_row, st_col);
+                mat(i - st_row, j - st_col) = (*this)(i, j);
             }
         return mat;
     }
@@ -280,7 +319,7 @@ public:
         assert(row_st + K <= N);
         assert(col_st + L <= M);
         for (int i = 0; i < K; i++)
-            for (int j = 0; j < K; j++)
+            for (int j = 0; j < L; j++)
             {
                 (*this)(row_st + i, col_st + j) = new_block(i, j);
             }
@@ -329,14 +368,13 @@ public:
         return sum;
     }
     template <int K>
-    SIM_CUDA_CALLABLE tCudaMatrix<dtype, K, 1>
-    segment(int st, const tCudaMatrix<dtype, K, 1> &new_seg) const
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, K, 1> segment(int st) const
     {
         assert(K <= N * M);
         static_assert(N == 1 || M == 1); // a vecotr method
         tCudaMatrix<dtype, K, 1> res;
         for (int i = 0; i < K; i++)
-            res[i] = mData[i];
+            res[i] = mData[st + i];
         return res;
     }
 
@@ -375,11 +413,15 @@ So we need an macro to define them all: Given
 
 CUDA_DECLARE_MATRIX_AND_VECTOR(int, i, 2);
 CUDA_DECLARE_MATRIX_AND_VECTOR(int, i, 3);
+CUDA_DECLARE_MATRIX_AND_VECTOR(int, i, 4);
 CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 2);
 CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 3);
 CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 4);
+CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 12);
 // CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 9);
-CUDA_DECLARE_VECTOR(int, i, 12);
+// CUDA_DECLARE_VECTOR(int, i, 12);
+CUDA_DECLARE_VECTOR(int, i, 32);
+CUDA_DECLARE_VECTOR(int, i, 8);
 CUDA_DECLARE_MATRIX(float, f, 3, 2);
 CUDA_DECLARE_MATRIX(float, f, 9, 2);
 using tCudaMatrix9f = tCudaMatrix<float, 9, 9>;

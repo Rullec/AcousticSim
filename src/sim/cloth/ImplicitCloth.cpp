@@ -71,10 +71,10 @@ tVectorXd cImplicitCloth::CalcNextPositionImplicit()
     tVectorXd x0 = mXcur;
     int dof = GetNumOfFreedom();
     tVectorXd res = tVectorXd::Zero(dof);
-    tSparseMat dGdx(dof, dof);
+    tSparseMatd dGdx(dof, dof);
     int cur_iter = 0;
 
-    Eigen::SparseLU<tSparseMat> solver;
+    Eigen::SparseLU<tSparseMatd> solver;
 
     while (true)
     {
@@ -93,7 +93,7 @@ tVectorXd cImplicitCloth::CalcNextPositionImplicit()
 
         // if (cur_iter == 3)
         // {
-        //     tSparseMat mat(dof, dof);
+        //     tSparseMatd mat(dof, dof);
         //     CalcdGxdxImplicitSparse(x0, mat);
         //     std::cout << "diff norm = " << (mat - dGdx).norm() << std::endl;
         //     std::cout << "dense = \n"
@@ -217,7 +217,7 @@ void cImplicitCloth::CalcdGxdxImplicit(const tVectorXd &x,
            tMatrixXd::Identity(GetNumOfFreedom(), GetNumOfFreedom());
 }
 void cImplicitCloth::CalcdGxdxImplicitSparse(const tVectorXd &x,
-                                             tSparseMat &dGdx) const
+                                             tSparseMatd &dGdx) const
 {
     int dof = GetNumOfFreedom();
     Eigen::SparseMatrix<double> spMat(dof, dof);

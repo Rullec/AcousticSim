@@ -8,6 +8,7 @@
 
 #define SIM_INLINE __inline__
 #define SIM_ALIGN(n) __align__(n)
+#define SIM_CUDA_CALLABLE_DEVICE __device__
 #define SIM_CUDA_CALLABLE __host__ __device__
 #define SIM_CUDA_CALLABLE_INLINE __host__ __device__ __forceinline__
 #define SIM_CUDA_CALLABLE_UNROLL __pragma(unroll)
@@ -15,6 +16,7 @@
 #else
 #define SIM_INLINE __inline
 #define SIM_ALIGN(n) __declspec(align(n)) //!	Only for windows platform.
+#define SIM_CUDA_CALLABLE_DEVICE
 #define SIM_CUDA_CALLABLE
 #define SIM_CUDA_CALLABLE_INLINE __forceinline
 #define SIM_CUDA_CALLABLE_UNROLL

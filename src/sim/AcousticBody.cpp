@@ -8,7 +8,7 @@ cAcousticBody::cAcousticBody()
 tVectorXd sum_wave;
 void cAcousticBody::SolveVibration(
     const tVectorXd &MassDiag,
-    const tSparseMat &StiffMat,
+    const tSparseMatd &StiffMat,
     const tVector2f &rayleigh_damping,
     const tVectorXd &xcur_vec,
     const tVectorXd &xprev_vec)

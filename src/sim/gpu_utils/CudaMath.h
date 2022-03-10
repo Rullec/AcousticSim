@@ -1,3 +1,5 @@
+#ifndef CUDA_MATH_H_
+#define CUDA_MATH_H_
 #include "CudaMatrix.h"
 // #include "CudaVector.h"
 #include <math.h>
@@ -29,3 +31,4 @@ public:
         return false;
     }
 };
+#endif

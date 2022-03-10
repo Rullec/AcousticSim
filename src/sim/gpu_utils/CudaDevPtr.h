@@ -1,13 +1,6 @@
-/**
- * 公司：凌笛数码
- * 版权信息：凌笛数码所有
- * 描述：供CUDA内核使用的带越界检查指针
- * 作者：黄文超
- * 日期：2019/05/14
- */
-
 #pragma once
 #include "CudaDef.h"
+#include "CudaMath.h"
 // #include "SeMath.h"
 
 //#define ENABLE_CUDA_MEMORY_CHECK
@@ -104,7 +97,7 @@
 				return *reinterpret_cast<const Type*>(sg_ReadWriteOutOfRange);
 			}
 		#ifndef DISABLE_NAN_CHECK
-			else if (std::isnan(m_Ptr[index]))
+			else if (cCudaMath::IsNan(m_Ptr[index]))
 			{
 				if (std::is_same_v<Type, float>)
 					printf("[%s]: Data of device 1D array (float) is not a number, index = %d.\n", sg_KernelNameStr, index);
@@ -208,7 +201,7 @@
 				return *reinterpret_cast<const Type*>(sg_ReadWriteOutOfRange);
 			}
 		#ifndef DISABLE_NAN_CHECK
-			else if (std::isnan(m_Ptr[index]))
+			else if (cCudaMath::IsNan(m_Ptr[index]))
 			{
 				if (std::is_same_v<Type, float>)
 					printf("[%s]: Data of device 1D array (float) is not a number, index = %d.\n", sg_KernelNameStr, index);
@@ -272,7 +265,7 @@
 		//!	@brief	Get address to the first element of i-th row.
 		SIM_CUDA_CALLABLE devPtr<const Type> operator[](unsigned int i) const
 		{
-			if (i >= SIM_SCI(m_Rows))
+			if (i >= static_cast<int>(m_Rows))
 			{
 				printf("[%s]: Device 2D array (sizeof %lld) out of rows(%d), requested: %d.\n", sg_KernelNameStr, sizeof(Type), m_Rows, i);
 
@@ -285,7 +278,7 @@
 		//!	@brief	Get address to the first element of i-th row.
 		SIM_CUDA_CALLABLE devPtr<Type> operator[](unsigned int i)
 		{
-			if (i >= SIM_SCI(m_Rows))
+			if (i >= static_cast<int>(m_Rows))
 			{
 				printf("[%s]: Device 2D array (sizeof %lld) out of rows(%d), requested: %d.\n", sg_KernelNameStr, sizeof(Type), m_Rows, i);
 
@@ -375,7 +368,7 @@
 		//!	@brief	Get address to the first element of i-th row.
 		SIM_CUDA_CALLABLE devPtr<const Type> operator[](unsigned int i) const
 		{
-			if (i >= SIM_SCI(m_Rows))
+			if (i >= static_cast<int>(m_Rows))
 			{
 				printf("[%s]: Device 2D array (sizeof %lld) out of rows(%d), requested: %d.\n", sg_KernelNameStr, sizeof(Type), m_Rows, i);
 

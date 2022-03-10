@@ -143,7 +143,7 @@ void cPDCloth::InitVarsOptImplicitSparseFast()
     std::vector<tTriplet> tri_lst(0);
     for (int k = 0; k < I_plus_dt2_Minv_L_sparse.outerSize(); k++)
     {
-        for (tSparseMat::InnerIterator it(I_plus_dt2_Minv_L_sparse, k); it;
+        for (tSparseMatd::InnerIterator it(I_plus_dt2_Minv_L_sparse, k); it;
              ++it)
         {
             // printf("row %d col %d value %.4f\n", it.row(),
@@ -171,7 +171,7 @@ void cPDCloth::InitVarsOptImplicitSparseFast()
  *      3. return the result
  */
 template <typename T>
-void SolveFast(const tSparseMat &A, const T &solver, tVectorXd &residual,
+void SolveFast(const tSparseMatd &A, const T &solver, tVectorXd &residual,
                tVectorXd &solution)
 {
     int size = residual.size();
@@ -460,7 +460,7 @@ void cPDCloth::AddBendTriplet(tEigenArr<tTriplet> &old_lst) const
         }
     }
 
-    // tSparseMat sparse(num_of_dof, num_of_dof);
+    // tSparseMatd sparse(num_of_dof, num_of_dof);
     // sparse.setFromTriplets(sparse_tri.begin(), sparse_tri.end());
     // std::cout << "sparse = \n"
     //           << sparse << std::endl;

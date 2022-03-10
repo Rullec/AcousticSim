@@ -1,12 +1,12 @@
-#include <iostream>
 #include "BaraffCloth.h"
-#include "sim/cloth/QBendingMaterial.h"
-#include "utils/TimeUtil.hpp"
-#include "geometries/Primitives.h"
 #include "BaraffMaterial.h"
-#include "utils/JsonUtil.h"
-#include "sim/Perturb.h"
+#include "geometries/Primitives.h"
 #include "imgui.h"
+#include "sim/Perturb.h"
+#include "sim/cloth/QBendingMaterial.h"
+#include "utils/JsonUtil.h"
+#include "utils/TimeUtil.hpp"
+#include <iostream>
 
 int frame = 0;
 cBaraffCloth::cBaraffCloth(int id_) : cBaseCloth(eClothType::FEM_CLOTH, id_)
@@ -32,13 +32,15 @@ void cBaraffCloth::Init(const Json::Value &conf)
     // init material
     // mMaterial = std::make_shared<cBaraffMaterial>();
     mBendingMaterial = std::make_shared<cQBendingMaterial>();
-    mBendingK = cJsonUtil::ReadVectorJson(cJsonUtil::ParseAsValue("cloth_bending_stiffness", conf)).cast<float>();
-    mBendingMaterial->Init(
-        GetVertexArray(),
-        GetEdgeArray(),
-        GetTriangleArray(),
-        mBendingK.cast<double>());
-    mStretchK = cJsonUtil::ReadVectorJson(cJsonUtil::ParseAsValue("cloth_stretch_stiffness", conf)).segment(0, 3).cast<float>();
+    mBendingK = cJsonUtil::ReadVectorJson(
+                    cJsonUtil::ParseAsValue("cloth_bending_stiffness", conf))
+                    .cast<float>();
+    mBendingMaterial->Init(GetVertexArray(), GetEdgeArray(), GetTriangleArray(),
+                           mBendingK.cast<double>());
+    mStretchK = cJsonUtil::ReadVectorJson(
+                    cJsonUtil::ParseAsValue("cloth_stretch_stiffness", conf))
+                    .segment(0, 3)
+                    .cast<float>();
     // mMaterial->SetStretchK(mStretchK[0], mStretchK[1]);
     // mMaterial->SetSheaingK(mStretchK[2]);
     mMaterial = std::make_shared<cBaraffMaterial>();
@@ -83,18 +85,20 @@ void cBaraffCloth::UpdatePos(double dt)
         mMaterial->Update(true, true, true);
     }
 
-    gProfRec.push_back(tTimeRecms("update material", cTimeUtil::End("update material", true)));
+    gProfRec.push_back(
+        tTimeRecms("update material", cTimeUtil::End("update material", true)));
     // std::cout << "-------\n";
     // UpdateCollisionForce(mCollisionForce);
     cTimeUtil::Begin("calc_K");
     CalcStiffnessMatrix(mXcur, mStiffnessMatrix);
 
     {
-        // mStiffnessMatrix = mMaterial->CalcTotalStiffnessMatrix() + this->mBendingMaterial->GetStiffnessMatrix();
-        // auto diff_norm = (new_K - mStiffnessMatrix).cwiseAbs().norm();
-        // std::cout << "new_K = " << new_K.toDense() << std::endl;
-        // std::cout << "old_K = " << mStiffnessMatrix.toDense() << std::endl;
-        // std::cout << "[K] diff_norm = " << diff_norm << std::endl;
+        // mStiffnessMatrix = mMaterial->CalcTotalStiffnessMatrix() +
+        // this->mBendingMaterial->GetStiffnessMatrix(); auto diff_norm = (new_K
+        // - mStiffnessMatrix).cwiseAbs().norm(); std::cout << "new_K = " <<
+        // new_K.toDense() << std::endl; std::cout << "old_K = " <<
+        // mStiffnessMatrix.toDense() << std::endl; std::cout << "[K] diff_norm
+        // = " << diff_norm << std::endl;
     }
 
     gProfRec.push_back(tTimeRecms("calc_K", cTimeUtil::End("calc_K", true)));
@@ -102,14 +106,18 @@ void cBaraffCloth::UpdatePos(double dt)
     cTimeUtil::Begin("calc_fint");
 
     CalcIntForce(mXcur, mIntForce);
-    
-    // std::cout << "[fint] diff norm = " << (new_fint - mIntForce).norm() << std::endl;
 
-    gProfRec.push_back(tTimeRecms("calc_fint", cTimeUtil::End("calc_fint", true)));
+    // std::cout << "[fint] diff norm = " << (new_fint - mIntForce).norm() <<
+    // std::endl;
+
+    gProfRec.push_back(
+        tTimeRecms("calc_fint", cTimeUtil::End("calc_fint", true)));
     // for (int i = 0; i < mVertexArrayShared.size(); i++)
     // {
-    //     std::cout << "fint" << i << " = " << mIntForce.segment(3 * i, 3).transpose() << std::endl;
-    // std::cout << "x" << i << " = " << mXcur.segment(3 * i, 3).transpose() << std::endl;
+    //     std::cout << "fint" << i << " = " << mIntForce.segment(3 * i,
+    //     3).transpose() << std::endl;
+    // std::cout << "x" << i << " = " << mXcur.segment(3 * i, 3).transpose() <<
+    // std::endl;
     // }
     // std::cout << "user force = " << mUserForce.transpose() << std::endl;
     cTimeUtil::Begin("solve");
@@ -128,9 +136,12 @@ void cBaraffCloth::ApplyUserPerturbForceOnce(tPerturb *pert)
     {
         auto t = this->mTriangleArrayShared[pert->mAffectedTriId];
         tVector3d force = pert->GetPerturbForce().segment(0, 3);
-        mUserForce.segment(3 * t->mId0, 3) += force * pert->mBarycentricCoords[0];
-        mUserForce.segment(3 * t->mId1, 3) += force * pert->mBarycentricCoords[1];
-        mUserForce.segment(3 * t->mId2, 3) += force * pert->mBarycentricCoords[2];
+        mUserForce.segment(3 * t->mId0, 3) +=
+            force * pert->mBarycentricCoords[0];
+        mUserForce.segment(3 * t->mId1, 3) +=
+            force * pert->mBarycentricCoords[1];
+        mUserForce.segment(3 * t->mId2, 3) +=
+            force * pert->mBarycentricCoords[2];
     }
 }
 
@@ -143,11 +154,13 @@ void cBaraffCloth::ApplyUserPerturbForceOnce(tPerturb *pert)
 //     // int num_of_triangles = GetNumOfTriangles();
 //     // mF.resize(num_of_triangles, tMatrix32d::Zero());
 //     // mJ.noalias() = tVectorXd::Zero(num_of_triangles);
-//     // mPK1.resize(num_of_triangles, tMatrixXd::Zero(element_size, element_size));
+//     // mPK1.resize(num_of_triangles, tMatrixXd::Zero(element_size,
+//     element_size));
 //     // mdFdx.resize(
 //     //     num_of_triangles,
 //     //     tEigenArr<tMatrixXd>(element_size,
-//     //                          tMatrixXd::Zero(element_size, element_size)));
+//     //                          tMatrixXd::Zero(element_size,
+//     element_size)));
 
 // }
 
@@ -195,9 +208,11 @@ int cBaraffCloth::GetSingleElementFreedom() const { return 9; }
 /**
  * \brief           calculate internal force in
  */
-void cBaraffCloth::CalcIntForce(const tVectorXd &xcur, tVectorXd &int_force) const
+void cBaraffCloth::CalcIntForce(const tVectorXd &xcur,
+                                tVectorXd &int_force) const
 {
-    int_force = mMaterial->CalcTotalForce() + mBendingMaterial->CalcForce(mXcur);
+    int_force =
+        mMaterial->CalcTotalForce() + mBendingMaterial->CalcForce(mXcur);
     // auto get_pos_mat = [](const tVectorXd &xcur,
     //                       int id0, int id1, int id2) -> tMatrix3d
     // {
@@ -228,11 +243,13 @@ void cBaraffCloth::CalcIntForce(const tVectorXd &xcur, tVectorXd &int_force) con
     //     uv_coords.row(1) = mVertexArrayShared[v_id[1]]->muv.cast<double>();
     //     uv_coords.row(2) = mVertexArrayShared[v_id[2]]->muv.cast<double>();
 
-    //     tVectorXd force = mMaterial->CalcForce(get_pos_mat(xcur, v_id[0], v_id[1], v_id[2]), uv_coords);
-    //     // std::cout << "[old] triangle " << i << " force = " << force.transpose() << std::endl;
-    //     int_force.segment(3 * v_id[0], 3) += force.segment(0, 3);
-    //     int_force.segment(3 * v_id[1], 3) += force.segment(3, 3);
-    //     int_force.segment(3 * v_id[2], 3) += force.segment(6, 3);
+    //     tVectorXd force = mMaterial->CalcForce(get_pos_mat(xcur, v_id[0],
+    //     v_id[1], v_id[2]), uv_coords);
+    //     // std::cout << "[old] triangle " << i << " force = " <<
+    //     force.transpose() << std::endl; int_force.segment(3 * v_id[0], 3) +=
+    //     force.segment(0, 3); int_force.segment(3 * v_id[1], 3) +=
+    //     force.segment(3, 3); int_force.segment(3 * v_id[2], 3) +=
+    //     force.segment(6, 3);
     // }
 
     // int_force += mBendingMaterial->CalcForce(mXcur);
@@ -278,98 +295,112 @@ void cBaraffCloth::InitMass(const Json::Value &conf)
         auto v1 = mVertexArrayShared[t->mId1];
         auto v2 = mVertexArrayShared[t->mId2];
 
-        double triangle_area = cMathUtil::CalcTriangleArea(v0->mPos,
-                                                           v1->mPos,
-                                                           v2->mPos);
-        mMassMatrixDiag.segment(3 * t->mId0, 3) += triangle_area / 3 * mClothDensity * tVector3d::Ones();
-        mMassMatrixDiag.segment(3 * t->mId1, 3) += triangle_area / 3 * mClothDensity * tVector3d::Ones();
-        mMassMatrixDiag.segment(3 * t->mId2, 3) += triangle_area / 3 * mClothDensity * tVector3d::Ones();
+        double triangle_area =
+            cMathUtil::CalcTriangleArea(v0->mPos, v1->mPos, v2->mPos);
+        mMassMatrixDiag.segment(3 * t->mId0, 3) +=
+            triangle_area / 3 * mClothDensity * tVector3d::Ones();
+        mMassMatrixDiag.segment(3 * t->mId1, 3) +=
+            triangle_area / 3 * mClothDensity * tVector3d::Ones();
+        mMassMatrixDiag.segment(3 * t->mId2, 3) +=
+            triangle_area / 3 * mClothDensity * tVector3d::Ones();
     }
     for (int i = 0; i < GetNumOfVertices(); i++)
     {
         mVertexArrayShared[i]->mMass = mMassMatrixDiag[3 * i];
-        // std::cout << "v" << i << " mass = " << mVertexArrayShared[i]->mMass << std::endl;
+        // std::cout << "v" << i << " mass = " << mVertexArrayShared[i]->mMass
+        // << std::endl;
     }
 }
 
 void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
-                                       tSparseMat &K_global) const
+                                       tSparseMatd &K_global) const
 {
-    K_global = mMaterial->CalcTotalStiffnessMatrix() + this->mBendingMaterial->GetStiffnessMatrix();
-//     auto get_pos_mat = [](const tVectorXd &xcur,
-//                           int id0, int id1, int id2) -> tMatrix3d
-//     {
-//         tMatrix3d val = tMatrix3d::Zero();
-//         val.col(0) = xcur.segment(3 * id0, 3);
-//         val.col(1) = xcur.segment(3 * id1, 3);
-//         val.col(2) = xcur.segment(3 * id2, 3);
-//         return val;
-//     };
-//     // auto get_uv_mat;
+    K_global = mMaterial->CalcTotalStiffnessMatrix() +
+               this->mBendingMaterial->GetStiffnessMatrix();
+    //     auto get_pos_mat = [](const tVectorXd &xcur,
+    //                           int id0, int id1, int id2) -> tMatrix3d
+    //     {
+    //         tMatrix3d val = tMatrix3d::Zero();
+    //         val.col(0) = xcur.segment(3 * id0, 3);
+    //         val.col(1) = xcur.segment(3 * id1, 3);
+    //         val.col(2) = xcur.segment(3 * id2, 3);
+    //         return val;
+    //     };
+    //     // auto get_uv_mat;
 
-//     tEigenArr<tTriplet>
-//         total_triplets;
-//     total_triplets.reserve(mTriangleArrayShared.size() * 3 * 3 * 9);
+    //     tEigenArr<tTriplet>
+    //         total_triplets;
+    //     total_triplets.reserve(mTriangleArrayShared.size() * 3 * 3 * 9);
 
-//     // __pragma(omp parallel for num_threads(3))
-//     int th_id, nthreads;
-// #pragma omp parallel for num_threads(8)
-//     for (int idx = 0; idx < mTriangleArrayShared.size(); idx++)
-//     {
-//         // std::cout << "omp num thread = " << omp_get_num_threads() << std::endl;
-//         // printf("Hello World from thread %d\n", omp_get_thread_num());
-//         auto t = this->mTriangleArrayShared[idx];
-//         std::vector<tTriplet> sub_triples = {};
-//         sub_triples.reserve(3 * 3 * 9);
-//         // 1. calc ele stiffness
-//         // 1.1 assemble current pos,
-//         // 1.2 give the 3x2d texture coords
-//         int v_id[3] = {t->mId0,
-//                        t->mId1,
-//                        t->mId2};
-//         // int id0 = t->mId0,
-//         //     id1 = t->mId1,
-//         //     id2 = t->mId2;
-//         tMatrix32d uv_coords;
-//         uv_coords.row(0) = mVertexArrayShared[v_id[0]]->muv.cast<double>();
-//         uv_coords.row(1) = mVertexArrayShared[v_id[1]]->muv.cast<double>();
-//         uv_coords.row(2) = mVertexArrayShared[v_id[2]]->muv.cast<double>();
+    //     // __pragma(omp parallel for num_threads(3))
+    //     int th_id, nthreads;
+    // #pragma omp parallel for num_threads(8)
+    //     for (int idx = 0; idx < mTriangleArrayShared.size(); idx++)
+    //     {
+    //         // std::cout << "omp num thread = " << omp_get_num_threads() <<
+    //         std::endl;
+    //         // printf("Hello World from thread %d\n", omp_get_thread_num());
+    //         auto t = this->mTriangleArrayShared[idx];
+    //         std::vector<tTriplet> sub_triples = {};
+    //         sub_triples.reserve(3 * 3 * 9);
+    //         // 1. calc ele stiffness
+    //         // 1.1 assemble current pos,
+    //         // 1.2 give the 3x2d texture coords
+    //         int v_id[3] = {t->mId0,
+    //                        t->mId1,
+    //                        t->mId2};
+    //         // int id0 = t->mId0,
+    //         //     id1 = t->mId1,
+    //         //     id2 = t->mId2;
+    //         tMatrix32d uv_coords;
+    //         uv_coords.row(0) =
+    //         mVertexArrayShared[v_id[0]]->muv.cast<double>(); uv_coords.row(1)
+    //         = mVertexArrayShared[v_id[1]]->muv.cast<double>();
+    //         uv_coords.row(2) =
+    //         mVertexArrayShared[v_id[2]]->muv.cast<double>();
 
-//         auto ele_K = mMaterial->CalcStiffMatrix(get_pos_mat(xcur, v_id[0], v_id[1], v_id[2]), uv_coords);
-//         // std::cout << "[old] triangle " << idx << " K = \n"
-//         //   << ele_K << std::endl;
-//         // 2. assemble
-//         for (size_t i = 0; i < 3; i++)
-//         {
-//             size_t global_vi_idx = v_id[i];
-//             for (size_t j = 0; j < 3; j++)
-//             {
-//                 size_t global_vj_idx = v_id[j];
+    //         auto ele_K = mMaterial->CalcStiffMatrix(get_pos_mat(xcur,
+    //         v_id[0], v_id[1], v_id[2]), uv_coords);
+    //         // std::cout << "[old] triangle " << idx << " K = \n"
+    //         //   << ele_K << std::endl;
+    //         // 2. assemble
+    //         for (size_t i = 0; i < 3; i++)
+    //         {
+    //             size_t global_vi_idx = v_id[i];
+    //             for (size_t j = 0; j < 3; j++)
+    //             {
+    //                 size_t global_vj_idx = v_id[j];
 
-//                 const tMatrix3d &ele_K_part = ele_K.block(3 * i, 3 * j, 3, 3);
-//                 size_t i3 = 3 * global_vi_idx, j3 = 3 * global_vj_idx;
-//                 sub_triples.push_back(tTriplet(i3, j3, ele_K_part(0, 0)));
-//                 sub_triples.push_back(tTriplet(i3, j3 + 1, ele_K_part(0, 1)));
-//                 sub_triples.push_back(tTriplet(i3, j3 + 2, ele_K_part(0, 2)));
+    //                 const tMatrix3d &ele_K_part = ele_K.block(3 * i, 3 * j,
+    //                 3, 3); size_t i3 = 3 * global_vi_idx, j3 = 3 *
+    //                 global_vj_idx; sub_triples.push_back(tTriplet(i3, j3,
+    //                 ele_K_part(0, 0))); sub_triples.push_back(tTriplet(i3, j3
+    //                 + 1, ele_K_part(0, 1)));
+    //                 sub_triples.push_back(tTriplet(i3, j3 + 2, ele_K_part(0,
+    //                 2)));
 
-//                 sub_triples.push_back(tTriplet(i3 + 1, j3, ele_K_part(1, 0)));
-//                 sub_triples.push_back(tTriplet(i3 + 1, j3 + 1, ele_K_part(1, 1)));
-//                 sub_triples.push_back(tTriplet(i3 + 1, j3 + 2, ele_K_part(1, 2)));
+    //                 sub_triples.push_back(tTriplet(i3 + 1, j3, ele_K_part(1,
+    //                 0))); sub_triples.push_back(tTriplet(i3 + 1, j3 + 1,
+    //                 ele_K_part(1, 1))); sub_triples.push_back(tTriplet(i3 +
+    //                 1, j3 + 2, ele_K_part(1, 2)));
 
-//                 sub_triples.push_back(tTriplet(i3 + 2, j3, ele_K_part(2, 0)));
-//                 sub_triples.push_back(tTriplet(i3 + 2, j3 + 1, ele_K_part(2, 1)));
-//                 sub_triples.push_back(tTriplet(i3 + 2, j3 + 2, ele_K_part(2, 2)));
-//             }
-//         }
+    //                 sub_triples.push_back(tTriplet(i3 + 2, j3, ele_K_part(2,
+    //                 0))); sub_triples.push_back(tTriplet(i3 + 2, j3 + 1,
+    //                 ele_K_part(2, 1))); sub_triples.push_back(tTriplet(i3 +
+    //                 2, j3 + 2, ele_K_part(2, 2)));
+    //             }
+    //         }
 
-// #pragma omp critical
-//         total_triplets.insert(total_triplets.end(), sub_triples.begin(), sub_triples.end());
-//     }
-//     int dof = 3 * GetNumOfVertices();
-//     K_global.resize(dof, dof);
+    // #pragma omp critical
+    //         total_triplets.insert(total_triplets.end(), sub_triples.begin(),
+    //         sub_triples.end());
+    //     }
+    //     int dof = 3 * GetNumOfVertices();
+    //     K_global.resize(dof, dof);
 
-//     K_global.setFromTriplets(total_triplets.begin(), total_triplets.end());
-//     K_global += mBendingMaterial->GetStiffnessMatrix();
+    //     K_global.setFromTriplets(total_triplets.begin(),
+    //     total_triplets.end()); K_global +=
+    //     mBendingMaterial->GetStiffnessMatrix();
 }
 
 /**
@@ -377,11 +408,11 @@ void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
  *  let A = (I + dt * damping_a) * I + dt * (damping_b - dt) * MInv * K
  *  let b = dt * Minv (fext + fint + (dt - damping_b) * K * vt) - damping_a * vt
  *  we will have A delta_v = b
-*/
+ */
 void cBaraffCloth::SolveForNextPos(double dt)
 {
     int dof = GetNumOfFreedom();
-    tSparseMat M(dof, dof);
+    tSparseMatd M(dof, dof);
     M.reserve(dof);
     // M.diagonal() = mMassMatDiag;
     for (size_t i = 0; i < dof; i++)
@@ -390,9 +421,11 @@ void cBaraffCloth::SolveForNextPos(double dt)
         // I.coeff(i, i) = 1;
     }
     // std::cout << "M = " << M.rows() << " " << M.cols() << std::endl;
-    // std::cout << "mStiffnessMatrix = " << mStiffnessMatrix.rows() << " " << mStiffnessMatrix.cols() << std::endl;
-    tSparseMat W = M - dt * dt * mStiffnessMatrix;
-    tVectorXd b = dt * dt * (mGravityForce + mUserForce + mIntForce) + dt * (W + dt * dt * mStiffnessMatrix) * (mXcur - mXpre) / dt;
+    // std::cout << "mStiffnessMatrix = " << mStiffnessMatrix.rows() << " " <<
+    // mStiffnessMatrix.cols() << std::endl;
+    tSparseMatd W = M - dt * dt * mStiffnessMatrix;
+    tVectorXd b = dt * dt * (mGravityForce + mUserForce + mIntForce) +
+                  dt * (W + dt * dt * mStiffnessMatrix) * (mXcur - mXpre) / dt;
     tVectorXd dx = mXcur - mXpre;
     float threshold = 1e-12, residual = 0;
     int iters = 0;
@@ -420,15 +453,18 @@ void cBaraffCloth::UpdateCollisionForce(tVectorXd &col_force)
             mVertexArrayShared[i]->mPos[1] = 0;
             float normal_force_amp = -dist * k;
 
-            tVector3d friction_dir = -1 * (mXcur.segment(3 * i, 3) - mXpre.segment(3 * i, 3));
+            tVector3d friction_dir =
+                -1 * (mXcur.segment(3 * i, 3) - mXpre.segment(3 * i, 3));
             friction_dir[1] = 0;
             friction_dir.normalize();
-            float friction_force_amp = KinectFrictionCoef * std::fabs(normal_force_amp);
+            float friction_force_amp =
+                KinectFrictionCoef * std::fabs(normal_force_amp);
             tVector3d force = tVector3d::Zero();
             force[1] = normal_force_amp;
             force[0] = friction_dir[0] * friction_force_amp;
             force[2] = friction_dir[2] * friction_force_amp;
-            // std::cout << "[col] force " << force.transpose() << " on v" << i << std::endl;
+            // std::cout << "[col] force " << force.transpose() << " on v" << i
+            // << std::endl;
             col_force.segment(3 * i, 3) = force;
         }
     }
@@ -453,7 +489,8 @@ void cBaraffCloth::UpdateImGui()
     {
         mStretchK = stretch;
         mMaterial->SetK(mStretchK.cast<double>());
-        std::cout << "change bending K = " << mStretchK.transpose() << std::endl;
+        std::cout << "change bending K = " << mStretchK.transpose()
+                  << std::endl;
     }
 
     ImGui::SliderFloat("Bending warp", &bending[0], 1e-5, 1e-2, "%.5f");
@@ -462,12 +499,10 @@ void cBaraffCloth::UpdateImGui()
     if ((bending - mBendingK).norm() > 1e-6)
     {
         mBendingK = bending;
-        mBendingMaterial->Init(
-            GetVertexArray(),
-            GetEdgeArray(),
-            GetTriangleArray(),
-            mBendingK.cast<double>());
-        std::cout << "change bending K = " << mBendingK.transpose() << std::endl;
+        mBendingMaterial->Init(GetVertexArray(), GetEdgeArray(),
+                               GetTriangleArray(), mBendingK.cast<double>());
+        std::cout << "change bending K = " << mBendingK.transpose()
+                  << std::endl;
     }
 
     for (auto &x : gProfRec)
@@ -498,17 +533,16 @@ void cBaraffCloth::CheckForce()
         cur_x[i] -= eps;
     }
     tVectorXd f_diff = num_fint - ana_fint;
-    // std::cout << "[check force] num_fint = " << num_fint.transpose() << std::endl;
-    // std::cout << "[check force] ana_fint = " << ana_fint.transpose() << std::endl;
-    // std::cout << "[check force] f diff = " << f_diff.transpose() << std::endl;
+    // std::cout << "[check force] num_fint = " << num_fint.transpose() <<
+    // std::endl; std::cout << "[check force] ana_fint = " <<
+    // ana_fint.transpose() << std::endl; std::cout << "[check force] f diff = "
+    // << f_diff.transpose() << std::endl;
     std::cout << "[check force] f diff norm = " << f_diff.norm() << std::endl;
 }
 
-void GetTrianglePosMatAndUV(
-    tVector3d v0, tVector3d v1, tVector3d v2,
-    tVector2f u0, tVector2f u1, tVector2f u2,
-    tMatrix3d &pos_mat,
-    tMatrix32d &uv_mat)
+void GetTrianglePosMatAndUV(tVector3d v0, tVector3d v1, tVector3d v2,
+                            tVector2f u0, tVector2f u1, tVector2f u2,
+                            tMatrix3d &pos_mat, tMatrix32d &uv_mat)
 {
     pos_mat.col(0) = v0;
     pos_mat.col(1) = v1;
@@ -525,13 +559,11 @@ double cBaraffCloth::CalcEnergy(const tVectorXd &xcur)
     {
         tMatrix3d pos_mat;
         tMatrix32d uv_mat;
-        GetTrianglePosMatAndUV(xcur.segment(3 * t->mId0, 3),
-                               xcur.segment(3 * t->mId1, 3),
-                               xcur.segment(3 * t->mId2, 3),
-                               mVertexArrayShared[t->mId0]->muv,
-                               mVertexArrayShared[t->mId1]->muv,
-                               mVertexArrayShared[t->mId2]->muv,
-                               pos_mat, uv_mat);
+        GetTrianglePosMatAndUV(
+            xcur.segment(3 * t->mId0, 3), xcur.segment(3 * t->mId1, 3),
+            xcur.segment(3 * t->mId2, 3), mVertexArrayShared[t->mId0]->muv,
+            mVertexArrayShared[t->mId1]->muv, mVertexArrayShared[t->mId2]->muv,
+            pos_mat, uv_mat);
         e_total += mMaterial->CalcTotalEnergy();
 
         // pos_mat.col(0) =->mPos.segment(0, 3);
@@ -548,8 +580,9 @@ void Filter(const std::vector<int> &constraint_pts, tVectorXd &vec)
         vec.segment(3 * i, 3).setZero();
     }
 }
-tSparseMat mBlockJacobianPreconditioner;
-void cBaraffCloth::Solve(const tSparseMat &A, const tVectorXd &b, tVectorXd &x, float threshold, int &iters, float &residual)
+tSparseMatd mBlockJacobianPreconditioner;
+void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
+                         float threshold, int &iters, float &residual)
 {
     // std::cout << "Eigen::nbThreads() = " << Eigen::nbThreads() << std::endl;
     int recalc_gap = 20;
@@ -602,7 +635,8 @@ void cBaraffCloth::Solve(const tSparseMat &A, const tVectorXd &b, tVectorXd &x, 
         r.noalias() = rnext;
         if (iters % (max_iters / 10) == 0 || iters == 1)
         {
-            std::cout << "iters " << iters << " residual = " << r.norm() << std::endl;
+            std::cout << "iters " << iters << " residual = " << r.norm()
+                      << std::endl;
         }
         iters += 1;
     }

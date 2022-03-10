@@ -21,7 +21,23 @@ public:
                         size_t offset_bytes) const;
     bool WriteToDevice(const void *p_host, size_t num_of_bytes,
                        size_t offset_bytes);
+    /**
+     *	@brief		Memory copy from device to host.
+     *	@param[in]	Pointer to host data.
+     *	@param[in]	Size of data in bytes.
+     *	@param[in]	Device address offset.
+     *	@return		Success -> true, else ->false.
+     */
+    bool Read(void *pHost, size_t SizeBytes, size_t OffsetBytes) const;
 
+    /**
+     *	@brief		Memory copy from host to device.
+     *	@param[in]	Pointer to host data.
+     *	@param[in]	Size of data in bytes.
+     *	@param[in]	Device address offset.
+     *	@return		Success -> true, else ->false.
+     */
+    bool Write(const void *pHost, size_t SizeBytes, size_t OffsetBytes);
     bool IsEmpty() const;
     size_t Bytes() const;
     const void *Ptr() const;

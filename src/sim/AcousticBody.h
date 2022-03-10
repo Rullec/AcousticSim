@@ -9,7 +9,7 @@ public:
     explicit cAcousticBody();
     void SolveVibration(
         const tVectorXd &MassDiag,
-        const tSparseMat &StiffMat,
+        const tSparseMatd &StiffMat,
         const tVector2f &rayleigh_damping,
         const tVectorXd &xcur,
         const tVectorXd &xprev);

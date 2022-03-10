@@ -19,7 +19,7 @@ protected:
     double mEnableQBending;
     double mBendingStiffness;
     tVectorXd mXpre;
-    tSparseMat mBendingHessianQ;
+    tSparseMatd mBendingHessianQ;
     void InitBendingHessian();
     tVectorXd CalcNextPositionSemiImplicit() const;
 };

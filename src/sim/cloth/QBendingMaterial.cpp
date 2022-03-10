@@ -1,13 +1,13 @@
 #include "QBendingMaterial.h"
-#include <iostream>
-#include "utils/LogUtil.h"
 #include "geometries/Primitives.h"
+#include "utils/LogUtil.h"
+#include <iostream>
 // #define _CRTDBG_MAP_ALLOC
 // #include <stdlib.h>
 // #include <crtdbg.h>
 
-tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1, const tVector3d &x2,
-                           const tVector3d &x3)
+tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1,
+                           const tVector3d &x2, const tVector3d &x3)
 {
     // std::cout << "begin to calc cotangent coef\n";
     tVector3d e0 = x0 - x1;
@@ -15,11 +15,11 @@ tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1, const tVect
     tVector3d e2 = x0 - x3;
     tVector3d e3 = x1 - x2;
     tVector3d e4 = x1 - x3;
-    //std::cout << "e0 = " << e0.transpose() << std::endl;
-    //std::cout << "e1 = " << e1.transpose() << std::endl;
-    //std::cout << "e2 = " << e2.transpose() << std::endl;
-    //std::cout << "e3 = " << e3.transpose() << std::endl;
-    //std::cout << "e4 = " << e4.transpose() << std::endl;
+    // std::cout << "e0 = " << e0.transpose() << std::endl;
+    // std::cout << "e1 = " << e1.transpose() << std::endl;
+    // std::cout << "e2 = " << e2.transpose() << std::endl;
+    // std::cout << "e3 = " << e3.transpose() << std::endl;
+    // std::cout << "e4 = " << e4.transpose() << std::endl;
 
     double e0_norm = e0.norm();
     double e1_norm = e1.norm();
@@ -70,7 +70,8 @@ tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1, const tVect
 //     const tVector3d &v3, double stiffness)
 // {
 //     tVectorXd x = Concatenate(v0, v1, v2, v3);
-//     return 0.5 * x.transpose() * CalcStiffnessMatrix(v0, v1, v2, v3, stiffness) * x;
+//     return 0.5 * x.transpose() * CalcStiffnessMatrix(v0, v1, v2, v3,
+//     stiffness) * x;
 // }
 
 // /**
@@ -81,7 +82,8 @@ tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1, const tVect
 //                                        const tVector3d &v2,
 //                                        const tVector3d &v3, double K)
 // {
-//     return -CalcStiffnessMatrix(v0, v1, v2, v3, K) * Concatenate(v0, v1, v2, v3);
+//     return -CalcStiffnessMatrix(v0, v1, v2, v3, K) * Concatenate(v0, v1, v2,
+//     v3);
 // }
 
 // /**
@@ -92,7 +94,8 @@ tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1, const tVect
 // tMatrixXd cQBendingMaterial::CalcStiffnessMatrix(const tVector3d &v0,
 //                                                  const tVector3d &v1,
 //                                                  const tVector3d &v2,
-//                                                  const tVector3d &v3, double stiff)
+//                                                  const tVector3d &v3, double
+//                                                  stiff)
 // {
 //     float area_total = cMathUtil::CalcTriangleArea3d(v0, v1, v2) +
 //                        cMathUtil::CalcTriangleArea3d(v0, v1, v3);
@@ -142,9 +145,7 @@ tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1, const tVect
 // {
 // }
 
-cQBendingMaterial::cQBendingMaterial()
-{
-}
+cQBendingMaterial::cQBendingMaterial() {}
 #include <set>
 int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1)
 {
@@ -157,10 +158,10 @@ int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1)
     return *vid_set.begin();
 };
 
-void cQBendingMaterial::Init(
-    const std::vector<tVertexPtr> &v_array,
-    const std::vector<tEdgePtr> &e_array,
-    const std::vector<tTrianglePtr> &t_array, const tVector3d &bending_stiffness_warpweftbias)
+void cQBendingMaterial::Init(const std::vector<tVertexPtr> &v_array,
+                             const std::vector<tEdgePtr> &e_array,
+                             const std::vector<tTrianglePtr> &t_array,
+                             const tVector3d &bending_stiffness_warpweftbias)
 {
     double K = bending_stiffness_warpweftbias.mean();
     int num_of_v = v_array.size();
@@ -178,26 +179,29 @@ void cQBendingMaterial::Init(
             v_array[t->mId2]->mPos.segment(0, 3)));
     }
     // 2. calculate coef
+    // mEleKLst.resize(e_array.size());
+    // tMatrix12f ele_K;
+    mEdgeConstraintVertexLst.clear();
+    mEleKLst.clear();
     for (auto &e : e_array)
     {
         if (e->mIsBoundary == true)
             continue;
-        int v0 = e->mId0,
-            v1 = e->mId1;
+        int v0 = e->mId0, v1 = e->mId1;
         int v2 = SelectAnotherVerteix(t_array[e->mTriangleId0], v0, v1),
             v3 = SelectAnotherVerteix(t_array[e->mTriangleId1], v0, v1);
-        int v_lst[4] = {
-            v0, v1, v2, v3};
+        int v_lst[4] = {v0, v1, v2, v3};
+        mEdgeConstraintVertexLst.push_back(tVector4i(v0, v1, v2, v3));
+
         // calculate K
         tVector coef = CalcCotangentCoeff(
-            v_array[v0]->mPos.segment(0, 3),
-            v_array[v1]->mPos.segment(0, 3),
-            v_array[v2]->mPos.segment(0, 3),
-            v_array[v3]->mPos.segment(0, 3));
+            v_array[v0]->mPos.segment(0, 3), v_array[v1]->mPos.segment(0, 3),
+            v_array[v2]->mPos.segment(0, 3), v_array[v3]->mPos.segment(0, 3));
 
         double prefix_coef = K * 3.0 /
                              (triangle_area_lst[e->mTriangleId0] +
                               triangle_area_lst[e->mTriangleId1]);
+        tMatrix12f eleK = tMatrix12f::Zero();
         for (int i = 0; i < 4; i++)
             for (int j = 0; j < 4; j++)
             {
@@ -205,11 +209,15 @@ void cQBendingMaterial::Init(
                 double cur_coef = coef[i] * coef[j] * prefix_coef;
                 for (int k = 0; k < 3; k++)
                 {
-                    triplet_lst.push_back(tTriplet(3 * v_lst[i] + k, 3 * v_lst[j] + k, cur_coef));
+                    triplet_lst.push_back(
+                        tTriplet(3 * v_lst[i] + k, 3 * v_lst[j] + k, cur_coef));
+                    eleK(3 * i + k, 3 * j + k) += cur_coef;
                 }
-                // triplet_lst.push_back(tTriplet(3 * v_lst[i] + 1, 3 * v_lst[j] + 1, cur_coef));
-                // triplet_lst.push_back(tTriplet(3 * v_lst[i] + 2, 3 * v_lst[j] + 2, cur_coef));
+                // triplet_lst.push_back(tTriplet(3 * v_lst[i] + 1, 3 * v_lst[j]
+                // + 1, cur_coef)); triplet_lst.push_back(tTriplet(3 * v_lst[i]
+                // + 2, 3 * v_lst[j] + 2, cur_coef));
             }
+        this->mEleKLst.push_back(eleK);
         // calcualte stiffness
         // get result
     }
@@ -225,7 +233,16 @@ tVectorXd cQBendingMaterial::CalcForce(const tVectorXd &xcur)
 {
     return -mStiffnessMat * xcur;
 }
-tSparseMat cQBendingMaterial::GetStiffnessMatrix() const
+tSparseMatd cQBendingMaterial::GetStiffnessMatrix() const
 {
     return -1 * mStiffnessMat;
+}
+
+std::vector<tMatrix12f> cQBendingMaterial::GetEleStiffnessMatrixLst() const
+{
+    return this->mEleKLst;
+}
+std::vector<tVector4i> cQBendingMaterial::GetEdgeConstraintVertex() const
+{
+    return mEdgeConstraintVertexLst;
 }

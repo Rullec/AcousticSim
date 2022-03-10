@@ -13,8 +13,8 @@
                 0.3
             ],
             "subdivision": [
-                1,
-                1
+                10,
+                10
             ],
             "cloth_stretch_stiffness": [
                 1e-4,

@@ -33,7 +33,7 @@ protected:
     // tEigenArr<tEigenArr<tMatrixXd>>
     //     mdFdx; // the gradient of deformation gradient
     cBaraffMaterialPtr mMaterial;
-    tSparseMat mStiffnessMatrix;
+    tSparseMatd mStiffnessMatrix;
     float mRayleightA, mRayleightB;
     tVector3f mStretchK, mBendingK; // warp weft bias
     cQBendingMaterialPtr mBendingMaterial;
@@ -47,10 +47,10 @@ protected:
                               tVectorXd &int_force) const override final;
     // virtual void CalculateF(); // calculate deformation gradient
     virtual void CalcStiffnessMatrix(const tVectorXd &xcur,
-                                     tSparseMat &K) const;
+                                     tSparseMatd &K) const;
     virtual void SolveForNextPos(double dt);
     virtual void CheckForce();
     virtual double CalcEnergy(const tVectorXd &xcur);
-    virtual void Solve(const tSparseMat &A, const tVectorXd &b, tVectorXd &x, float threshold, int &iters, float &residual);
+    virtual void Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x, float threshold, int &iters, float &residual);
     // virtual void CheckStiffnessMatrix();
 };

@@ -124,7 +124,7 @@ void ParseArg(int argc, char *argv[], std::string &config_path)
 #include "sim/cloth/BaraffMaterial.h"
 #include "sim/cloth/QBendingMaterial.h"
 
-void SparseMatVecProd(const tSparseMat &A, const tVectorXd &b, tVectorXd &res)
+void SparseMatVecProd(const tSparseMatd &A, const tVectorXd &b, tVectorXd &res)
 {
     if (res.size() != b.size())
         res.resize(b.size());
@@ -132,7 +132,7 @@ void SparseMatVecProd(const tSparseMat &A, const tVectorXd &b, tVectorXd &res)
     for (int k = 0; k < A.outerSize(); ++k)
     {
         double sum = 0;
-        for (tSparseMat::InnerIterator it(A, k); it; ++it)
+        for (tSparseMatd::InnerIterator it(A, k); it; ++it)
         {
             // std::cout << it.row() << "\t";
             // std::cout << it.col() << "\t";
@@ -148,7 +148,7 @@ int main(int argc, char **argv)
     Eigen::setNbThreads(15);
     // {
     //     int dims = 30000;
-    //     tSparseMat mat(dims, dims);
+    //     tSparseMatd mat(dims, dims);
     //     std::vector<tTriplet> trip;
     //     trip.reserve(dims * dims);
     //     for (int i = 0; i < dims; i++)

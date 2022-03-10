@@ -12,6 +12,7 @@ public:
     // static void Memset(devPtr<bool> pDev, bool Value, size_type Count);
     static void Memset(devPtr<float> pDev, float Value, size_type Count);
 	static void Memset(devPtr<tCudaMatrix9f> pDev, tCudaMatrix9f value, size_type Count);
+	static void Memset(devPtr<tCudaMatrix3f> pDev, tCudaMatrix3f value, size_type Count);
 	
     // static void Memset(devPtr<double> pDev, double Value, size_type Count);
     // static void Memset(devPtr<Float2> pDev, Float2 Value, size_type Count);

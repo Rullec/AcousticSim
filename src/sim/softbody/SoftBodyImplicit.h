@@ -9,7 +9,7 @@ public:
     virtual ~cSoftBodyImplicit();
     virtual void Update(float dt) override;
     virtual void Init(const Json::Value &conf) override;
-    virtual tSparseMat GetGlobalStiffnessMatrix() const;
+    virtual tSparseMatd GetGlobalStiffnessMatrix() const;
     virtual tVectorXd GetMassMatrixDiag();
     virtual tVector2f GetRayleightDamping();
 
@@ -32,11 +32,11 @@ protected:
     virtual void SolveForNextPosSparse(float dt);
     virtual tMatrixXd CalcElementStiffnessMatrix(int tet_id);
     virtual tMatrixXd CalcGlobalStiffnessMatrix();
-    virtual tSparseMat CalcGlobalStiffnessSparseMatrix();
+    virtual tSparseMatd CalcGlobalStiffnessSparseMatrix();
 
     virtual void InitDDsDxTensor();
     virtual void UpdateImGui() override;
     tEigenArr<tMatrix3d> mDDsDxTensor_const; // tensor C_{ijk} for d(Ds)/dx
     // tMatrixXd mGlobalStiffnessMatrix;
-    tSparseMat mGlobalStiffnessSparseMatrix;
+    tSparseMatd mGlobalStiffnessSparseMatrix;
 };
