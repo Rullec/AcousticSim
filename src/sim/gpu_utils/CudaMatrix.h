@@ -1,9 +1,9 @@
 #pragma once
 #include "sim/gpu_utils/CudaDef.h"
+#include <cassert>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
-#include <cassert>
 #include <type_traits>
 // namespace HandyMatrix
 // {
@@ -26,6 +26,11 @@ public:
             mData[i++] = res;
         // for (int i = 0; i < N * M; i++)
     }
+    // SIM_CUDA_CALLABLE operator dtype() const
+    // {
+    //     static_assert(N == 1 && M == 1);
+    //     return mData[0];
+    // }
     SIM_CUDA_CALLABLE size_t size() const { return mElements; }
     SIM_CUDA_CALLABLE void setValue(const dtype &val)
     {
@@ -92,7 +97,31 @@ public:
         mat.setIdentity();
         return mat;
     }
-
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M> cwiseAbs()
+    {
+        tCudaMatrix<dtype, N, M> data(*this);
+        for (int i = 0; i < mElements; i++)
+            data.mData[i] = std::fabs(data.mData[i]);
+        return data;
+    }
+    SIM_CUDA_CALLABLE dtype maxCoeff()
+    {
+        dtype cur_max = -1e16;
+        for (int i = 0; i < mElements; i++)
+        {
+            cur_max = SIM_MAX(cur_max, mData[i]);
+        }
+        return cur_max;
+    }
+    SIM_CUDA_CALLABLE dtype minCoeff()
+    {
+        dtype cur_min = 1e16;
+        for (int i = 0; i < mElements; i++)
+        {
+            cur_min = SIM_NIN(cur_min, mData[i]);
+        }
+        return cur_min;
+    }
     SIM_CUDA_CALLABLE dtype operator()(int i, int j) const
     {
 
@@ -114,7 +143,7 @@ public:
         assert(j >= 0 && j < M);
         return mData[j * mRows + i];
     }
-    SIM_CUDA_CALLABLE tCudaMatrix<dtype, M, N> transpose()
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, M, N> transpose() const
     {
         tCudaMatrix<dtype, M, N> res;
         for (int i = 0; i < N; i++)
@@ -168,6 +197,11 @@ public:
             res[i] *= val;
         return res;
     }
+    SIM_CUDA_CALLABLE void operator*=(const dtype &val)
+    {
+        for (int i = 0; i < mElements; i++)
+            mData[i] *= val;
+    }
     SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M> operator/(const dtype &val) const
     {
         tCudaMatrix<dtype, N, M> res = (*this);
@@ -186,7 +220,7 @@ public:
         return negative;
     }
     SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M>
-    operator-(const tCudaMatrix<dtype, N, M> &another_mat)
+    operator-(const tCudaMatrix<dtype, N, M> &another_mat) const
     {
         tCudaMatrix<dtype, N, M> negative = (*this);
         for (int i = 0; i < mElements; i++)
@@ -196,7 +230,7 @@ public:
         return negative;
     }
     SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, M>
-    operator+(const tCudaMatrix<dtype, N, M> &another_mat)
+    operator+(const tCudaMatrix<dtype, N, M> &another_mat) const
     {
         tCudaMatrix<dtype, N, M> negative = (*this);
         for (int i = 0; i < mElements; i++)
@@ -325,16 +359,41 @@ public:
             }
     }
 
-    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, N> inverse()
+    SIM_CUDA_CALLABLE tCudaMatrix<dtype, N, N> inverse() const
     {
-        static_assert((N == 2 && M == 2));
-        tCudaMatrix<dtype, N, N> res;
-        dtype a = res[0], c = res[1], b = res[2], d = res[3];
-        dtype deno = 1.0 / (a * d - b * c);
-        res[0] = d * deno;
-        res[1] = -c * deno;
-        res[2] = -b * deno;
-        res[3] = a * deno;
+        tCudaMatrix<dtype, N, N> res(*this);
+        if (N == 2 && M == 2)
+        {
+            dtype a = res[0], c = res[1], b = res[2], d = res[3];
+            dtype deno = 1.0 / (a * d - b * c);
+            res[0] = d * deno;
+            res[1] = -c * deno;
+            res[2] = -b * deno;
+            res[3] = a * deno;
+        }
+        else if (N == 3 && M == 3)
+        {
+            dtype a = res(0, 0), b = res(0, 1), c = res(0, 2), d = res(1, 0),
+                  e = res(1, 1), f = res(1, 2), g = res(2, 0), h = res(2, 1),
+                  i = res(2, 2);
+            res(0, 0) = e * i - f * h;
+            res(0, 1) = c * h - b * i;
+            res(0, 2) = b * f - c * e;
+            res(1, 0) = f * g - d * i;
+            res(1, 1) = a * i - c * g;
+            res(1, 2) = c * d - a * f;
+            res(2, 0) = d * h - e * g;
+            res(2, 1) = b * g - a * h;
+            res(2, 2) = a * e - b * d;
+            float prefix = 1.0 / (a * (e * i - f * h) - b * (d * i - f * g) +
+                                  c * (d * h - e * g));
+            res *= prefix;
+        }
+        else
+        {
+            assert(false && "unsupported inverse");
+            exit(1);
+        }
         return res;
     }
 
@@ -354,6 +413,28 @@ public:
             }
         return result;
     }
+#if defined(__CUDACC__)
+    __device__ bool hasNan() const
+    {
+        for (int i = 0; i < mElements; i++)
+        {
+            if (isnan(mData[i]))
+                return true;
+        }
+        return false;
+    }
+#else
+
+    SIM_CUDA_CALLABLE bool hasNan() const
+    {
+        for (int i = 0; i < mElements; i++)
+        {
+            if (cCudaMath::IsNan(mData[i]))
+                return true;
+        }
+        return false;
+    }
+#endif
     // ------------vector method--------------
     template <int K>
     SIM_CUDA_CALLABLE dtype dot(const tCudaMatrix<dtype, K, 1> &vec) const
@@ -417,6 +498,7 @@ CUDA_DECLARE_MATRIX_AND_VECTOR(int, i, 4);
 CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 2);
 CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 3);
 CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 4);
+CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 9);
 CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 12);
 // CUDA_DECLARE_MATRIX_AND_VECTOR(float, f, 9);
 // CUDA_DECLARE_VECTOR(int, i, 12);

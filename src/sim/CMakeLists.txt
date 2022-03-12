@@ -20,9 +20,11 @@ set(CLOTH_SRC
     cloth/QBendingMaterial.cpp
     cloth/BaraffClothGpu.cpp
     cloth/BaraffClothGpu.cu
+    cloth/PCGSolver.cu
     gpu_utils/CudaMemory.cpp
     gpu_utils/CudaArray.cpp
     gpu_utils/CudaELLMatrix.cpp
+    gpu_utils/GPUMatrixOps.cu
     gpu_utils/CudaAsync.cu
     # cloth/ImplicitCloth.cpp   
     # cloth/PBDCloth.cpp

@@ -1,4 +1,4 @@
-#define ENABLE_CUDA_MEMORY_CHECK
+// #define ENABLE_CUDA_MEMORY_CHECK
 #define SIM_CANNOT_COPY(class_name)                                            \
     class_name(const class_name &) = delete;                                   \
     class_name &operator=(const class_name &) = delete;

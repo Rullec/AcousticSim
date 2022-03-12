@@ -6,7 +6,7 @@
  * 日期：2019/06/26
  */
 
-#define DISABLE_NAN_CHECK
+// #define DISABLE_NAN_CHECK
 
 #include "CudaAsync.h"
 // #include "SeCudaRuntime.h"
@@ -132,6 +132,18 @@ void CudaAsync::Memset(devPtr<tCudaMatrix3f> pDev, tCudaMatrix3f value,
 {
     CuKernel::MemsetAsync CUDA_at(count, 256)(pDev, value, count);
     CUDA_ERR("memset mat3f");
+}
+void CudaAsync::Memset(devPtr<tCudaVector9f> pDev, tCudaVector9f value,
+                       size_type count)
+{
+    CuKernel::MemsetAsync CUDA_at(count, 256)(pDev, value, count);
+    CUDA_ERR("memset vec9f");
+}
+void CudaAsync::Memset(devPtr<tCudaVector3f> pDev, tCudaVector3f value, size_type count)
+{
+    CuKernel::MemsetAsync CUDA_at(count, 256)(pDev, value, count);
+    CUDA_ERR("memset vec3f");
+
 }
 // void CudaAsync::Memset(devPtr<SeFrictionInfo> pDev, SeFrictionInfo value,
 // size_type count)

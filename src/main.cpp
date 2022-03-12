@@ -20,11 +20,11 @@
 #include <iostream>
 #include <memory>
 
+#include "sim/AudioOutput.h"
 #include "utils/FileUtil.h"
 #include "utils/JsonUtil.h"
 #include "utils/LogUtil.h"
 #include <cmath>
-#include "sim/AudioOutput.h"
 extern cAudioOutputPtr gAudioOutput;
 #include "sim/softbody/FourOrderTensorTest.hpp"
 
@@ -143,6 +143,7 @@ void SparseMatVecProd(const tSparseMatd &A, const tVectorXd &b, tVectorXd &res)
     }
     // return b;
 }
+
 int main(int argc, char **argv)
 {
     Eigen::setNbThreads(15);

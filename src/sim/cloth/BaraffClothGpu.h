@@ -22,16 +22,21 @@ public:
     virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
     virtual void UpdateImGui() override;
     virtual void SetPos(const tVectorXd &newpos) override;
+    virtual void Reset() override;
+    virtual void ClearForce() override;
 
 protected:
     tVector3f mBendingK, mStretchK;
     // -----------CPU data-----------
     // ------ CPU constant data -----
+    cBaraffMaterialPtr mStretchMaterialCPU;
+    cQBendingMaterialPtr mQBendingMaterialCPU;
     std::vector<tCudaMatrix32f> mNArrayCpu, mNprimeArrayCpu;
     std::vector<int> mVerticesMassCpu;
+
     // ------ CPU time-dependent data -----
     std::vector<tCudaVector3f> mXcurCpu, mXpreCpu;
-
+    std::vector<tCudaVector3f> mUserForceCpu;
     // -----------GPU data-----------
 
     // ------ GPU constant data -----
@@ -41,11 +46,13 @@ protected:
     cCudaArray<tConnectedInfo>
         mVerticesTriangleIdLstCuda; // vertex-connected triangle id, -1 is
                                     // invalid
-    // all edges connected with this vertex 
-    cCudaArray<tConnectedInfo> mVertexConnectedAllEdge, mVertexInvolvedInnerEdge; // only inner edges connected with this vertex
+    // all edges connected with this vertex
+    cCudaArray<tConnectedInfo> mVertexConnectedAllEdge,
+        mVertexInvolvedInnerEdge; // only inner edges connected with this vertex
 
     cCudaArray<tCudaMatrix12f> mQBendingElementKLst;
     cCudaArray<tCudaVector4i> mQBendingConstraintVertexLst;
+    cCudaArray<tCudaVector3f> mMassMatrixDiagCuda;
     /*
         edge info:
             v0, v1, triangle0, v0_localid, v1_localid,
@@ -61,14 +68,28 @@ protected:
         mnprimeLstCuda; // Fi / |Fi|, F colwise normalized
     cCudaArray<tCudaVector2f> mCLstCuda, mCprimeLstCuda;  // condition
     cCudaArray<tCudaMatrix92f> mgLstCuda, mgprimeLstCuda; // gi = Ni \otimes ni
-    cCudaArray<tCudaMatrix9f> mEleStiffnessMatrixLstCuda;
-    cCudaArray<tCudaVector3f>
-        mEleBendingStiffnessMatrixItemLstCuda; // row, col, value
+    cCudaArray<tCudaMatrix9f> mEleStretchStiffnessMatrixLstCuda;
+    cCudaArray<tCudaVector9f> mEleStretchInternalForceCuda;
 
-    cBaraffMaterialPtr mStretchMaterialCPU;
-    cQBendingMaterialPtr mQBendingMaterialCPU;
-    cCuda2DArray<tCudaMatrix3f> mGlobalStiffnessMatrix;
+    cCuda2DArray<tCudaMatrix3f> mGlobalStiffnessMatrix_stretch,
+        mGlobalStiffnessMatrix_bending, mGlobalStiffnessMatrix;
+    cCudaArray<tCudaVector3f> mGravityCuda, mUserForceCuda, mCollisionForce;
+    cCudaArray<tCudaVector3f> mIntForceCuda_stretch, mIntForceCuda_bending,
+        mIntForceCuda;
+    cCudaArray<tCudaVector3f> mVelCuda;
+    cCuda2DArray<tCudaMatrix3f> mSystemMatrixCuda;
+    cCudaArray<tCudaVector3f> mSystemRHSCuda;
+    cCudaArray<tCudaMatrix3f> mPreconditionerCuda;
+    cCudaArray<tCudaVector3f> mSolutionCuda;
 
+    cCudaArray<tCudaVector3f> mPCGResidualCuda;  // r = b - A x
+    cCudaArray<tCudaVector3f> mPCGDirectionCuda; // conjugate di
+    cCudaArray<tCudaVector3f> mPCGzCuda;         // z = A * di
+    cCudaArray<float> mPCG_rMinvr_arrayCuda; // rMinvr, Minv is a preconditioner
+    cCudaArray<float> mPCG_dTAd_arrayCuda;   // dT * A * d, A is the system mat
+
+    cCudaArray<int> mFixedVertexIndices;            // fix point indices
+    cCudaArray<tCudaVector3f> mFixedVertexTargetPos; // fix point target position
     virtual void InitGeometry(const Json::Value &conf) override final;
     virtual void InitMass(const Json::Value &conf) override final;
     virtual void InitGlobalStiffnessMatrix();
@@ -78,7 +99,16 @@ protected:
     virtual void InitQBendingHessian();
     virtual void UpdateGpuData();
     virtual void VerifyData();
+    virtual void VerifyLinearSystem(float dt);
     virtual void BuildEdgeInfo();
-    tMatrixXf GetCudaGlobalStiffnessMatrix();
+    tMatrixXf
+    FromELLMatrixToEigenMatrix(const cCuda2DArray<tCudaMatrix3f> &ell_mat);
+    tVectorXf
+    FromCudaVectorToEigenVector(const cCudaArray<tCudaVector3f> &cuda_vec);
+    virtual void UpdateStiffnessMatrixAndIntForce();
+    virtual void UpdateCollisionForceAndUserForce();
+    virtual void UpdateLinearSystem(float dt);
+    virtual void SolveLinearSystem();
+    virtual void PostSolve();
     // virtual void BuildVertexConnectedEdgeId();
 };

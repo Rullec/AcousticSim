@@ -801,3 +801,8 @@ void cBaraffMaterial::GetEleKLst(std::vector<tMatrix9f> &mat)
 {
     Fetch(mat, this->mKLst);
 }
+
+void cBaraffMaterial::GetEleFintLst(std::vector<tVector9f> &mat)
+{
+    Fetch(mat, this->mIntForceLst);
+}

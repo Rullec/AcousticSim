@@ -104,12 +104,14 @@ public:
     //!	@brief	Return constant address of device memory.
     devPtr<const Type> Ptr() const
     {
+        static_assert(false);
         return devPtr<const Type>((const Type *)mMemory.Ptr(), this->Size());
     }
 
     //!	@brief	Return address of device memory.
     devPtr<Type> Ptr()
     {
+        static_assert(false);
         return devPtr<Type>((Type *)mMemory.Ptr(), this->Size());
     }
 

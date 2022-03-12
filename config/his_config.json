@@ -13,8 +13,8 @@
                 0.3
             ],
             "subdivision": [
-                10,
-                10
+                100,
+                100
             ],
             "cloth_stretch_stiffness": [
                 1e-4,
@@ -29,8 +29,8 @@
             "rayleigh_damping_a": 0,
             "rayleigh_damping_b": 0,
             "enable_cloth_from_obj": false,
-            "cloth_mass": 3e-3,
-            "cloth_density": 0.3,
+            "cloth_mass": 1e-1,
+            "cloth_density": 10,
             "cloth_init_pos": [
                 0,
                 0.2,

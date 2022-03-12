@@ -1,4 +1,6 @@
-#pragma once
+
+#ifndef EIGEN_UTIL_H_
+#define EIGEN_UTIL_H_
 #include <Eigen/Dense>
 typedef Eigen::Vector4d tVector;
 typedef Eigen::VectorXd tVectorXd;
@@ -25,3 +27,4 @@ typedef Eigen::MatrixXi tMatrixXi;
 template <typename T>
 using tEigenArr = std::vector<T, Eigen::aligned_allocator<T>>;
 typedef tEigenArr<tVector> tVectorArr;
+#endif

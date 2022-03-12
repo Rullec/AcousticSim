@@ -5,9 +5,22 @@
 #include "sim/gpu_utils/CudaDef.h"
 #include "sim/gpu_utils/CudaMatrix.h"
 #include "sim/gpu_utils/CudaMatrixUtil.h"
+#include "utils/EigenUtil.h"
 #include "utils/JsonUtil.h"
 #include "utils/RotUtil.h"
+#include "utils/TimeUtil.hpp"
+#include <imgui.h>
 #include <iostream>
+
+template <typename int N, int M>
+std::vector<tCudaMatrix<float, N, M>>
+FetchFromGPU(const cCudaArray<tCudaMatrix<float, N, M>> &cuda_array)
+{
+    std::vector<tCudaMatrix<float, N, M>> cpu;
+    cuda_array.Download(cpu);
+    return cpu;
+}
+
 // strcut Params
 // {
 //     // std::vector<tMatrix2d>
@@ -22,18 +35,65 @@
 //     // jisuan
 // }
 
+namespace PCGSolver
+{
+extern void TestAtomicAdd(const cCudaArray<float> &data_array,
+                          cCudaArray<float> &sum);
+extern void
+Solve(const cCudaArray<tCudaMatrix3f> &Winv_preconditioner,
+      const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+      const cCuda2DArray<tCudaMatrix3f> &W, const cCudaArray<tCudaVector3f> &b,
+      cCudaArray<tCudaVector3f> &pcg_rbuf, cCudaArray<tCudaVector3f> &pcg_dbuf,
+      cCudaArray<tCudaVector3f> &pcg_zbuf, cCudaArray<float> &pcg_rMinvr_array,
+      cCudaArray<tCudaVector3f> &x);
+
+extern void CalcJacobiPreconditioner(
+    const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+    const cCuda2DArray<tCudaMatrix3f> &W,
+    cCudaArray<tCudaMatrix3f> &Winv_preconditioner);
+extern void CalcBlockJacobiPreconditioner(
+    const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+    const cCuda2DArray<tCudaMatrix3f> &W,
+    cCudaArray<tCudaMatrix3f> &Winv_preconditioner);
+
+extern void CalcNoPreconditioner(
+    const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+    const cCuda2DArray<tCudaMatrix3f> &W,
+    cCudaArray<tCudaMatrix3f> &Winv_preconditioner);
+
+} // namespace PCGSolver
+
 cBaraffClothGPU::cBaraffClothGPU(int id_)
     : cBaseCloth(eClothType::FEM_CLOTH_GPU, id_)
 {
 }
 
-namespace nBaraffClothGpu
-{
-extern void Calc(int);
-};
-
 void cBaraffClothGPU::Init(const Json::Value &conf)
 {
+    cTimeUtil::Begin("init");
+    // {
+    //     int test_size = 158;
+    //     cCudaArray<float> array_cuda;
+    //     std::vector<float> array_cpu(test_size);
+    //     float sum = 0;
+    //     for (int i = 0; i < test_size; i++)
+    //     {
+    //         array_cpu[i] = cMathUtil::RandDouble(0, 3);
+    //         sum += array_cpu[i];
+    //     }
+    //     array_cuda.Upload(array_cpu);
+    //     cCudaArray<float> sum_cuda;
+    //     std::vector<float> sum_cuda_download;
+    //     sum_cuda.Upload({0.0});
+    //     // calculate it in cuda
+    //     PCGSolver::TestAtomicAdd(array_cuda, sum_cuda);
+    //     sum_cuda.Download(sum_cuda_download);
+    //     std::cout << "sum cuda =  " << sum_cuda_download[0] << std::endl;
+    //     std::cout << "sum cpu =  " << sum << std::endl;
+
+    //     exit(1);
+    // };
+
     /*
         1. load parameter:
             bending + stretch stiffness
@@ -54,27 +114,63 @@ void cBaraffClothGPU::Init(const Json::Value &conf)
 
     // 2.1 init CPU material (for comparision)
     {
+        // cTimeUtil::Begin("CPU material");
         mStretchMaterialCPU = std::make_shared<cBaraffMaterial>();
         mStretchMaterialCPU->Init(shared_from_this(), mStretchK.cast<double>());
         mQBendingMaterialCPU = std::make_shared<cQBendingMaterial>();
         mQBendingMaterialCPU->Init(GetVertexArray(), GetEdgeArray(),
                                    GetTriangleArray(),
                                    mBendingK.cast<double>());
+        // cTimeUtil::End("CPU material");
     }
 
+    cTimeUtil::Begin("Init global stiffness");
     InitGlobalStiffnessMatrix();
+    cTimeUtil::End("Init global stiffness");
     /*
         3. allocate: CPU buffer and GPU buffer
     */
+    // cTimeUtil::Begin("Init CPU data");
     InitCpuData();
     UpdateCpuData();
+    // cTimeUtil::End("Init CPU data");
 
+    // cTimeUtil::Begin("Init GPU data");
     InitGpuData();
     UpdateGpuData();
+    // cTimeUtil::End("Init GPU data");
+
+    // begin to add random noise on vertex data, and then check the result
+    {
+        // tVectorXd cur_pos = GetPos();
+        // cur_pos += tVectorXd::Random(cur_pos.size());
+        // SetPos(cur_pos);
+        // UpdateStiffnessMatrixAndIntForce();
+
+        // show fint
+        // {
+        //     auto bending = FetchFromGPU(mIntForceCuda_bending);
+        //     auto stretch = FetchFromGPU(mIntForceCuda_stretch);
+        //     auto sum = FetchFromGPU(mIntForceCuda);
+        //     for (int i = 0; i < bending.size(); i++)
+        //     {
+        //         std::cout << "---v " << i << "---\n";
+        //         std::cout << "bending = " << bending[i].transpose()
+        //                   << std::endl;
+        //         std::cout << "stretch = " << stretch[i].transpose()
+        //                   << std::endl;
+        //         std::cout << "sum = " << sum[i].transpose() << std::endl;
+        //     }
+        // }
+    }
     // 5. calculate energy, calculate internal force, calculate hessian
     // check the numerical diff
     // UpdateDataGPU();
-    VerifyData();
+    // cTimeUtil::Begin("verify data");
+    // VerifyData();
+    // cTimeUtil::End("verify data");
+    cTimeUtil::End("init");
+    // exit(1);
     // int dims = 5;
     // nBaraffClothGpu::Calc(dims);
     // 1. Ds^{-1}
@@ -83,13 +179,55 @@ void cBaraffClothGPU::Init(const Json::Value &conf)
 
     // param.upload();
     // KERNEL_NAME CUDA_AT(mem.ptr(), )
-    exit(1);
+    // exit(1);
 }
 
 cBaraffClothGPU::~cBaraffClothGPU() {}
-void cBaraffClothGPU::UpdatePos(double dt) {}
+
+typedef std::pair<std::string, float> tTimeRecms;
+static std::vector<tTimeRecms> gProfRec;
+void cBaraffClothGPU::UpdatePos(double dt)
+{
+    // std::cout << "dt = " << dt << std::endl;
+    dt = this->mIdealDefaultTimestep;
+    // data, CPU->GPU, update pos, pre on CUDA, set dt
+    // 1. calculate stiffness matrix
+    gProfRec.clear();
+    cTimeUtil::Begin("update K and fint");
+    UpdateStiffnessMatrixAndIntForce();
+    gProfRec.push_back(tTimeRecms("update K and fint",
+                                  cTimeUtil::End("update K and fint", true)));
+    // 2. system matrix assemble: W x = b
+    cTimeUtil::Begin("assemble Ax=b");
+    UpdateLinearSystem(dt);
+    gProfRec.push_back(
+        tTimeRecms("assemble Ax=b", cTimeUtil::End("assemble Ax=b", true)));
+    // VerifyLinearSystem(dt);
+
+    // 3. conjugate gradient, solve x
+
+    cTimeUtil::Begin("solve");
+    SolveLinearSystem();
+
+    gProfRec.push_back(tTimeRecms("solve", cTimeUtil::End("solve", true)));
+
+    // 4. update CPU rendering data
+
+    cTimeUtil::Begin("post solve");
+    PostSolve();
+    gProfRec.push_back(
+        tTimeRecms("post solve", cTimeUtil::End("post solve", true)));
+}
 void cBaraffClothGPU::ApplyUserPerturbForceOnce(tPerturb *) {}
-void cBaraffClothGPU::UpdateImGui() {}
+
+void cBaraffClothGPU::UpdateImGui()
+{
+
+    for (auto &x : gProfRec)
+    {
+        ImGui::Text("%s %d ms", x.first.c_str(), int(x.second));
+    }
+}
 
 void cBaraffClothGPU::InitMass(const Json::Value &conf)
 {
@@ -205,11 +343,113 @@ void cBaraffClothGPU::InitGpuData()
     mCprimeLstCuda.Resize(num_of_tris);
     mgLstCuda.Resize(num_of_tris);
     mgprimeLstCuda.Resize(num_of_tris); // gi = Ni \otimes ni
-    mEleStiffnessMatrixLstCuda.Resize(num_of_tris);
-    mEleStiffnessMatrixLstCuda.MemsetAsync(tCudaMatrix9f::Zero());
+    mEleStretchStiffnessMatrixLstCuda.Resize(num_of_tris);
+    mEleStretchStiffnessMatrixLstCuda.MemsetAsync(tCudaMatrix9f::Zero());
 
     InitQBendingHessian();
     BuildEdgeInfo();
+
+    // confirm there is no zero
+    SIM_ASSERT(mMassMatrixDiag.minCoeff() > 1e-7);
+
+    // update mass matrix by diag
+    {
+        std::vector<tCudaVector3f> mass_matrix_diag_cpu(num_of_v);
+        for (int i = 0; i < num_of_v; i++)
+        {
+            mass_matrix_diag_cpu[i] = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
+                tVector3f(mMassMatrixDiag.segment(3 * i, 3).cast<float>()));
+            // std::cout << "mass diag for v " << i << " =  "
+            //           << mass_matrix_diag_cpu[i].transpose() << std::endl;
+        }
+        mMassMatrixDiagCuda.Upload(mass_matrix_diag_cpu);
+    }
+
+    // init gravity
+    {
+
+        std::vector<tCudaVector3f> gravity_cpu(num_of_v, tCudaVector3f::Zero());
+        mGravityForce.resize(GetNumOfFreedom());
+        for (int i = 0; i < num_of_v; i++)
+        {
+            gravity_cpu[i] = tCudaVector3f(
+                {0.0f, -9.8f * float(mMassMatrixDiag[3 * i]), 0.0f});
+            mGravityForce.segment(3 * i, 3) =
+                tVector3d(0.0, -9.8 * mMassMatrixDiag[3 * i], 0.0);
+        }
+        mGravityCuda.Upload(gravity_cpu);
+    }
+
+    // init ele internal force cuda
+    {
+        mEleStretchInternalForceCuda.Resize(num_of_tris);
+        mEleStretchInternalForceCuda.MemsetAsync(tCudaVector9f::Zero());
+    }
+
+    // init vertex internal force cuda
+    {
+        mIntForceCuda_stretch.Resize(num_of_v);
+        mIntForceCuda_stretch.MemsetAsync(tCudaVector3f::Zero());
+
+        mIntForceCuda_bending.Resize(num_of_v);
+        mIntForceCuda_bending.MemsetAsync(tCudaVector3f::Zero());
+
+        mIntForceCuda.Resize(num_of_v);
+        mIntForceCuda.MemsetAsync(tCudaVector3f::Zero());
+    }
+
+    // init stretch, bending, total stiffness cuda
+    {
+        int max_connected = tELLLocal2GlobalInfo::mElements;
+
+        mGlobalStiffnessMatrix_bending.Resize(num_of_v, max_connected);
+        mGlobalStiffnessMatrix_bending.MemsetAsync(tCudaMatrix3f::Zero());
+
+        mGlobalStiffnessMatrix_stretch.Resize(num_of_v, max_connected);
+        mGlobalStiffnessMatrix_stretch.MemsetAsync(tCudaMatrix3f::Zero());
+
+        mGlobalStiffnessMatrix.Resize(num_of_v, max_connected);
+        mGlobalStiffnessMatrix.MemsetAsync(tCudaMatrix3f::Zero());
+
+        mSystemMatrixCuda.Resize(num_of_v, max_connected);
+        mSystemMatrixCuda.MemsetAsync(tCudaMatrix3f::Zero());
+    }
+
+    // init system matrix and rhs
+    {
+        int max_connected = tELLLocal2GlobalInfo::mElements;
+        mSystemMatrixCuda.Resize(num_of_v, max_connected);
+        mSystemRHSCuda.Resize(num_of_v);
+    }
+
+    // init velocity on CUDA
+    {
+        int num_of_v = GetNumOfVertices();
+        mVelCuda.Resize(num_of_v);
+        mVelCuda.MemsetAsync(tCudaVector3f::Zero());
+    }
+
+    // init preconditioner on CUDA
+    {
+        this->mPreconditionerCuda.Resize(num_of_v);
+        mPreconditionerCuda.MemsetAsync(tCudaMatrix3f::Zero());
+    }
+
+    // init solution vector on CUDA
+    {
+        mSolutionCuda.Resize(num_of_v);
+        mSolutionCuda.MemsetAsync(tCudaVector3f::Zero());
+    }
+
+    // init buffers used in PCG
+    {
+        mPCGResidualCuda.Resize(num_of_v);  // r = b - A x
+        mPCGDirectionCuda.Resize(num_of_v); // conjugate di
+        mPCGzCuda.Resize(num_of_v);         // z = A * di
+        // iterations: max 1000
+        mPCG_rMinvr_arrayCuda.Resize(1000); // rMinvr, Minv is a
+        mPCG_dTAd_arrayCuda.Resize(1);      // diT * A * di
+    }
 }
 
 void cBaraffClothGPU::InitCpuData()
@@ -265,6 +505,13 @@ void cBaraffClothGPU::InitCpuData()
             tVector3f(mXcur.segment(3 * i, 3).cast<float>()));
         mXpreCpu[i] = mXcurCpu[i];
     }
+
+    // allocate user force CPU
+    {
+        mUserForceCpu.resize(num_of_v, tCudaVector3f::Zero());
+        mUserForce.resize(3 * num_of_v);
+        mUserForce.setZero();
+    }
 }
 
 /**
@@ -273,21 +520,23 @@ void cBaraffClothGPU::InitCpuData()
 namespace BaraffClothGpu
 {
 
-// extern void UpdateF(const cCudaArray<float> &Xcur, const cCudaArray<float>
-// &Xpre, const cCudaArray<tMatrix32f> &Nlst, cCudaArray<tMatrix32f> &FLst);
-extern void
-UpdateK(float K0, float K1, const cCudaArray<tCudaVector3f> &pos_lst,
-        const cCudaArray<tCudaVector3i> &tri_vertices_lst,
-        cCudaArray<tCudaMatrix32f> &N_lst, cCudaArray<tCudaMatrix32f> &F_lst,
-        cCudaArray<tCudaMatrix32f> &n_lst,
-        cCudaArray<tCudaVector2f> &C_lst, // condition
-        cCudaArray<tCudaMatrix92f> &g_lst, cCudaArray<tCudaMatrix9f> &K_lst);
-extern void AssembleStretchStiffnessMatrix(
+extern void UpdateStretch_StiffnessMatrix_Fint(
+    float K0, float K1, const cCudaArray<tCudaVector3f> &pos_lst,
+    const cCudaArray<tCudaVector3i> &tri_vertices_lst,
+    cCudaArray<tCudaMatrix32f> &N_lst, cCudaArray<tCudaMatrix32f> &F_lst,
+    cCudaArray<tCudaMatrix32f> &n_lst,
+    cCudaArray<tCudaVector2f> &C_lst, // condition
+    cCudaArray<tCudaMatrix92f> &g_lst, cCudaArray<tCudaMatrix9f> &K_lst,
+    cCudaArray<tCudaVector9f> &fint_lst_in_each_triangle);
+
+extern void AssembleStretch_StiffnessMatrix_Fint(
     const cCudaArray<tCudaMatrix9f> &ele_K_lst_per_triangle,
     const cCudaArray<tCudaVector32i> &vertex_connected_triangle_lst,
     const cCudaArray<tCudaVector3i> &vertex_id_of_triangle_lst,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
-    cCuda2DArray<tCudaMatrix3f> &global_K);
+    cCuda2DArray<tCudaMatrix3f> &global_K,
+    const cCudaArray<tCudaVector9f> &ele_fint,
+    cCudaArray<tCudaVector3f> &global_fint);
 
 extern void AssembleBendingStiffnessMatrix(
     const cCudaArray<tCudaVector4i> &bending_vertex_per_edge_lst,
@@ -295,6 +544,29 @@ extern void AssembleBendingStiffnessMatrix(
     const cCudaArray<tCudaMatrix12f> &ele_K_lst,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
     cCuda2DArray<tCudaMatrix3f> &global_K);
+extern void UpdateBendingIntForce(
+    const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+    const cCuda2DArray<tCudaMatrix3f> &bending_hessian,
+    const cCudaArray<tCudaVector3f> &vertex_pos_lst,
+    cCudaArray<tCudaVector3f> &bending_fint);
+
+extern void AssembleSystemMatrix(
+    float dt,
+    const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+    const cCuda2DArray<tCudaMatrix3f> &K, const cCudaArray<tCudaVector3f> &M,
+    cCuda2DArray<tCudaMatrix3f> &W);
+extern void CalcCurVelocity(float dt, const cCudaArray<tCudaVector3f> &mXcur,
+                            const cCudaArray<tCudaVector3f> &mXpre,
+                            cCudaArray<tCudaVector3f> &mVel);
+
+extern void AssembleSystemRHS(
+    float dt, const cCudaArray<tCudaVector3f> &Gravity,
+    const cCudaArray<tCudaVector3f> &UserForce,
+    const cCudaArray<tCudaVector3f> &IntForce,
+    const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+    const cCuda2DArray<tCudaMatrix3f> &W, const cCuda2DArray<tCudaMatrix3f> &K,
+    const cCudaArray<tCudaVector3f> &cur_v, cCudaArray<tCudaVector3f> &RHS);
+
 } // namespace BaraffClothGpu
 void cBaraffClothGPU::UpdateGpuData()
 {
@@ -305,25 +577,7 @@ void cBaraffClothGPU::UpdateGpuData()
     }
 
     // 2. update F
-    {
-        BaraffClothGpu::UpdateK(mStretchK[0], mStretchK[1], mXcurCuda,
-                                mTriangleVerticesIdLstCuda, mNLstCuda,
-                                mFLstCuda, mnLstCuda, mCLstCuda, mgLstCuda,
-                                mEleStiffnessMatrixLstCuda);
-        BaraffClothGpu::UpdateK(mStretchK[2], mStretchK[2], mXcurCuda,
-                                mTriangleVerticesIdLstCuda, mNprimeLstCuda,
-                                mFprimeLstCuda, mnprimeLstCuda, mCprimeLstCuda,
-                                mgprimeLstCuda, mEleStiffnessMatrixLstCuda);
-        BaraffClothGpu::AssembleStretchStiffnessMatrix(
-            mEleStiffnessMatrixLstCuda, mVerticesTriangleIdLstCuda,
-            mTriangleVerticesIdLstCuda, mELLLocalVidToGlobalVid,
-            this->mGlobalStiffnessMatrix);
-        BaraffClothGpu::AssembleBendingStiffnessMatrix(
-            mQBendingConstraintVertexLst, mVertexInvolvedInnerEdge,
-            mQBendingElementKLst, mELLLocalVidToGlobalVid,
-            mGlobalStiffnessMatrix);
-        // assemble bending stiffness matrix
-    }
+    UpdateStiffnessMatrixAndIntForce();
 }
 
 template <typename T1, typename T2>
@@ -401,6 +655,7 @@ void cBaraffClothGPU::VerifyData()
             std::vector<tMatrix92f> gprimeLstCPU;
             std::vector<tMatrix9f> KLstCPU;
             std::vector<tVector2f> CprimeLstCPU;
+            std::vector<tVector9f> EleFintCPU;
             mStretchMaterialCPU->GetFLst(mFLstCPU);
             mStretchMaterialCPU->GetFprimeLst(mFprimeLstCPU);
             mStretchMaterialCPU->GetnLst(nLstCPU);
@@ -410,13 +665,15 @@ void cBaraffClothGPU::VerifyData()
             mStretchMaterialCPU->GetgprimeLst(gprimeLstCPU);
             mStretchMaterialCPU->GetCprimeLst(CprimeLstCPU);
             mStretchMaterialCPU->GetEleKLst(KLstCPU);
+            mStretchMaterialCPU->GetEleFintLst(EleFintCPU);
             // tMatrixXf global_K_cpu =
             //     mStretchMaterialCPU->CalcTotalStiffnessMatrix()
             //         .cast<float>()
             //         .toDense();
             tMatrixXf global_K_cpu =
                 (mQBendingMaterialCPU->GetStiffnessMatrix().cast<float>() +
-                mStretchMaterialCPU->CalcTotalStiffnessMatrix().cast<float>()).toDense();
+                 mStretchMaterialCPU->CalcTotalStiffnessMatrix().cast<float>())
+                    .toDense();
             // CheckIsSyncMat("F", mFLstCPU, mFLstCuda);
             // CheckIsSyncMat("Fprime", mFprimeLstCPU, mFprimeLstCuda);
 
@@ -430,31 +687,97 @@ void cBaraffClothGPU::VerifyData()
             // CheckIsSyncVec("Cprime", CprimeLstCPU, mCprimeLstCuda);
 
             // CheckIsSyncVec("K", KLstCPU, mEleStiffnessMatrixLstCuda);
+            {
+                tMatrixXf global_K_cuda =
+                    FromELLMatrixToEigenMatrix(mGlobalStiffnessMatrix);
 
-            tMatrixXf global_K_cuda = GetCudaGlobalStiffnessMatrix();
-            auto K_diff = (global_K_cuda - global_K_cpu);
-            std::cout << "global K diff norm = " << K_diff.norm() << std::endl;
-            std::cout << "global K diff abs maxcoef = "
-                      << K_diff.cwiseAbs().maxCoeff() << std::endl;
-            // std::cout << "global K cuda = \n" << global_K_cuda << std::endl;
-            // std::cout << "global K cpu = \n" << global_K_cpu << std::endl;
-            // check block
-            int num_of_v = GetNumOfVertices();
-            for (int i = 0; i < num_of_v; i++)
-                for (int j = 0; j < num_of_v; j++)
-                {
-                    auto block_diff = K_diff.block(3 * i, 3 * j, 3, 3);
-                    auto block_cuda = global_K_cuda.block(3 * i, 3 * j, 3, 3);
-                    auto block_cpu = global_K_cpu.block(3 * i, 3 * j, 3, 3);
-                    float max_coef = block_diff.cwiseAbs().maxCoeff();
-                    if (max_coef > 1e-3)
+                auto K_diff = (global_K_cuda - global_K_cpu);
+                std::cout << "global K diff norm = " << K_diff.norm()
+                          << std::endl;
+                std::cout << "global K diff abs maxcoef = "
+                          << K_diff.cwiseAbs().maxCoeff() << std::endl;
+                // std::cout << "global K cuda = \n" << global_K_cuda <<
+                // std::endl; std::cout << "global K cpu = \n" << global_K_cpu
+                // << std::endl; check block
+                int num_of_v = GetNumOfVertices();
+                for (int i = 0; i < num_of_v; i++)
+                    for (int j = 0; j < num_of_v; j++)
                     {
-                        std::cout << "block " << i << " " << j << " diff = \n"
-                                  << block_diff << std::endl;
-                        std::cout << "cuda = \n" << block_cuda << std::endl;
-                        std::cout << "cpu = \n" << block_cpu << std::endl;
+                        auto block_diff = K_diff.block(3 * i, 3 * j, 3, 3);
+                        auto block_cuda =
+                            global_K_cuda.block(3 * i, 3 * j, 3, 3);
+                        auto block_cpu = global_K_cpu.block(3 * i, 3 * j, 3, 3);
+                        float max_coef = block_diff.cwiseAbs().maxCoeff();
+                        if (max_coef > 1e-3)
+                        {
+                            std::cout << "block " << i << " " << j
+                                      << " diff = \n"
+                                      << block_diff << std::endl;
+                            std::cout << "cuda = \n" << block_cuda << std::endl;
+                            std::cout << "cpu = \n" << block_cpu << std::endl;
+                        }
                     }
+            }
+            std::vector<tVector9f> ele_fint_cuda_eigen(GetNumOfTriangles());
+            {
+                std::vector<tCudaVector9f> ele_fint_cpu;
+                mEleStretchInternalForceCuda.Download(ele_fint_cpu);
+                for (int i = 0; i < GetNumOfTriangles(); i++)
+                {
+                    ele_fint_cuda_eigen[i] =
+                        cCudaMatrixUtil::CudaMatrixToEigenMatrix(
+                            ele_fint_cpu[i]);
                 }
+            }
+
+            {
+                // tVectorXf fint_cuda =
+                //     this->FromCudaVectorToEigenVector(this->mIntForceCuda);
+                // tVectorXf fint_cpu =
+                //     mStretchMaterialCPU->CalcTotalForce().cast<float>() +
+                //     mQBendingMaterialCPU->CalcForce(mXcur).cast<float>();
+                // tVectorXf fint_diff = fint_cuda - fint_cpu;
+                // float max_coef = fint_diff.cwiseAbs().maxCoeff();
+                // std::cout << "fint cpu =  " << fint_cpu.transpose()
+                //           << std::endl;
+                // std::cout << "fint cuda =  " << fint_cuda.transpose()
+                //           << std::endl;
+                // std::cout << "fint max diff = " << max_coef << std::endl;
+                // for (int i = 0; i < GetNumOfVertices(); i++)
+                // {
+                //     tVector3f diff = fint_diff.segment(3 * i, 3);
+                //     float max_coef = diff.cwiseAbs().maxCoeff();
+                //     if (max_coef > 1e-5)
+                //     {
+                //         std::cout << "v" << i << " fint cpu = "
+                //                   << fint_cpu.segment(3 * i, 3).transpose()
+                //                   << " cuda = "
+                //                   << fint_cuda.segment(3 * i, 3).transpose()
+                //                   << std::endl;
+                //     }
+                // }
+
+                // for (int i = 0; i < GetNumOfTriangles(); i++)
+                // {
+                //     auto cuda = ele_fint_cuda_eigen[i];
+                //     auto cpu = EleFintCPU[i];
+                //     auto diff = cuda - cpu;
+                //     float max_coef = diff.cwiseAbs().maxCoeff();
+                //     if (max_coef > 1e-5)
+                //     {
+                //         std::cout << "triangle " << i << " cuda = \n"
+                //                   << cuda << " cpu = \n"
+                //                   << cpu << " max coef diff =  " << max_coef
+                //                   << std::endl;
+                //     }
+                //     else
+                //     {
+                //         std::cout << "triangle " << i
+                //                   << " ele fint verify succ\n";
+                //     }
+                // }
+            }
+            // exit(1);
             // for (int i = 0; i < GetNumOfTriangles(); i++)
             // {
             //     tMatrix32f cpu = mFLstCPU[i];
@@ -481,8 +804,41 @@ void cBaraffClothGPU::InitGeometry(const Json::Value &conf)
 void cBaraffClothGPU::SetPos(const tVectorXd &newpos)
 {
     cBaseCloth::SetPos(newpos);
+    int num_of_v = this->GetNumOfVertices();
+    for (int i = 0; i < num_of_v; i++)
+    {
+        mXcurCpu[i] = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
+            tVector3f(newpos.segment(3 * i, 3).cast<float>()));
+    }
+    mXcurCuda.Upload(mXcurCpu);
 }
-
+void cBaraffClothGPU::ClearForce()
+{
+    cBaseCloth::ClearForce();
+    mGravityCuda.MemsetAsync(tCudaVector3f::Zero());
+    mUserForceCuda.MemsetAsync(tCudaVector3f::Zero());
+    mCollisionForce.MemsetAsync(tCudaVector3f::Zero());
+    mIntForceCuda_stretch.MemsetAsync(tCudaVector3f::Zero());
+    mIntForceCuda_bending.MemsetAsync(tCudaVector3f::Zero());
+    mIntForceCuda.MemsetAsync(tCudaVector3f::Zero());
+}
+#include <cuda.h>
+void cBaraffClothGPU::Reset()
+{
+    std::cout << "[log] Cloth reset\n";
+    SetPos(mClothInitPos);
+    mXpre.noalias() = mClothInitPos;
+    ClearForce();
+    int num_of_v = this->GetNumOfVertices();
+    for (int i = 0; i < num_of_v; i++)
+    {
+        mXpreCpu[i] = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
+            tVector3f(mXpre.segment(3 * i, 3).cast<float>()));
+    }
+    mXpreCuda.Upload(mXpreCpu);
+    InitGpuData();
+    UpdateGpuData();
+}
 void cBaraffClothGPU::UpdateCpuData()
 {
     for (int i = 0; i < GetNumOfVertices(); i++)
@@ -496,60 +852,57 @@ void cBaraffClothGPU::UpdateCpuData()
 #include <set>
 void cBaraffClothGPU::InitGlobalStiffnessMatrix()
 {
-    // 1. build vertice connection
+    // 1. for each edge, vertices included in the connected triangle has effect
+    // with each other
     int num_of_v = GetNumOfVertices();
-    std::vector<tELLLocal2GlobalInfo> ELL_local_vid_to_global_vid(
-        num_of_v, tELLLocal2GlobalInfo::Ones() * -1);
+    std::vector<std::set<int>> vertices_included_vertices(num_of_v);
+    // 1. add bending constraint
+    std::set<int> affected_vertices = {};
 
-    for (int i = 0; i < num_of_v; i++)
+    for (int i = 0; i < GetNumOfEdges(); i++)
     {
-        ELL_local_vid_to_global_vid[i][0] = i;
-    }
-    int num_of_e = GetNumOfEdges();
+        affected_vertices.clear();
+        auto edge = GetEdgeArray()[i];
+        // stretch
+        auto t0 = GetTriangleArray()[edge->mTriangleId0];
+        affected_vertices.insert(t0->mId0);
+        affected_vertices.insert(t0->mId1);
+        affected_vertices.insert(t0->mId2);
 
-    for (int e_id = 0; e_id < num_of_e; e_id++)
-    {
-        auto cur_e = mEdgeArrayShared[e_id];
-        int v0 = cur_e->mId0, v1 = cur_e->mId1;
-        // stretch: one vertex only affect vertices in this triangle
-        AddInfo(ELL_local_vid_to_global_vid[v0], v1);
-        AddInfo(ELL_local_vid_to_global_vid[v1], v0);
-        // bending: one vertex will be affected in all vertices involed in
-        // triangles
-        if (cur_e->mIsBoundary == false)
+        // bending
+        if (edge->mIsBoundary == false)
         {
-            // inner edge, apply inner affect
-            std::set<int> cur_set = {
-                mTriangleArrayShared[cur_e->mTriangleId0]->mId0,
-                mTriangleArrayShared[cur_e->mTriangleId0]->mId1,
-                mTriangleArrayShared[cur_e->mTriangleId0]->mId2,
-                mTriangleArrayShared[cur_e->mTriangleId1]->mId0,
-                mTriangleArrayShared[cur_e->mTriangleId1]->mId1,
-                mTriangleArrayShared[cur_e->mTriangleId1]->mId2};
-            int k = 0;
-            tVector4i involed_vertices = tVector4i::Ones() * -1;
-            for (auto &x : cur_set)
-            {
-                involed_vertices[k] = x;
-                assert(k++ <= 4);
-            }
-            for (int a = 0; a < 4; a++)
-                for (int b = 0; b < 4; b++)
-                {
-                    AddInfo(ELL_local_vid_to_global_vid[involed_vertices[a]],
-                            involed_vertices[b]);
-                }
+            auto t1 = GetTriangleArray()[edge->mTriangleId1];
+            affected_vertices.insert(t1->mId0);
+            affected_vertices.insert(t1->mId1);
+            affected_vertices.insert(t1->mId2);
+        }
+        // add
+        for (auto &v : affected_vertices)
+        {
+            vertices_included_vertices[v].insert(affected_vertices.begin(),
+                                                 affected_vertices.end());
         }
     }
 
+    std::vector<tELLLocal2GlobalInfo> ELL_local_vid_to_global_vid(
+        num_of_v, tELLLocal2GlobalInfo::Ones() * -1);
     for (int i = 0; i < num_of_v; i++)
     {
-        SortInfo(ELL_local_vid_to_global_vid[i]);
-        // std::cout << "v" << i << " ELL local to global = "
-        //           << ELL_local_vid_to_global_vid[i].transpose() << std::endl;
+        auto affected_v_lst = vertices_included_vertices[i];
+        if (affected_v_lst.size() > tELLLocal2GlobalInfo::mElements)
+        {
+            printf("[error] vertex %d has more than %d entries in K, exit\n", i,
+                   tELLLocal2GlobalInfo::mElements);
+            exit(1);
+        }
+        for (auto &x : affected_v_lst)
+        {
+            AddInfo(ELL_local_vid_to_global_vid[i], x);
+        }
     }
     mELLLocalVidToGlobalVid.Upload(ELL_local_vid_to_global_vid);
-    int max_connected = tELLLocal2GlobalInfo::mElements;
+
     // for (int i = 0; i < num_of_v; i++)
     // {
     //     std::sort(mColumnIdLstPerRow[i].begin(),
@@ -562,13 +915,10 @@ void cBaraffClothGPU::InitGlobalStiffnessMatrix()
     //                mColumnIdLstPerRow[i].size(), max_connected);
     //     }
     // }
-    mGlobalStiffnessMatrix.Resize(num_of_v, max_connected);
-    mGlobalStiffnessMatrix.MemsetAsync(tCudaMatrix3f::Zero());
 }
 
 void cBaraffClothGPU::InitQBendingHessian()
 {
-
     std::vector<tVector4i> edge_constraint_vertex_lst_eigen =
         mQBendingMaterialCPU->GetEdgeConstraintVertex();
     std::vector<tMatrix12f> eleK_lst_eigen =
@@ -637,10 +987,8 @@ void cBaraffClothGPU::BuildEdgeInfo()
         vec[7]:     v1_local_id in triangle1 (-1 if boundary edge)
     */
     int num_of_v = this->GetNumOfVertices();
-    std::vector<tConnectedInfo> vertex_connected_edges(
-        num_of_v, -1 * tConnectedInfo::Ones());
-    std::vector<tConnectedInfo> vertex_involved_inner_edges(
-        num_of_v, -1 * tConnectedInfo::Ones());
+    std::vector<tConnectedInfo> vertex_connected_edges(num_of_v, -1);
+    std::vector<tConnectedInfo> vertex_involved_inner_edges(num_of_v, -1);
 
     for (int all_e_id = 0, inner_e_id = 0; all_e_id < num_of_e; all_e_id++)
     {
@@ -702,7 +1050,8 @@ void cBaraffClothGPU::BuildEdgeInfo()
     mVertexInvolvedInnerEdge.Upload(vertex_involved_inner_edges);
 }
 
-tMatrixXf cBaraffClothGPU::GetCudaGlobalStiffnessMatrix()
+tMatrixXf cBaraffClothGPU::FromELLMatrixToEigenMatrix(
+    const cCuda2DArray<tCudaMatrix3f> &ell_mat)
 {
     int num_of_v = this->GetNumOfVertices();
     int num_of_dof = GetNumOfFreedom();
@@ -710,7 +1059,7 @@ tMatrixXf cBaraffClothGPU::GetCudaGlobalStiffnessMatrix()
     tMatrixXf mat(num_of_dof, num_of_dof);
     mat.setZero();
     std::vector<tCudaMatrix3f> cuda_global_K_download;
-    mGlobalStiffnessMatrix.Download(cuda_global_K_download);
+    ell_mat.Download(cuda_global_K_download);
     std::vector<tELLLocal2GlobalInfo> ell_local_vid_to_global_vid;
     mELLLocalVidToGlobalVid.Download(ell_local_vid_to_global_vid);
     std::vector<tTriplet> content = {};
@@ -733,4 +1082,232 @@ tMatrixXf cBaraffClothGPU::GetCudaGlobalStiffnessMatrix()
         }
     }
     return mat;
+}
+namespace GPUMatrixOps
+{
+extern void ELLMatrixAdd(const cCuda2DArray<tCudaMatrix3f> &mat0,
+                         const cCuda2DArray<tCudaMatrix3f> &mat1,
+                         cCuda2DArray<tCudaMatrix3f> &mat2);
+
+extern void VectorAdd(const cCudaArray<tCudaVector3f> &vec0,
+                      const cCudaArray<tCudaVector3f> &vec1,
+                      cCudaArray<tCudaVector3f> &vec2);
+} // namespace GPUMatrixOps
+/**
+ * \brief           update stiffness matrix on GPU
+ */
+void cBaraffClothGPU::UpdateStiffnessMatrixAndIntForce()
+{
+    // clear
+    {
+        // 1. clear stiffness matrix
+        mGlobalStiffnessMatrix_stretch.MemsetAsync(tCudaMatrix3f::Zero());
+        mGlobalStiffnessMatrix_bending.MemsetAsync(tCudaMatrix3f::Zero());
+        mGlobalStiffnessMatrix.MemsetAsync(tCudaMatrix3f::Zero());
+        mEleStretchStiffnessMatrixLstCuda.MemsetAsync(tCudaMatrix9f::Zero());
+
+        // 2. clear internal force
+        mEleStretchInternalForceCuda.MemsetAsync(tCudaVector9f::Zero());
+        mIntForceCuda_stretch.MemsetAsync(tCudaVector3f::Zero());
+        mIntForceCuda_bending.MemsetAsync(tCudaVector3f::Zero());
+        mIntForceCuda.MemsetAsync(tCudaVector3f::Zero());
+    }
+    // update stretch stiffness and fint
+    BaraffClothGpu::UpdateStretch_StiffnessMatrix_Fint(
+        mStretchK[0], mStretchK[1], mXcurCuda, mTriangleVerticesIdLstCuda,
+        mNLstCuda, mFLstCuda, mnLstCuda, mCLstCuda, mgLstCuda,
+        mEleStretchStiffnessMatrixLstCuda, mEleStretchInternalForceCuda);
+    BaraffClothGpu::UpdateStretch_StiffnessMatrix_Fint(
+        mStretchK[2], mStretchK[2], mXcurCuda, mTriangleVerticesIdLstCuda,
+        mNprimeLstCuda, mFprimeLstCuda, mnprimeLstCuda, mCprimeLstCuda,
+        mgprimeLstCuda, mEleStretchStiffnessMatrixLstCuda,
+        mEleStretchInternalForceCuda);
+
+    BaraffClothGpu::AssembleStretch_StiffnessMatrix_Fint(
+        mEleStretchStiffnessMatrixLstCuda, mVerticesTriangleIdLstCuda,
+        mTriangleVerticesIdLstCuda, mELLLocalVidToGlobalVid,
+        this->mGlobalStiffnessMatrix_stretch,
+        this->mEleStretchInternalForceCuda, mIntForceCuda_stretch);
+
+    // update bending stiffness and fint
+    BaraffClothGpu::AssembleBendingStiffnessMatrix(
+        mQBendingConstraintVertexLst, mVertexInvolvedInnerEdge,
+        mQBendingElementKLst, mELLLocalVidToGlobalVid,
+        mGlobalStiffnessMatrix_bending);
+
+    BaraffClothGpu::UpdateBendingIntForce(
+        mELLLocalVidToGlobalVid, mGlobalStiffnessMatrix_bending,
+        this->mXcurCuda, mIntForceCuda_bending);
+
+    // sum global stiffness
+    GPUMatrixOps::ELLMatrixAdd(mGlobalStiffnessMatrix_bending,
+                               mGlobalStiffnessMatrix_stretch,
+                               mGlobalStiffnessMatrix);
+    // sum global fint
+    // mIntForceCuda_stretch.MemsetAsync(tCudaVector3f::Zero());
+    // printf("[error] int force is set to zero\n");
+    GPUMatrixOps::VectorAdd(mIntForceCuda_bending, mIntForceCuda_stretch,
+                            mIntForceCuda);
+}
+
+/**
+ * \brief           Set up the linear system Wx = b
+ *  dt2K = dt * dt * K
+ *  W = M - dt2K
+ *  b = dt * dt * (mGravityForce + mUserForce + mIntForce)
+ *      + dt * (W + dt2K) * V_cur
+ *  V_cur = (mXcur - mXpre) / dt
+ */
+void cBaraffClothGPU::UpdateLinearSystem(float dt)
+{
+    /* 1. upload all force
+            user force
+            gravity
+            collision force
+    */
+    UpdateCollisionForceAndUserForce();
+
+    /*
+        3. assemble W
+    */
+    BaraffClothGpu::AssembleSystemMatrix(
+        dt, this->mELLLocalVidToGlobalVid, this->mGlobalStiffnessMatrix,
+        this->mMassMatrixDiagCuda, this->mSystemMatrixCuda);
+
+    // 4. assemble b
+    // 4.1 calculate current velocity
+    BaraffClothGpu::CalcCurVelocity(dt, mXcurCuda, mXpreCuda, this->mVelCuda);
+
+    // 4.2 calcualte RHS
+    // extern void AssembleSystemRHS(
+    // float dt, const cCudaArray<tCudaVector3f> &Gravity,
+    // const cCudaArray<tCudaVector3f> &UserForce,
+    // const cCudaArray<tCudaVector3f> &IntForce,
+    // const cCudaArray<tCudaVector32i>
+    // &ELL_local_vertex_id_to_global_vertex_id, const cCudaArray<tCudaVector3f>
+    // &W, const cCudaArray<tCudaVector3f> &K, const cCudaArray<tCudaVector3f>
+    // &cur_v, cCudaArray<tCudaVector3f> &RHS);
+    BaraffClothGpu::AssembleSystemRHS(
+        dt, this->mGravityCuda, this->mUserForceCuda, this->mIntForceCuda,
+        this->mELLLocalVidToGlobalVid, this->mSystemMatrixCuda,
+        this->mGlobalStiffnessMatrix, this->mVelCuda, this->mSystemRHSCuda);
+}
+
+void cBaraffClothGPU::SolveLinearSystem()
+{
+    // 1. create the preconditioner
+    PCGSolver::CalcNoPreconditioner(mELLLocalVidToGlobalVid, mSystemMatrixCuda,
+                                    mPreconditionerCuda);
+
+    // 2. solve
+    PCGSolver::Solve(mPreconditionerCuda, mELLLocalVidToGlobalVid,
+                     mSystemMatrixCuda, mSystemRHSCuda, this->mPCGResidualCuda,
+                     this->mPCGDirectionCuda, this->mPCGzCuda,
+                     this->mPCG_rMinvr_arrayCuda, this->mSolutionCuda);
+    // 3. copy back result, verification
+    // tMatrixXf W_cpu = this->FromELLMatrixToEigenMatrix(mSystemMatrixCuda);
+    // tVectorXf b_cpu = FromCudaVectorToEigenVector(this->mSystemRHSCuda);
+    // tVectorXf x_cpu = FromCudaVectorToEigenVector(this->mSolutionCuda);
+    // tVectorXf residual = W_cpu * x_cpu - b_cpu;
+    // std::cout << "[solve] residual = " << residual.cwiseAbs().maxCoeff()
+    //           << std::endl;
+    // exit(1);
+}
+
+void cBaraffClothGPU::PostSolve()
+{
+    // 1. copy back the dx data from GPU
+    tVectorXf dx = FromCudaVectorToEigenVector(this->mSolutionCuda);
+    this->mXpre = mXcur;
+    mXcur += dx.cast<double>();
+
+    // 2. update cpu data (mXcur, mXpre)
+    this->SetPos(mXcur);
+
+    // 3. update the GPU data
+    int num_of_v = this->GetNumOfVertices();
+    for (int i = 0; i < num_of_v; i++)
+    {
+        mXpreCpu[i] = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
+            tVector3f(mXpre.segment(3 * i, 3).cast<float>()));
+    }
+    mXpreCuda.Upload(mXpreCpu);
+}
+
+tVectorXf cBaraffClothGPU::FromCudaVectorToEigenVector(
+    const cCudaArray<tCudaVector3f> &cuda_vec)
+{
+    int num_of_v = this->GetNumOfVertices();
+    int num_of_dof = GetNumOfFreedom();
+    // tSparseMatf mat(num_of_dof, num_of_dof);
+    tVectorXf vec(num_of_dof);
+    vec.setZero();
+
+    std::vector<tCudaVector3f> int_force_cpu;
+    cuda_vec.Download(int_force_cpu);
+    assert(int_force_cpu.size() == num_of_v);
+    for (int i = 0; i < num_of_v; i++)
+    {
+        vec.segment(3 * i, 3).noalias() =
+            cCudaMatrixUtil::CudaMatrixToEigenMatrix(int_force_cpu[i]);
+    }
+    return vec;
+}
+
+/**
+ *\brief            upload user force and collision force
+ */
+void cBaraffClothGPU::UpdateCollisionForceAndUserForce()
+{
+    int num_of_v = GetNumOfVertices();
+
+    mUserForceCuda.Resize(num_of_v);
+    mCollisionForce.Resize(num_of_v);
+
+    mUserForceCuda.MemsetAsync(tCudaVector3f::Zero());
+    mCollisionForce.MemsetAsync(tCudaVector3f::Zero());
+}
+
+void cBaraffClothGPU::VerifyLinearSystem(float dt)
+{
+    // 1. get the cpu linear system (barrow from CPU version)
+    tMatrixXf W_cpu;
+    tVectorXf b_cpu;
+    {
+        int dof = GetNumOfFreedom();
+        tSparseMatf M(dof, dof);
+        M.reserve(dof);
+        // M.diagonal() = mMassMatDiag;
+        for (size_t i = 0; i < dof; i++)
+        {
+            M.coeffRef(i, i) = mMassMatrixDiag[i];
+            // I.coeff(i, i) = 1;
+        }
+        mStretchMaterialCPU->Update();
+        auto global_K_cpu =
+            (mQBendingMaterialCPU->GetStiffnessMatrix().cast<float>() +
+             mStretchMaterialCPU->CalcTotalStiffnessMatrix().cast<float>())
+                .toDense();
+        W_cpu = (M - dt * dt * global_K_cpu).cast<float>();
+
+        // set gravity, set user force, set int force
+        tVectorXf int_force = (this->mStretchMaterialCPU->CalcTotalForce() +
+                               this->mQBendingMaterialCPU->CalcForce(mXcur))
+                                  .cast<float>();
+        b_cpu = dt * dt *
+                    (mGravityForce.cast<float>() + mUserForce.cast<float>() +
+                     int_force) +
+                dt * (W_cpu + dt * dt * global_K_cpu) *
+                    (mXcur - mXpre).cast<float>() / dt;
+    }
+    // 2. get the cuda version W and residual
+    tMatrixXf W_cuda = this->FromELLMatrixToEigenMatrix(mSystemMatrixCuda);
+    tMatrixXf b_cuda = FromCudaVectorToEigenVector(mSystemRHSCuda);
+
+    tMatrixXf W_diff = W_cuda - W_cpu;
+    tVectorXf b_diff = b_cpu - b_cuda;
+    std::cout << "[verify] W diff = " << W_diff.cwiseAbs().maxCoeff()
+              << std::endl;
+    std::cout << "[verify] b diff = " << b_diff.cwiseAbs().maxCoeff()
+              << std::endl;
 }

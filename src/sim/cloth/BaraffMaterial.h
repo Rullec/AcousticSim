@@ -6,6 +6,7 @@ template <typename data_type> using tMatrix32 = Eigen::Matrix<data_type, 3, 2>;
 typedef tMatrix32<double> tMatrix32d;
 typedef tMatrix32<float> tMatrix32f;
 typedef Eigen::Matrix<double, 9, 1> tVector9d;
+typedef Eigen::Matrix<float, 9, 1> tVector9f;
 typedef Eigen::Matrix<double, 9, 9> tMatrix9d;
 typedef Eigen::Matrix<double, 9, 2> tMatrix92d;
 typedef Eigen::Matrix<float, 9, 2> tMatrix92f;
@@ -41,6 +42,7 @@ public:
     void GetgprimeLst(std::vector<tMatrix92f> &vec);
     void GetCprimeLst(std::vector<tVector2f> &vec);
     void GetEleKLst(std::vector<tMatrix9f> &mat);
+    void GetEleFintLst(std::vector<tVector9f> &mat);
 
 protected:
     cBaseObjectPtr mObject;
