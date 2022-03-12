@@ -66,6 +66,8 @@ extern void CalcNoPreconditioner(
 cBaraffClothGPU::cBaraffClothGPU(int id_)
     : cBaseCloth(eClothType::FEM_CLOTH_GPU, id_)
 {
+    mDragPointVertexId = -1;
+    mDragPointTargetPos.setZero();
 }
 
 void cBaraffClothGPU::Init(const Json::Value &conf)
@@ -189,7 +191,9 @@ static std::vector<tTimeRecms> gProfRec;
 void cBaraffClothGPU::UpdatePos(double dt)
 {
     // std::cout << "dt = " << dt << std::endl;
+    printf("-------new frame---------\n");
     dt = this->mIdealDefaultTimestep;
+    UpdateFixedPt();
     // data, CPU->GPU, update pos, pre on CUDA, set dt
     // 1. calculate stiffness matrix
     gProfRec.clear();
@@ -218,7 +222,26 @@ void cBaraffClothGPU::UpdatePos(double dt)
     gProfRec.push_back(
         tTimeRecms("post solve", cTimeUtil::End("post solve", true)));
 }
-void cBaraffClothGPU::ApplyUserPerturbForceOnce(tPerturb *) {}
+#include "sim/Perturb.h"
+void cBaraffClothGPU::ApplyUserPerturbForceOnce(tPerturb *pert)
+{
+    if (pert == nullptr)
+        return;
+    int max_id = 0;
+    float max_bary = 0;
+    auto tri = mTriangleArrayShared[pert->mAffectedTriId];
+    std::vector<int> res = {tri->mId0, tri->mId1, tri->mId2};
+    for (max_id = 0; max_id < 3; max_id++)
+    {
+        if (pert->mBarycentricCoords[max_id] > max_bary)
+        {
+            max_bary = pert->mBarycentricCoords[max_id];
+            mDragPointVertexId = res[max_id];
+        }
+    }
+    mDragPointTargetPos = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
+        tVector3f(pert->GetGoalPos().segment(0, 3).cast<float>()));
+}
 
 void cBaraffClothGPU::UpdateImGui()
 {
@@ -450,6 +473,51 @@ void cBaraffClothGPU::InitGpuData()
         mPCG_rMinvr_arrayCuda.Resize(1000); // rMinvr, Minv is a
         mPCG_dTAd_arrayCuda.Resize(1);      // diT * A * di
     }
+
+    // init the constraint point
+    {
+        // mFixedVertexIndices.Upload(mConstraint_StaticPointIds);
+        mFixedVertexIndicesCPU = {};
+        mFixedVertexTargetPosCPU = {};
+        for (auto con_vid : mConstraint_StaticPointIds)
+        {
+            tCudaVector3f pos = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
+                tVector3f(GetVertexArray()[con_vid]
+                              ->mPos.segment(0, 3)
+                              .cast<float>()));
+            mFixedVertexIndicesCPU.push_back(con_vid);
+            mFixedVertexTargetPosCPU.push_back(pos);
+            printf("[debug] fixed point v%d to (%.3f,%.3f,%.3f)\n", con_vid,
+                   pos[0], pos[1], pos[2]);
+        }
+        // mFixedVertexTargetPos.Upload(fixed_pos);
+    }
+}
+
+void cBaraffClothGPU::ClearDragPt()
+{
+    mDragPointVertexId = -1;
+    mDragPointTargetPos.setZero();
+}
+
+void cBaraffClothGPU::UpdateFixedPt()
+{
+    std::vector<int> fixed_vertex_indices_cpu = mFixedVertexIndicesCPU;
+    std::vector<tCudaVector3f> fixed_vertex_target_pos_cpu =
+        mFixedVertexTargetPosCPU;
+    if (mDragPointVertexId != -1)
+    {
+        fixed_vertex_indices_cpu.push_back(mDragPointVertexId);
+        fixed_vertex_target_pos_cpu.push_back(mDragPointTargetPos);
+    }
+
+    for (int i = 0; i < fixed_vertex_indices_cpu.size(); i++)
+    {
+        std::cout << "[debug] fix v" << fixed_vertex_indices_cpu[i] << " to "
+                  << fixed_vertex_target_pos_cpu[i].transpose() << std::endl;
+    }
+    mFixedVertexIndicesCUDA.Upload(fixed_vertex_indices_cpu);
+    mFixedVertexTargetPosCUDA.Upload(fixed_vertex_target_pos_cpu);
 }
 
 void cBaraffClothGPU::InitCpuData()
@@ -534,8 +602,11 @@ extern void AssembleStretch_StiffnessMatrix_Fint(
     const cCudaArray<tCudaVector32i> &vertex_connected_triangle_lst,
     const cCudaArray<tCudaVector3i> &vertex_id_of_triangle_lst,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
-    cCuda2DArray<tCudaMatrix3f> &global_K,
     const cCudaArray<tCudaVector9f> &ele_fint,
+    const cCudaArray<int> &fixed_vertex_indices_lst,
+    const cCudaArray<tCudaVector3f> &fixed_vertex_target_pos_lst,
+    const cCudaArray<tCudaVector3f> &vertex_pos_lst,
+    cCuda2DArray<tCudaMatrix3f> &global_K,
     cCudaArray<tCudaVector3f> &global_fint);
 
 extern void AssembleBendingStiffnessMatrix(
@@ -1126,8 +1197,9 @@ void cBaraffClothGPU::UpdateStiffnessMatrixAndIntForce()
     BaraffClothGpu::AssembleStretch_StiffnessMatrix_Fint(
         mEleStretchStiffnessMatrixLstCuda, mVerticesTriangleIdLstCuda,
         mTriangleVerticesIdLstCuda, mELLLocalVidToGlobalVid,
-        this->mGlobalStiffnessMatrix_stretch,
-        this->mEleStretchInternalForceCuda, mIntForceCuda_stretch);
+        this->mEleStretchInternalForceCuda, this->mFixedVertexIndicesCUDA,
+        this->mFixedVertexTargetPosCUDA, this->mXcurCuda,
+        this->mGlobalStiffnessMatrix_stretch, mIntForceCuda_stretch);
 
     // update bending stiffness and fint
     BaraffClothGpu::AssembleBendingStiffnessMatrix(
@@ -1196,8 +1268,8 @@ void cBaraffClothGPU::UpdateLinearSystem(float dt)
 void cBaraffClothGPU::SolveLinearSystem()
 {
     // 1. create the preconditioner
-    PCGSolver::CalcNoPreconditioner(mELLLocalVidToGlobalVid, mSystemMatrixCuda,
-                                    mPreconditionerCuda);
+    PCGSolver::CalcBlockJacobiPreconditioner(
+        mELLLocalVidToGlobalVid, mSystemMatrixCuda, mPreconditionerCuda);
 
     // 2. solve
     PCGSolver::Solve(mPreconditionerCuda, mELLLocalVidToGlobalVid,
@@ -1232,6 +1304,8 @@ void cBaraffClothGPU::PostSolve()
             tVector3f(mXpre.segment(3 * i, 3).cast<float>()));
     }
     mXpreCuda.Upload(mXpreCpu);
+
+    ClearDragPt();
 }
 
 tVectorXf cBaraffClothGPU::FromCudaVectorToEigenVector(

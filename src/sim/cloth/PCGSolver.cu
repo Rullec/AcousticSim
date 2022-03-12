@@ -254,7 +254,7 @@ void Solve(
     // ! try to group work together
     cCudaArray<float> pcg_dTAd;
 
-    int max_iters = 200;
+    int max_iters = 300;
     pcg_dTAd.Resize(1);
     pcg_dTAd.MemsetAsync(0);
 
@@ -262,7 +262,6 @@ void Solve(
     pcg_dbuf.MemsetAsync(tCudaVector3f::Zero());
     pcg_rMinvr_array.Resize(max_iters + 1);
     pcg_rMinvr_array.MemsetAsync(0.f);
-    x.MemsetAsync(tCudaVector3f::Zero());
 
     int num_of_v = ELL_local_vertex_id_to_global_vertex_id.Size();
 
@@ -292,7 +291,7 @@ void Solve(
     //     std::cout << "r" << i << " = " << r_cpu[i].transpose() << std::endl;
     //     std::cout << "d" << i << " = " << d_cpu[i].transpose() << std::endl;
     // }
-
+    float init_residual = 0;
     for (int cur_iter = 0; cur_iter < max_iters; cur_iter++)
     {
         /*
@@ -341,7 +340,7 @@ void Solve(
             pcg_rbuf.Ptr(), pcg_dbuf.Ptr());
 
         // x.Download(x_cpu);
-        if (cur_iter % 50 == 0 && cur_iter != 0)
+        if (cur_iter % 50 == 0 || cur_iter == max_iters - 1)
         {
             pcg_rbuf.Download(r_cpu);
             // printf("---------------iter %d-------------\n", cur_iter);
@@ -350,15 +349,30 @@ void Solve(
             {
                 max_r = std::max(r_cpu[i].cwiseAbs().maxCoeff(), max_r);
             }
-            if (max_r < 1e-7)
+            if (cur_iter == 0)
             {
-                printf("[log] max residual %.1e, break\n", max_r);
+                init_residual = max_r;
+            }
+            if (max_r < init_residual * 1e-1)
+            {
+                printf("[break] cur iter %d max residual %.1e, break\n",
+                       cur_iter, max_r);
                 break;
+            }
+            else
+            {
+                if (cur_iter != max_iters - 1)
+                    printf("[log] cur iter %d max residual %.1e\n", cur_iter,
+                           max_r);
+                else
+                {
+                    printf("[exceed] exceed max iter %d, max residual %.1e\n",
+                           max_iters, max_r);
+                }
             }
         }
         // break;
     }
-    // exit(1);
 }
 
 void CalcJacobiPreconditioner(

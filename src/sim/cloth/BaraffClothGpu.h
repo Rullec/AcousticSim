@@ -88,8 +88,19 @@ protected:
     cCudaArray<float> mPCG_rMinvr_arrayCuda; // rMinvr, Minv is a preconditioner
     cCudaArray<float> mPCG_dTAd_arrayCuda;   // dT * A * d, A is the system mat
 
-    cCudaArray<int> mFixedVertexIndices;            // fix point indices
-    cCudaArray<tCudaVector3f> mFixedVertexTargetPos; // fix point target position
+    // 1. CPU fixed point, inited at first
+    std::vector<int> mFixedVertexIndicesCPU;
+    std::vector<tCudaVector3f> mFixedVertexTargetPosCPU;
+
+    // 2. drag point
+    int mDragPointVertexId;            // default -1
+    tCudaVector3f mDragPointTargetPos; // drag point pos
+
+    // 2. Update CUDA per frame
+    cCudaArray<int> mFixedVertexIndicesCUDA; // fix point indices
+    cCudaArray<tCudaVector3f>
+        mFixedVertexTargetPosCUDA; // fix point target position
+
     virtual void InitGeometry(const Json::Value &conf) override final;
     virtual void InitMass(const Json::Value &conf) override final;
     virtual void InitGlobalStiffnessMatrix();
@@ -110,5 +121,8 @@ protected:
     virtual void UpdateLinearSystem(float dt);
     virtual void SolveLinearSystem();
     virtual void PostSolve();
+
+    virtual void ClearDragPt();
+    virtual void UpdateFixedPt();
     // virtual void BuildVertexConnectedEdgeId();
 };

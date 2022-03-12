@@ -22,15 +22,15 @@
                 1e-4
             ],
             "cloth_bending_stiffness": [
-                1e-4,
-                1e-4,
-                1e-4
+                1e-5,
+                1e-5,
+                1e-5
             ],
             "rayleigh_damping_a": 0,
             "rayleigh_damping_b": 0,
             "enable_cloth_from_obj": false,
-            "cloth_mass": 1e-1,
-            "cloth_density": 10,
+            "cloth_mass": 1e-3,
+            "cloth_density": 0.1,
             "cloth_init_pos": [
                 0,
                 0.2,
@@ -43,7 +43,7 @@
                 0,
                 0
             ],
-            "constraints.bak": {
+            "constraints": {
                 "static_point": [
                     [
                         0.5,

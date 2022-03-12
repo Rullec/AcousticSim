@@ -249,7 +249,10 @@ __global__ void DispatchStretch_StiffnessMatrix_and_fint(
     devPtr<const tCudaVector32i> vertex_connected_triangles_lst,
     devPtr<const tCudaVector3i> vertex_id_in_triangle_lst,
     devPtr<const tCudaVector32i> ELL_local_vertex_id_to_global_vertex_id,
-    devPtr2<tCudaMatrix3f> global_K, devPtr<const tCudaVector9f> ele_fint,
+    devPtr<const tCudaVector9f> ele_fint, const int num_of_fixed_vertices,
+    devPtr<const int> fixed_vertex_indices_lst,
+    devPtr<const tCudaVector3f> fixed_vertex_target_pos_lst,
+    devPtr<const tCudaVector3f> vertex_pos_lst, devPtr2<tCudaMatrix3f> global_K,
     devPtr<tCudaVector3f> global_fint)
 {
     CUDA_function;
@@ -257,6 +260,7 @@ __global__ void DispatchStretch_StiffnessMatrix_and_fint(
     if (v_id >= num_of_v)
         return;
     const tCudaVector32i &connected_tri = vertex_connected_triangles_lst[v_id];
+    // 1. dispatch common stretch stiffness matrix
     for (int i = 0; i < 32; i++)
     {
         int tri_id = connected_tri[i];
@@ -303,6 +307,33 @@ __global__ void DispatchStretch_StiffnessMatrix_and_fint(
             }
         }
     }
+
+    // 2. add fixed point stiffness (implicit spring)
+    {
+        float fixed_point_K = 1e4;
+        for (int i = 0; i < num_of_fixed_vertices; i++)
+        {
+            if (v_id == fixed_vertex_indices_lst[i])
+            {
+                // printf("need to fix vertex %d\n", v_id);
+                // add fixed!
+                tCudaVector3f target_pos = fixed_vertex_target_pos_lst[i];
+                // printf("vertex %d tar pos %.3f %.3f %.3f\n", v_id,
+                //    target_pos[0], target_pos[1], target_pos[2]);
+                tCudaVector3f cur_pos = vertex_pos_lst[v_id];
+                // printf("vertex %d cur pos %.3f %.3f %.3f\n", v_id,
+                // cur_pos[0],
+                //    cur_pos[1], cur_pos[2]);
+                // fint = K (p - x)
+                global_fint[v_id] += fixed_point_K * (target_pos - cur_pos);
+                // H = -K, add to ELL
+                int v_local_id = global_to_local(
+                    ELL_local_vertex_id_to_global_vertex_id[v_id], v_id);
+                global_K[v_id][v_local_id] +=
+                    -fixed_point_K * tCudaMatrix3f::Identity();
+            }
+        }
+    }
 }
 
 namespace BaraffClothGpu
@@ -330,19 +361,27 @@ void AssembleStretch_StiffnessMatrix_Fint(
     const cCudaArray<tCudaVector32i> &vertex_connected_triangle_lst,
     const cCudaArray<tCudaVector3i> &vertex_id_of_triangle_lst,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
-    cCuda2DArray<tCudaMatrix3f> &global_K,
     const cCudaArray<tCudaVector9f> &ele_fint,
+    const cCudaArray<int> &fixed_vertex_indices_lst,
+    const cCudaArray<tCudaVector3f> &fixed_vertex_target_pos_lst,
+    const cCudaArray<tCudaVector3f> &vertex_pos_lst,
+
+    cCuda2DArray<tCudaMatrix3f> &global_K,
     cCudaArray<tCudaVector3f> &global_fint)
 {
     int num_of_v = vertex_connected_triangle_lst.Size();
 
     // std::cout << "[debug] ele K size = " << ele_K_lst_per_triangle.Size()
-            //   << std::endl;
+    //   << std::endl;
     DispatchStretch_StiffnessMatrix_and_fint CUDA_at(num_of_v, 128)(
         num_of_v, ele_K_lst_per_triangle.Ptr(),
         vertex_connected_triangle_lst.Ptr(), vertex_id_of_triangle_lst.Ptr(),
-        ELL_local_vertex_id_to_global_vertex_id.Ptr(), global_K.Ptr(),
-        ele_fint.Ptr(), global_fint.Ptr());
+        ELL_local_vertex_id_to_global_vertex_id.Ptr(), ele_fint.Ptr(),
+        fixed_vertex_indices_lst.Size(), fixed_vertex_indices_lst.Ptr(),
+        fixed_vertex_target_pos_lst.Ptr(), vertex_pos_lst.Ptr(), global_K.Ptr(),
+        global_fint.Ptr());
+
+    CUDA_ERR("dispatch stretch stiffness matrix and fint");
 }
 
 void AssembleBendingStiffnessMatrix(
@@ -517,9 +556,9 @@ __global__ void AssembleSystemRHSKernel(
         else
         {
             // 2.1 get the value W + dt * dt * K
-            
+
             tCudaMatrix3f row_i = W[v_id][i] + dt * dt * K[v_id][i];
-            
+
             // if(row_i.hasNan() == true)
             // {
             //     printf("[error] row i has Nan!\n");
@@ -532,7 +571,7 @@ __global__ void AssembleSystemRHSKernel(
         }
     }
     sum *= dt;
-    
+
     RHS[v_id] += sum;
     // if (true == cCudaMath::IsNan(RHS[v_id]))
     // {
