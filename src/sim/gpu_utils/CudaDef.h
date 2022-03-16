@@ -42,12 +42,14 @@
     if (thread_index >= total)                                                 \
         return;
 
-#define CUDA_ERR(func)                                                               \
-    cudaDeviceSynchronize();                                                   \
-    cudaError_t err = cudaGetLastError();                                      \
-    if (err != cudaSuccess)                                                    \
+#define CUDA_ERR(func)                                                         \
     {                                                                          \
-        printf("CUDA_Error: func [%s][%d]: %s.\n",  func, __LINE__,                 \
-               cudaGetErrorString(err));                                       \
-        throw(err);                                                            \
+        cudaDeviceSynchronize();                                               \
+        cudaError_t err = cudaGetLastError();                                  \
+        if (err != cudaSuccess)                                                \
+        {                                                                      \
+            printf("CUDA_Error: func [%s][%d]: %s.\n", func, __LINE__,         \
+                   cudaGetErrorString(err));                                   \
+            throw(err);                                                        \
+        }                                                                      \
     }

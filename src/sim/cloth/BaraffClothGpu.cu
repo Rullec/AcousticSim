@@ -310,7 +310,7 @@ __global__ void DispatchStretch_StiffnessMatrix_and_fint(
 
     // 2. add fixed point stiffness (implicit spring)
     {
-        float fixed_point_K = 1e4;
+        float fixed_point_K = 1e1;
         for (int i = 0; i < num_of_fixed_vertices; i++)
         {
             if (v_id == fixed_vertex_indices_lst[i])
@@ -325,12 +325,12 @@ __global__ void DispatchStretch_StiffnessMatrix_and_fint(
                 // cur_pos[0],
                 //    cur_pos[1], cur_pos[2]);
                 // fint = K (p - x)
-                global_fint[v_id] += fixed_point_K * (target_pos - cur_pos);
+                // global_fint[v_id] += fixed_point_K * (target_pos - cur_pos);
                 // H = -K, add to ELL
                 int v_local_id = global_to_local(
                     ELL_local_vertex_id_to_global_vertex_id[v_id], v_id);
-                global_K[v_id][v_local_id] +=
-                    -fixed_point_K * tCudaMatrix3f::Identity();
+                global_K[v_id][v_local_id] += 1e12;
+                // -fixed_point_K * tCudaMatrix3f::Identity();
             }
         }
     }
@@ -460,7 +460,7 @@ void UpdateBendingIntForce(
  *  dt2K = dt * dt * K
  *  W = M - dt2K
  *  b = dt * dt * (mGravityForce + mUserForce + mIntForce)
- *      + dt * (W + dt2K) * V_cur
+ *      + dt * M * V_cur
  *  V_cur = (mXcur - mXpre) / dt
  */
 __global__ void AssembleSystemMatrixKernel(
@@ -474,6 +474,7 @@ __global__ void AssembleSystemMatrixKernel(
     if (v_id >= num_of_v)
         return;
 
+    float alpha = 0, beta = 0;
     // handle W.row(3 * v_id + [0, 3])
     tCudaVector32i ell_local_id_to_global_id =
         ELL_local_vertex_id_to_global_vertex_id[v_id];
@@ -485,13 +486,13 @@ __global__ void AssembleSystemMatrixKernel(
         else
         {
             // copy this column block (3x3)
-            W[v_id][i] = -dt * dt * K[v_id][i];
+            W[v_id][i] = (dt * beta - dt * dt) * K[v_id][i];
             // if this ELL columdn represents the same vertex as "v_is" tells
             // the mass matrix is row-diagnozation lumped, only its diagnoal is
             // nonzero.
             if (cur_column_global_id == v_id)
             {
-                tCudaVector3f m_diag = M[v_id];
+                tCudaVector3f m_diag = M[v_id] * (1 + dt * alpha);
                 W[v_id][i](0, 0) += m_diag[0];
                 W[v_id][i](1, 1) += m_diag[1];
                 W[v_id][i](2, 2) += m_diag[2];
@@ -524,8 +525,8 @@ __global__ void AssembleSystemRHSKernel(
     devPtr<const tCudaVector3f> mUserForce,
     devPtr<const tCudaVector3f> mIntForce,
     devPtr<const tCudaVector32i> ELL_local_vertex_id_to_global_vertex_id,
-    devPtr2<const tCudaMatrix3f> W, devPtr2<const tCudaMatrix3f> K,
-    devPtr<const tCudaVector3f> Vel, devPtr<tCudaVector3f> RHS)
+    devPtr<const tCudaVector3f> M, devPtr<const tCudaVector3f> Vel,
+    devPtr<tCudaVector3f> RHS)
 {
     CUDA_function;
     /*
@@ -549,28 +550,14 @@ __global__ void AssembleSystemRHSKernel(
     for (int i = 0; i < ell_local_id_to_global_id.size(); i++)
     {
         int cur_column_v_global_id = ell_local_id_to_global_id[i];
-        if (cur_column_v_global_id == -1)
+        if (cur_column_v_global_id == v_id)
         {
-            break;
-        }
-        else
-        {
-            // 2.1 get the value W + dt * dt * K
-
-            tCudaMatrix3f row_i = W[v_id][i] + dt * dt * K[v_id][i];
-
-            // if(row_i.hasNan() == true)
-            // {
-            //     printf("[error] row i has Nan!\n");
-            // }
-            // if(Vel[cur_column_v_global_id].hasNan() == true)
-            // {
-            //     printf("[error] Vel[cur_column_v_global_id] has Nan!\n");
-            // }
-            sum += row_i * Vel[cur_column_v_global_id];
+            sum = Vel[cur_column_v_global_id] * dt;
+            sum[0] *= M[v_id][0];
+            sum[1] *= M[v_id][1];
+            sum[2] *= M[v_id][2];
         }
     }
-    sum *= dt;
 
     RHS[v_id] += sum;
     // if (true == cCudaMath::IsNan(RHS[v_id]))
@@ -588,8 +575,8 @@ void AssembleSystemRHS(
     const cCudaArray<tCudaVector3f> &UserForce,
     const cCudaArray<tCudaVector3f> &IntForce,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
-    const cCuda2DArray<tCudaMatrix3f> &W, const cCuda2DArray<tCudaMatrix3f> &K,
-    const cCudaArray<tCudaVector3f> &cur_v, cCudaArray<tCudaVector3f> &RHS)
+    const cCudaArray<tCudaVector3f> &M, const cCudaArray<tCudaVector3f> &cur_v,
+    cCudaArray<tCudaVector3f> &RHS)
 {
 
     int num_of_v = Gravity.Size();
@@ -602,8 +589,8 @@ void AssembleSystemRHS(
     // std::cout << "RHS size = " << RHS.Size() << std::endl;
     AssembleSystemRHSKernel CUDA_at(num_of_v, 128)(
         num_of_v, dt, Gravity.Ptr(), UserForce.Ptr(), IntForce.Ptr(),
-        ELL_local_vertex_id_to_global_vertex_id.Ptr(), W.Ptr(), K.Ptr(),
-        cur_v.Ptr(), RHS.Ptr());
+        ELL_local_vertex_id_to_global_vertex_id.Ptr(), M.Ptr(), cur_v.Ptr(),
+        RHS.Ptr());
 
     CUDA_ERR("assemble system RHS");
     // printf("---begin to check RHS---\n");

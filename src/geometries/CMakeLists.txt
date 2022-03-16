@@ -9,4 +9,5 @@ add_library(
     CollisionInfo.cpp
     BezierCurve.cpp
     Tetrahedron.cpp
+    TriangulatorDelaunay.cpp
 )

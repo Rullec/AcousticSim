@@ -21,6 +21,9 @@ set(CLOTH_SRC
     cloth/BaraffClothGpu.cpp
     cloth/BaraffClothGpu.cu
     cloth/PCGSolver.cu
+    cloth/FRPCGSolver.cu
+    cloth/GDSolver.cu
+    cloth/JacobiSolver.cu
     gpu_utils/CudaMemory.cpp
     gpu_utils/CudaArray.cpp
     gpu_utils/CudaELLMatrix.cpp

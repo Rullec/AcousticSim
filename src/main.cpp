@@ -146,6 +146,14 @@ void SparseMatVecProd(const tSparseMatd &A, const tVectorXd &b, tVectorXd &res)
 
 int main(int argc, char **argv)
 {
+    cMathUtil::SeedRand(0);
+    // {
+    //     for (int i = 0; i < 10; i++)
+    //     {
+    //         std::cout << cMathUtil::RandDouble(0, 1) << std::endl;
+    //     }
+    //     exit(1);
+    // }
     Eigen::setNbThreads(15);
     // {
     //     int dims = 30000;

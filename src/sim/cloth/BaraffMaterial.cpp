@@ -120,7 +120,7 @@ void cBaraffMaterial::Update(bool calc_energy /*= true*/,
     auto &tri_lst = mObject->GetTriangleArray();
     auto &v_lst = mObject->GetVertexArray();
 
-#pragma omp parallel for num_threads(15)
+    // #pragma omp parallel for num_threads(15)
     for (int i = 0; i < mNumOfTriangles; i++)
     {
         tMatrix3d X;
@@ -133,12 +133,15 @@ void cBaraffMaterial::Update(bool calc_energy /*= true*/,
         mnLst[i].noalias() = F.colwise().normalized();
         mCLst[i].noalias() =
             tVector2d(F.col(0).norm() - 1, F.col(1).norm() - 1);
+
         mFLst[i].noalias() = F;
 
         const tMatrix32d &Fprime = X * mNprimeLst[i];
         mnprimeLst[i].noalias() = Fprime.colwise().normalized();
         mCprimeLst[i].noalias() =
             tVector2d(Fprime.col(0).norm() - 1, Fprime.col(1).norm() - 1);
+        // std::cout << "tri " << i << " stretch C = " << mCLst[i].transpose()
+        //           << " C' = " << mCprimeLst[i].transpose() << std::endl;
         mFprimeLst[i].noalias() = Fprime;
 
         mgLst[i].noalias() = cBaraffMaterial::Calcg(mNLst[i], mnLst[i]);
@@ -169,6 +172,8 @@ void cBaraffMaterial::Update(bool calc_energy /*= true*/,
                                        mCprimeLst[i][1] * mgprimeLst[i].col(1));
 
             mIntForceLst[i].noalias() = fstretch + fshear;
+            // std::cout << "tri " << i << " f cwiseabs max= "
+            //           << mIntForceLst[i].cwiseAbs().maxCoeff() << std::endl;
             // std::cout << "[] triangle " << i << " force = " << (fstretch +
             // fshear).transpose() << std::endl; std::cout << "C = " <<
             // mCLst[i].transpose() << std::endl; std::cout << "g = \n" <<
@@ -699,6 +704,7 @@ tVectorXd cBaraffMaterial::CalcTotalForce() const
         total_force.segment(3 * t->mId1, 3) += ele_f.segment(3, 3);
         total_force.segment(3 * t->mId2, 3) += ele_f.segment(6, 3);
     }
+    // std::cout << "[mat] stretch total force max = " << total_force.cwiseAbs().maxCoeff() << std::endl;
     return total_force;
 }
 #include "utils/DefUtil.h"

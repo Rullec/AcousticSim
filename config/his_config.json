@@ -4,8 +4,8 @@
         {
             "object_name": "a_cloth",
             "object_type": "Cloth",
-            "cloth_type": "fem_gpu",
-            "geometry_type": "regular_triangle",
+            "cloth_type": "fem",
+            "geometry_type": "delaunay",
             "damping": 1e-5,
             "default_timestep": 1e-2,
             "cloth_size": [
@@ -13,8 +13,8 @@
                 0.3
             ],
             "subdivision": [
-                100,
-                100
+                4,
+                4
             ],
             "cloth_stretch_stiffness": [
                 1e-4,
@@ -22,9 +22,9 @@
                 1e-4
             ],
             "cloth_bending_stiffness": [
-                1e-5,
-                1e-5,
-                1e-5
+                1,
+                1,
+                1
             ],
             "rayleigh_damping_a": 0,
             "rayleigh_damping_b": 0,
@@ -61,7 +61,7 @@
     "window_width": 1000,
     "enable_draw": true,
     "enable_only_exporting_cutted_window": true,
-    "pause_at_first": false,
+    "pause_at_first": true,
     "ground_png_path": "data/grid0.png",
     "enable_camera_auto_rot": false,
     "camera": {

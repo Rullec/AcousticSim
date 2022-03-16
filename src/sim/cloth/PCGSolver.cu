@@ -193,6 +193,8 @@ __global__ void Calc_dTAd_zi(
  *      1. r_{i+1} = r_i - alpha * z_i
  *
  *      2. r_{i+1} Minv * r_{i+1}
+ *
+ *      3. x_{next} = x_i + alpha * di
  */
 __global__ void Calc_rnext_rnextMinvrnext_xnext(
     int num_of_v, devPtr<const float> riMinvri, devPtr<const float> diAdi,
@@ -254,7 +256,7 @@ void Solve(
     // ! try to group work together
     cCudaArray<float> pcg_dTAd;
 
-    int max_iters = 300;
+    int max_iters = 50;
     pcg_dTAd.Resize(1);
     pcg_dTAd.MemsetAsync(0);
 
@@ -265,10 +267,10 @@ void Solve(
 
     int num_of_v = ELL_local_vertex_id_to_global_vertex_id.Size();
 
-    std::vector<tCudaVector3f> x_cpu(x.Size());
+    // std::vector<tCudaVector3f> x_cpu(x.Size());
     std::vector<tCudaVector3f> r_cpu(x.Size());
-    std::vector<tCudaVector3f> z_cpu(x.Size());
-    std::vector<tCudaVector3f> d_cpu(x.Size());
+    // std::vector<tCudaVector3f> z_cpu(x.Size());
+    // std::vector<tCudaVector3f> d_cpu(x.Size());
     /*
         1. calculate r0, d0
 
@@ -353,7 +355,7 @@ void Solve(
             {
                 init_residual = max_r;
             }
-            if (max_r < init_residual * 1e-1)
+            if (max_r < init_residual * 1e-1 && max_r < 1e-8)
             {
                 printf("[break] cur iter %d max residual %.1e, break\n",
                        cur_iter, max_r);

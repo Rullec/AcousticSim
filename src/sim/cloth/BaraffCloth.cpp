@@ -83,6 +83,7 @@ void cBaraffCloth::UpdatePos(double dt)
     cTimeUtil::Begin("update material");
     {
         mMaterial->Update(true, true, true);
+        // exit(1);
     }
 
     gProfRec.push_back(
@@ -213,6 +214,7 @@ void cBaraffCloth::CalcIntForce(const tVectorXd &xcur,
 {
     int_force =
         mMaterial->CalcTotalForce() + mBendingMaterial->CalcForce(mXcur);
+    // std::cout << "fint cwiseabs max = " << int_force.cwiseAbs().maxCoeff() << std::endl;
     // auto get_pos_mat = [](const tVectorXd &xcur,
     //                       int id0, int id1, int id2) -> tMatrix3d
     // {
@@ -409,6 +411,7 @@ void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
  *  let b = dt * Minv (fext + fint + (dt - damping_b) * K * vt) - damping_a * vt
  *  we will have A delta_v = b
  */
+#include <Eigen/SparseCholesky>
 void cBaraffCloth::SolveForNextPos(double dt)
 {
     int dof = GetNumOfFreedom();
@@ -425,11 +428,29 @@ void cBaraffCloth::SolveForNextPos(double dt)
     // mStiffnessMatrix.cols() << std::endl;
     tSparseMatd W = M - dt * dt * mStiffnessMatrix;
     tVectorXd b = dt * dt * (mGravityForce + mUserForce + mIntForce) +
-                  dt * (W + dt * dt * mStiffnessMatrix) * (mXcur - mXpre) / dt;
+                  dt * M * (mXcur - mXpre) / dt;
     tVectorXd dx = mXcur - mXpre;
     float threshold = 1e-12, residual = 0;
     int iters = 0;
-    Solve(W, b, dx, threshold, iters, residual);
+    // Solve(W, b, dx, threshold, iters, residual);
+    {
+        Eigen::SparseLU<tSparseMatd> solver;
+        solver.compute(W);
+        if (solver.info() != Eigen::Success)
+        {
+            printf("[error] compute failed\n");
+            exit(1);
+        }
+        dx = solver.solve(b);
+        if (solver.info() != Eigen::Success)
+        {
+            printf("[error] solve failed\n");
+            exit(1);
+        }
+        // std::cout << "dx = " << dx.transpose() << std::endl;
+        // tVectorXd residual = W * dx - b;
+        // std::cout << "residual norm = " << residual.norm() << std::endl;
+    }
 
     mXpre = mXcur;
     mXcur = mXcur + dx;
@@ -613,7 +634,7 @@ void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
     tVectorXd Adi;
     tVectorXd rnext;
     tVectorXd PInvr, PInvrnext;
-    while (r.norm() > 1e-4 && iters < max_iters)
+    while (iters < max_iters)
     {
         Adi.noalias() = A * d;
         PInvr.noalias() = PInv.cwiseProduct(r);

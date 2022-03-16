@@ -75,6 +75,12 @@ void cTriangulator::BuildGeometry(const Json::Value &config,
             cloth_shape, subdivision, vertices_array, edges_array,
             triangles_array, true);
     }
+    else if (geo_type == "delaunay")
+    {
+        cTriangulator::DelaunayTriangulation(
+            cloth_shape[1], cloth_shape[0], subdivision[0] * subdivision[1],
+            vertices_array, edges_array, triangles_array);
+    }
     else
     {
         SIM_ERROR("unsupported geo type {}", geo_type);
@@ -193,10 +199,10 @@ void cTriangulator::BuildGeometry_UniformTriangle(
             edges_array[skew_edge_id] = skew_edge;
             if (is_even)
             {
-                auto tri1 =
-                    std::make_shared<tTriangle>(left_up_vid, left_down_vid, right_down_vid);
-                auto tri2 =
-                    std::make_shared<tTriangle>(left_up_vid, right_down_vid, right_up_vid);
+                auto tri1 = std::make_shared<tTriangle>(
+                    left_up_vid, left_down_vid, right_down_vid);
+                auto tri2 = std::make_shared<tTriangle>(
+                    left_up_vid, right_down_vid, right_up_vid);
 
                 triangles_array.push_back(tri1);
                 triangles_array.push_back(tri2);
@@ -215,10 +221,10 @@ void cTriangulator::BuildGeometry_UniformTriangle(
                 ---------
                 */
                 // for odd number, from upright to downleft
-                auto tri1 =
-                    std::make_shared<tTriangle>(left_up_vid, left_down_vid, right_up_vid);
-                auto tri2 =
-                    std::make_shared<tTriangle>(left_down_vid, right_down_vid, right_up_vid);
+                auto tri1 = std::make_shared<tTriangle>(
+                    left_up_vid, left_down_vid, right_up_vid);
+                auto tri2 = std::make_shared<tTriangle>(
+                    left_down_vid, right_down_vid, right_up_vid);
                 triangles_array.push_back(tri1);
                 triangles_array.push_back(tri2);
                 skew_edge->mId0 = right_up_vid;
@@ -681,9 +687,9 @@ void cTriangulator::BuildEdgesTriangleId(
         }
     }
 }
-void cTriangulator::RotateMaterialCoords(float cur_uv_rot_deg,
-                                         float tar_uv_rot_deg,
-                                         std::vector<tVertexPtr> &vertices_array)
+void cTriangulator::RotateMaterialCoords(
+    float cur_uv_rot_deg, float tar_uv_rot_deg,
+    std::vector<tVertexPtr> &vertices_array)
 {
     // std::cout << "---------------------\n";
     tMatrix2f convert_mat =

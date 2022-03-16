@@ -31,6 +31,14 @@ public:
 
     static void RotateMaterialCoords(float cur_uv_rot_deg, float tar_uv_rot_deg,
                                      std::vector<tVertexPtr> &vertices_array);
+    static void DelaunayTriangulation(float cloth_width, float cloth_height,
+                                      int target_num_of_vertices,
+                                      std::vector<tVertexPtr> &v_array,
+                                      std::vector<tEdgePtr> &e_array,
+                                      std::vector<tTrianglePtr> &tri_array);
+    //   std::vector<tVertexPtr> vertex_array,
+    //   std::vector<tEdgePtr> edge_array,
+    //   std::vector<tTrianglePtr> tri_array);
 
 protected:
     // static void
@@ -38,13 +46,15 @@ protected:
     //                             const tVector2i &subdivision,
     //                             std::vector<tVertexPtr > &vertices_array,
     //                             std::vector<tEdge *> &edges_array,
-    //                             std::vector<tTriangle *> &triangles_array);
+    //                             std::vector<tTriangle *>
+    //                             &triangles_array);
     // static void
     // BuildGeometry_SkewTriangle(const tVector2d &mesh_shape,
     //                            const tVector2i &subdivision,
     //                            std::vector<tVertexPtr > &vertices_array,
     //                            std::vector<tEdge *> &edges_array,
-    //                            std::vector<tTriangle *> &triangles_array);
+    //                            std::vector<tTriangle *>
+    //                            &triangles_array);
     static void BuildGeometry_UniformTriangle(
         const tVector2d &mesh_shape, const tVector2i &subdivision,
         std::vector<tVertexPtr> &vertices_array,
@@ -56,9 +66,13 @@ protected:
                                   std::vector<tVertexPtr> &edges_array,
                                   bool add_vertices_perturb);
 
-    static void BuildEdgesTriangleId(std::vector<tEdgePtr> &edges_array,
-                                     std::vector<tTrianglePtr> &triangles_array);
+    static void
+    BuildEdgesTriangleId(std::vector<tEdgePtr> &edges_array,
+                         std::vector<tTrianglePtr> &triangles_array);
     inline static const std::string NUM_OF_VERTICES_KEY = "num_of_vertices",
                                     EDGE_ARRAY_KEY = "edge_array",
                                     TRIANGLE_ARRAY_KEY = "triangle_array";
+    static tEigenArr<tVector2f> BuildRectangleBoundary(float cloth_width,
+                                                       float cloth_height,
+                                                       int num_of_vertices);
 };

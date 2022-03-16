@@ -35,6 +35,17 @@ FetchFromGPU(const cCudaArray<tCudaMatrix<float, N, M>> &cuda_array)
 //     // jisuan
 // }
 
+namespace FRPCGSolver
+{
+extern void
+Solve(const cCudaArray<tCudaMatrix3f> &Winv_preconditioner,
+      const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+      const cCuda2DArray<tCudaMatrix3f> &A, const cCudaArray<tCudaVector3f> &b,
+      cCudaArray<tCudaVector3f> &x, cCudaArray<float> &debugEnergy,
+      cCudaArray<float> &pap, cCudaArray<float> &rdotZ,
+      cCudaArray<tCudaVector3f> &p, cCudaArray<tCudaVector3f> &Ap,
+      cCudaArray<tCudaVector3f> &residual, cCudaArray<tCudaVector3f> &z);
+};
 namespace PCGSolver
 {
 extern void TestAtomicAdd(const cCudaArray<float> &data_array,
@@ -69,7 +80,7 @@ cBaraffClothGPU::cBaraffClothGPU(int id_)
     mDragPointVertexId = -1;
     mDragPointTargetPos.setZero();
 }
-
+#include "geometries/Triangulator.h"
 void cBaraffClothGPU::Init(const Json::Value &conf)
 {
     cTimeUtil::Begin("init");
@@ -505,11 +516,11 @@ void cBaraffClothGPU::UpdateFixedPt()
     std::vector<int> fixed_vertex_indices_cpu = mFixedVertexIndicesCPU;
     std::vector<tCudaVector3f> fixed_vertex_target_pos_cpu =
         mFixedVertexTargetPosCPU;
-    if (mDragPointVertexId != -1)
-    {
-        fixed_vertex_indices_cpu.push_back(mDragPointVertexId);
-        fixed_vertex_target_pos_cpu.push_back(mDragPointTargetPos);
-    }
+    // if (mDragPointVertexId != -1)
+    // {
+    //     fixed_vertex_indices_cpu.push_back(mDragPointVertexId);
+    //     fixed_vertex_target_pos_cpu.push_back(mDragPointTargetPos);
+    // }
 
     for (int i = 0; i < fixed_vertex_indices_cpu.size(); i++)
     {
@@ -635,8 +646,8 @@ extern void AssembleSystemRHS(
     const cCudaArray<tCudaVector3f> &UserForce,
     const cCudaArray<tCudaVector3f> &IntForce,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
-    const cCuda2DArray<tCudaMatrix3f> &W, const cCuda2DArray<tCudaMatrix3f> &K,
-    const cCudaArray<tCudaVector3f> &cur_v, cCudaArray<tCudaVector3f> &RHS);
+    const cCudaArray<tCudaVector3f> &M, const cCudaArray<tCudaVector3f> &cur_v,
+    cCudaArray<tCudaVector3f> &RHS);
 
 } // namespace BaraffClothGpu
 void cBaraffClothGPU::UpdateGpuData()
@@ -1261,12 +1272,31 @@ void cBaraffClothGPU::UpdateLinearSystem(float dt)
     // &cur_v, cCudaArray<tCudaVector3f> &RHS);
     BaraffClothGpu::AssembleSystemRHS(
         dt, this->mGravityCuda, this->mUserForceCuda, this->mIntForceCuda,
-        this->mELLLocalVidToGlobalVid, this->mSystemMatrixCuda,
-        this->mGlobalStiffnessMatrix, this->mVelCuda, this->mSystemRHSCuda);
+        this->mELLLocalVidToGlobalVid, this->mMassMatrixDiagCuda,
+        this->mVelCuda, this->mSystemRHSCuda);
 }
-
+// namespace GDSolver
+// {
+// extern void
+// Solve(const cCudaArray<tCudaVector32i>
+// &ELL_local_vertex_id_to_global_vertex_id,
+//       const cCuda2DArray<tCudaMatrix3f> &A, const cCudaArray<tCudaVector3f>
+//       &b, cCudaArray<tCudaVector3f> &x, cCudaArray<tCudaVector3f> &r_buf);
+// }
+namespace JacobSolver
+{
+extern void
+Solve(const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+      const cCuda2DArray<tCudaMatrix3f> &A, const cCudaArray<tCudaVector3f> &b,
+      cCudaArray<tCudaVector3f> &x, cCudaArray<tCudaVector3f> &r_buf);
+}
 void cBaraffClothGPU::SolveLinearSystem()
 {
+    // JacobSolver::Solve(mELLLocalVidToGlobalVid, mSystemMatrixCuda,
+    //                    mSystemRHSCuda, mSolutionCuda, mPCGResidualCuda);
+    // GDSolver::Solve(mELLLocalVidToGlobalVid, mSystemMatrixCuda,
+    // mSystemRHSCuda,
+    //                 mSolutionCuda, mPCGResidualCuda);
     // 1. create the preconditioner
     PCGSolver::CalcBlockJacobiPreconditioner(
         mELLLocalVidToGlobalVid, mSystemMatrixCuda, mPreconditionerCuda);
@@ -1276,6 +1306,17 @@ void cBaraffClothGPU::SolveLinearSystem()
                      mSystemMatrixCuda, mSystemRHSCuda, this->mPCGResidualCuda,
                      this->mPCGDirectionCuda, this->mPCGzCuda,
                      this->mPCG_rMinvr_arrayCuda, this->mSolutionCuda);
+    // {
+    // cCudaArray<float> debugEnergy, pap, rdotz;
+    // cCudaArray<tCudaVector3f> Ap;
+    // Ap.Resize(GetNumOfVertices());
+
+    // FRPCGSolver::Solve(mPreconditionerCuda, mELLLocalVidToGlobalVid,
+    //                    mSystemMatrixCuda, mSystemRHSCuda, mSolutionCuda,
+    //                    debugEnergy, pap, rdotz, this->mPCGzCuda, Ap,
+    //                    this->mPCGResidualCuda, this->mPCGDirectionCuda);
+    // }
+
     // 3. copy back result, verification
     // tMatrixXf W_cpu = this->FromELLMatrixToEigenMatrix(mSystemMatrixCuda);
     // tVectorXf b_cpu = FromCudaVectorToEigenVector(this->mSystemRHSCuda);
@@ -1302,6 +1343,8 @@ void cBaraffClothGPU::PostSolve()
     {
         mXpreCpu[i] = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
             tVector3f(mXpre.segment(3 * i, 3).cast<float>()));
+        mXcurCpu[i] = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
+            tVector3f(mXcur.segment(3 * i, 3).cast<float>()));
     }
     mXpreCuda.Upload(mXpreCpu);
 
@@ -1340,6 +1383,26 @@ void cBaraffClothGPU::UpdateCollisionForceAndUserForce()
 
     mUserForceCuda.MemsetAsync(tCudaVector3f::Zero());
     mCollisionForce.MemsetAsync(tCudaVector3f::Zero());
+
+    // begin to add user for
+    if (this->mDragPointVertexId != -1)
+    {
+        this->mUserForceCpu.resize(num_of_v);
+        for (int i = 0; i < num_of_v; i++)
+            mUserForceCpu[i].setZero();
+        float k = 1;
+        mUserForceCpu[mDragPointVertexId] +=
+            k * (mDragPointTargetPos - mXcurCpu[mDragPointVertexId]);
+
+        std::cout << "[fixed] add force = "
+                  << mUserForceCpu[mDragPointVertexId].transpose()
+                  << " tar pos = " << mDragPointTargetPos.transpose()
+                  << " cur pos = " << mXcurCpu[mDragPointVertexId].transpose()
+                  << " cur new = "
+                  << mXcur.segment(3 * mDragPointVertexId, 3).transpose()
+                  << std::endl;
+        mUserForceCuda.Upload(mUserForceCpu);
+    }
 }
 
 void cBaraffClothGPU::VerifyLinearSystem(float dt)

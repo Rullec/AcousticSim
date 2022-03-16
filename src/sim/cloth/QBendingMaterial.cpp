@@ -6,34 +6,31 @@
 // #include <stdlib.h>
 // #include <crtdbg.h>
 
+// AB and AC
+double CalcCotangent(const tVector3d &A, const tVector3d &B, const tVector3d &C)
+{
+    const tVector3d AB = B - A;
+    const tVector3d AC = C - A;
+    float ABAC = AB.dot(AC);
+    float ABAB = AB.dot(AB);
+    float ACAC = AC.dot(AC);
+    return ABAC / std::sqrt(ABAB * ACAC - ABAC * ABAC);
+}
 tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1,
                            const tVector3d &x2, const tVector3d &x3)
 {
-    // std::cout << "begin to calc cotangent coef\n";
-    tVector3d e0 = x0 - x1;
-    tVector3d e1 = x0 - x2;
-    tVector3d e2 = x0 - x3;
-    tVector3d e3 = x1 - x2;
-    tVector3d e4 = x1 - x3;
-    // std::cout << "e0 = " << e0.transpose() << std::endl;
-    // std::cout << "e1 = " << e1.transpose() << std::endl;
-    // std::cout << "e2 = " << e2.transpose() << std::endl;
-    // std::cout << "e3 = " << e3.transpose() << std::endl;
-    // std::cout << "e4 = " << e4.transpose() << std::endl;
+    double c01 = CalcCotangent(x0, x1, x2);
+    double c02 = CalcCotangent(x0, x1, x3);
+    double c03 = CalcCotangent(x1, x0, x2);
+    double c04 = CalcCotangent(x1, x0, x3);
 
-    double e0_norm = e0.norm();
-    double e1_norm = e1.norm();
-    double e2_norm = e2.norm();
-    double e3_norm = e3.norm();
-    double e4_norm = e4.norm();
+    // clamp cotangent value to 1 degree, otherwise the value will be very big
+    float threshold = 1.0 / std::sin(1.0 / 180 * M_PI);
+    cMathUtil::Clamp(c01, -threshold, threshold);
+    cMathUtil::Clamp(c02, -threshold, threshold);
+    cMathUtil::Clamp(c03, -threshold, threshold);
+    cMathUtil::Clamp(c04, -threshold, threshold);
 
-    double t01 = std::acos(std::fabs(e0.dot(e1)) / (e0_norm * e1_norm));
-    double t02 = std::acos(std::fabs(e0.dot(e2)) / (e0_norm * e2_norm));
-    double t03 = std::acos(std::fabs(e0.dot(e3)) / (e0_norm * e3_norm));
-    double t04 = std::acos(std::fabs(e0.dot(e4)) / (e0_norm * e4_norm));
-
-    const double c01 = 1.0 / std::tan(t01), c02 = 1.0 / std::tan(t02),
-                 c03 = 1.0 / std::tan(t03), c04 = 1.0 / std::tan(t04);
     tVector res = tVector(c03 + c04, c01 + c02, -c01 - c03, -c02 - c04);
     if (res.hasNaN() == true)
     {
@@ -231,7 +228,10 @@ double cQBendingMaterial::CalcEnergy(const tVectorXd &xcur)
 }
 tVectorXd cQBendingMaterial::CalcForce(const tVectorXd &xcur)
 {
-    return -mStiffnessMat * xcur;
+    tVectorXd total_force = -mStiffnessMat * xcur;
+    // std::cout << "[mat] bending total force max = "
+    //           << total_force.cwiseAbs().maxCoeff() << std::endl;
+    return total_force;
 }
 tSparseMatd cQBendingMaterial::GetStiffnessMatrix() const
 {
