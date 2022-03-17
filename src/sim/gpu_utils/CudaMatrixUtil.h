@@ -1,3 +1,4 @@
+#include "CudaArray.h"
 #include "CudaMatrix.h"
 #include "utils/EigenUtil.h"
 
@@ -29,4 +30,17 @@ EigenMatrixToCudaMatrix(const Eigen::Matrix<dtype, N, M> &eigen_mat)
     return mat;
 };
 
+tVectorXd CudaVectorArrayToEigenVector(const cCudaArray<tCudaVector3f> &cuda)
+{
+    std::vector<tCudaVector3f> cpu;
+    cuda.Download(cpu);
+    tVectorXd eigen = tVectorXd::Zero(3 * cpu.size());
+    for (int i = 0; i < cpu.size(); i++)
+    {
+        eigen[3 * i + 0] = cpu[i][0];
+        eigen[3 * i + 1] = cpu[i][1];
+        eigen[3 * i + 2] = cpu[i][2];
+    }
+    return eigen;
+};
 }; // namespace cCudaMatrixUtil

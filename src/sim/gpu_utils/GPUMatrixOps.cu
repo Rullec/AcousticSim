@@ -60,8 +60,8 @@ void ELLMatrixAdd(const cCuda2DArray<tCudaMatrix3f> &mat0,
 }
 
 void VectorAdd(const cCudaArray<tCudaVector3f> &vec0,
-                  const cCudaArray<tCudaVector3f> &vec1,
-                  cCudaArray<tCudaVector3f> &vec2)
+               const cCudaArray<tCudaVector3f> &vec1,
+               cCudaArray<tCudaVector3f> &vec2)
 {
     if (vec0.Size() != vec1.Size() || vec0.Size() != vec2.Size())
     {

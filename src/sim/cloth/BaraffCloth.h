@@ -37,7 +37,8 @@ protected:
     float mRayleightA, mRayleightB;
     tVector3f mStretchK, mBendingK; // warp weft bias
     cQBendingMaterialPtr mBendingMaterial;
-
+    float mRayleighA, mRayleighB; // rayleigh damping
+    int mDragVertexIdx;
     // virtual void InitBuffer();
     virtual void InitMass(const Json::Value &conf) override;
     virtual void InitMaterialCoords();
@@ -51,6 +52,7 @@ protected:
     virtual void SolveForNextPos(double dt);
     virtual void CheckForce();
     virtual double CalcEnergy(const tVectorXd &xcur);
-    virtual void Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x, float threshold, int &iters, float &residual);
+    virtual void Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
+                       float threshold, int &iters, float &residual, int fix_vertex = -1);
     // virtual void CheckStiffnessMatrix();
 };

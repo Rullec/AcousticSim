@@ -16,6 +16,7 @@ set(CLOTH_SRC
     cloth/BaseCloth.cpp
     cloth/ClothBuilder.cpp
     cloth/BaraffCloth.cpp
+    cloth/BaraffMaterialUnstable.cpp
     cloth/BaraffMaterial.cpp
     cloth/QBendingMaterial.cpp
     cloth/BaraffClothGpu.cpp

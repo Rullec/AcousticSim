@@ -1,4 +1,4 @@
-#include "BaraffMaterial.h"
+#include "BaraffMaterialUnstable.h"
 #include <iostream>
 cBaraffMaterial::cBaraffMaterial()
 {

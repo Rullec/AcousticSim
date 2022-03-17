@@ -210,6 +210,12 @@ __global__ void Calc_rnext_rnextMinvrnext_xnext(
     }
 
     float alpha = riMinvri[0] / diAdi[0];
+
+    if (diAdi[0] == 0.0f)
+    {
+        printf("alpha is clamped to zero\n");
+        alpha = 0;
+    }
     r[v_id] -= alpha * zi[v_id];
 
     cCudaIntrinsic::AtomicAdd((float *)(rnextMinvrnext),
@@ -232,9 +238,45 @@ __global__ void UpdateDirection(int num_of_v,
     }
 
     float beta = rnextMinvrnext[0] / rcurMinvrcur[0];
+    if (rcurMinvrcur[0] == 0.0f)
+    {
+        printf("[warn] beta is clamped to zero\n");
+        beta = 0;
+    }
     d[v_id] = Minv[v_id] * rnext[v_id] + beta * d[v_id];
 }
 
+__global__ void ComputeResidual(
+    int num_of_v,
+    devPtr<const tCudaVector32i> ELL_local_vertex_id_to_global_vertex_id,
+    devPtr2<const tCudaMatrix3f> A, devPtr<const tCudaVector3f> b,
+    devPtr<const tCudaVector3f> x0, devPtr<tCudaVector3f> r0)
+{
+    CUDA_function;
+    int v_id = threadIdx.x + blockIdx.x * blockDim.x;
+    if (v_id >= num_of_v)
+    {
+        return;
+    }
+
+    // 1. calculate r0[v_id]
+
+    const tCudaVector32i &ELL_local_to_global_id =
+        ELL_local_vertex_id_to_global_vertex_id[v_id];
+    tCudaVector3f r0_entry = tCudaVector3f::Zero();
+    for (int i = 0; i < ELL_local_to_global_id.size(); i++)
+    {
+        int cur_column_v_global_id = ELL_local_to_global_id[i];
+        if (cur_column_v_global_id == -1)
+        {
+            break;
+        }
+
+        r0_entry += A[v_id][i] * x0[cur_column_v_global_id];
+    }
+    r0_entry = b[v_id] - r0_entry;
+    r0[v_id] = r0_entry;
+}
 namespace PCGSolver
 {
 void TestAtomicAdd(const cCudaArray<float> &data_array, cCudaArray<float> &sum)
@@ -256,7 +298,7 @@ void Solve(
     // ! try to group work together
     cCudaArray<float> pcg_dTAd;
 
-    int max_iters = 50;
+    int max_iters = 100;
     pcg_dTAd.Resize(1);
     pcg_dTAd.MemsetAsync(0);
 
@@ -341,37 +383,42 @@ void Solve(
             pcg_rMinvr_array.Ptr() + cur_iter, Winv_preconditioner.Ptr(),
             pcg_rbuf.Ptr(), pcg_dbuf.Ptr());
 
+        // calculate accurate residual
+        ComputeResidual CUDA_at(num_of_v, 128)(
+            num_of_v, ELL_local_vertex_id_to_global_vertex_id.Ptr(), W.Ptr(),
+            b.Ptr(), x.Ptr(), pcg_rbuf.Ptr());
         // x.Download(x_cpu);
-        if (cur_iter % 50 == 0 || cur_iter == max_iters - 1)
+        if (cur_iter % 10 == 0 || cur_iter == max_iters - 1)
         {
             pcg_rbuf.Download(r_cpu);
             // printf("---------------iter %d-------------\n", cur_iter);
-            float max_r = -1;
+            float residual_l2norm = 0;
             for (int i = 0; i < x.Size(); i++)
             {
-                max_r = std::max(r_cpu[i].cwiseAbs().maxCoeff(), max_r);
+                residual_l2norm += r_cpu[i].norm() * r_cpu[i].norm();
             }
+            residual_l2norm = std::sqrt(residual_l2norm);
             if (cur_iter == 0)
             {
-                init_residual = max_r;
+                init_residual = residual_l2norm;
             }
-            if (max_r < init_residual * 1e-1 && max_r < 1e-8)
-            {
-                printf("[break] cur iter %d max residual %.1e, break\n",
-                       cur_iter, max_r);
-                break;
-            }
+            // if (max_r < init_residual * 1e-3 || max_r < 1e-10)
+            // {
+            //     printf("[break] cur iter %d max residual %.1e, break\n",
+            //            cur_iter, max_r);
+            //     break;
+            // }
+            // else
+            // {
+            if (cur_iter != max_iters - 1)
+                printf("[log] cur iter %d  residual %.1e\n", cur_iter,
+                       residual_l2norm);
             else
             {
-                if (cur_iter != max_iters - 1)
-                    printf("[log] cur iter %d max residual %.1e\n", cur_iter,
-                           max_r);
-                else
-                {
-                    printf("[exceed] exceed max iter %d, max residual %.1e\n",
-                           max_iters, max_r);
-                }
+                printf("[exceed] exceed max iter %d, residual %.1e\n",
+                       max_iters, residual_l2norm);
             }
+            // }
         }
         // break;
     }

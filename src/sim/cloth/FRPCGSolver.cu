@@ -5,37 +5,37 @@
 #include "sim/gpu_utils/CudaIntrinsic.h"
 #include "sim/gpu_utils/CudaMatrix.h"
 
-__global__ void ComputeResidual(
+extern __global__ void ComputeResidual(
     int num_of_v,
     devPtr<const tCudaVector32i> ELL_local_vertex_id_to_global_vertex_id,
     devPtr2<const tCudaMatrix3f> A, devPtr<const tCudaVector3f> b,
-    devPtr<const tCudaVector3f> x0, devPtr<tCudaVector3f> r0)
-{
-    CUDA_function;
-    int v_id = threadIdx.x + blockIdx.x * blockDim.x;
-    if (v_id >= num_of_v)
-    {
-        return;
-    }
+    devPtr<const tCudaVector3f> x0, devPtr<tCudaVector3f> r0);
+// {
+//     CUDA_function;
+//     int v_id = threadIdx.x + blockIdx.x * blockDim.x;
+//     if (v_id >= num_of_v)
+//     {
+//         return;
+//     }
 
-    // 1. calculate r0[v_id]
+//     // 1. calculate r0[v_id]
 
-    const tCudaVector32i &ELL_local_to_global_id =
-        ELL_local_vertex_id_to_global_vertex_id[v_id];
-    tCudaVector3f r0_entry = tCudaVector3f::Zero();
-    for (int i = 0; i < ELL_local_to_global_id.size(); i++)
-    {
-        int cur_column_v_global_id = ELL_local_to_global_id[i];
-        if (cur_column_v_global_id == -1)
-        {
-            break;
-        }
+//     const tCudaVector32i &ELL_local_to_global_id =
+//         ELL_local_vertex_id_to_global_vertex_id[v_id];
+//     tCudaVector3f r0_entry = tCudaVector3f::Zero();
+//     for (int i = 0; i < ELL_local_to_global_id.size(); i++)
+//     {
+//         int cur_column_v_global_id = ELL_local_to_global_id[i];
+//         if (cur_column_v_global_id == -1)
+//         {
+//             break;
+//         }
 
-        r0_entry += A[v_id][i] * x0[cur_column_v_global_id];
-    }
-    r0_entry = b[v_id] - r0_entry;
-    r0[v_id] = r0_entry;
-}
+//         r0_entry += A[v_id][i] * x0[cur_column_v_global_id];
+//     }
+//     r0_entry = b[v_id] - r0_entry;
+//     r0[v_id] = r0_entry;
+// }
 
 __global__ void ApplyPreconditioner(int num_of_v,
                                     devPtr<const tCudaMatrix3f> Minv,

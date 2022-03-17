@@ -121,7 +121,6 @@ void ParseArg(int argc, char *argv[], std::string &config_path)
     SIM_INFO("conf path {}", config_path);
 }
 
-#include "sim/cloth/BaraffMaterial.h"
 #include "sim/cloth/QBendingMaterial.h"
 
 void SparseMatVecProd(const tSparseMatd &A, const tVectorXd &b, tVectorXd &res)
@@ -147,42 +146,7 @@ void SparseMatVecProd(const tSparseMatd &A, const tVectorXd &b, tVectorXd &res)
 int main(int argc, char **argv)
 {
     cMathUtil::SeedRand(0);
-    // {
-    //     for (int i = 0; i < 10; i++)
-    //     {
-    //         std::cout << cMathUtil::RandDouble(0, 1) << std::endl;
-    //     }
-    //     exit(1);
-    // }
     Eigen::setNbThreads(15);
-    // {
-    //     int dims = 30000;
-    //     tSparseMatd mat(dims, dims);
-    //     std::vector<tTriplet> trip;
-    //     trip.reserve(dims * dims);
-    //     for (int i = 0; i < dims; i++)
-    //         for (int j = 0; j < dims; j++)
-    //         {
-    //             if ((i * j) % 2 == 1)
-    //             {
-    //                 trip.push_back(tTriplet(i, j, 3.1));
-    //             }
-    //         }
-
-    //     mat.setFromTriplets(trip.begin(), trip.end());
-    //     tVectorXd b = tVectorXd::Ones(dims);
-    //     // std::cout << mat << std::endl;
-    //     tVectorXd res_self = tVectorXd::Zero(dims);
-    //     cTimeUtil::Begin("eigen");
-    //     tVectorXd res_eigen = mat * b;
-    //     cTimeUtil::End("eigen");
-    //     cTimeUtil::Begin("self");
-    //     SparseMatVecProd(mat, b, res_self);
-    //     cTimeUtil::End("self");
-    //     tVectorXd diff = res_eigen - res_self;
-    //     std::cout << "diff norm = " << diff.norm() << std::endl;
-    // }
-    // exit(1);
     std::string conf = "";
     ParseArg(argc, argv, conf);
 

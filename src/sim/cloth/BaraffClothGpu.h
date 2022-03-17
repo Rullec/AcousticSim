@@ -5,7 +5,7 @@
 #include "utils/DefUtil.h"
 #include "utils/SparseUtil.h"
 // #include "sim/gpu_utils/CudaVector.h"
-SIM_DECLARE_CLASS_AND_PTR(cBaraffMaterial);
+SIM_DECLARE_CLASS_AND_PTR(cBaraffMaterialUnstable);
 SIM_DECLARE_CLASS_AND_PTR(cQBendingMaterial);
 typedef tCudaMatrix<float, 9, 2> tCudaMatrix92f;
 // typedef tCudaMatrix<float, 9, 9> tCudaMatrix9f;
@@ -29,7 +29,7 @@ protected:
     tVector3f mBendingK, mStretchK;
     // -----------CPU data-----------
     // ------ CPU constant data -----
-    cBaraffMaterialPtr mStretchMaterialCPU;
+    cBaraffMaterialUnstablePtr mStretchMaterialCPU;
     cQBendingMaterialPtr mQBendingMaterialCPU;
     std::vector<tCudaMatrix32f> mNArrayCpu, mNprimeArrayCpu;
     std::vector<int> mVerticesMassCpu;
@@ -46,6 +46,7 @@ protected:
     cCudaArray<tConnectedInfo>
         mVerticesTriangleIdLstCuda; // vertex-connected triangle id, -1 is
                                     // invalid
+    cCudaArray<float> mTriangleAreaCuda;
     // all edges connected with this vertex
     cCudaArray<tConnectedInfo> mVertexConnectedAllEdge,
         mVertexInvolvedInnerEdge; // only inner edges connected with this vertex
@@ -100,6 +101,7 @@ protected:
     cCudaArray<int> mFixedVertexIndicesCUDA; // fix point indices
     cCudaArray<tCudaVector3f>
         mFixedVertexTargetPosCUDA; // fix point target position
+    float mRayleighA, mRayleighB;  // rayleigh damping
 
     virtual void InitGeometry(const Json::Value &conf) override final;
     virtual void InitMass(const Json::Value &conf) override final;

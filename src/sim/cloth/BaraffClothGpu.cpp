@@ -1,6 +1,6 @@
 #include "BaraffClothGPU.h"
 #include "geometries/Primitives.h"
-#include "sim/cloth/BaraffMaterial.h"
+#include "sim/cloth/BaraffMaterialUnstable.h"
 #include "sim/cloth/QBendingMaterial.h"
 #include "sim/gpu_utils/CudaDef.h"
 #include "sim/gpu_utils/CudaMatrix.h"
@@ -11,7 +11,7 @@
 #include "utils/TimeUtil.hpp"
 #include <imgui.h>
 #include <iostream>
-
+static int frame = 0;
 template <typename int N, int M>
 std::vector<tCudaMatrix<float, N, M>>
 FetchFromGPU(const cCudaArray<tCudaMatrix<float, N, M>> &cuda_array)
@@ -120,6 +120,9 @@ void cBaraffClothGPU::Init(const Json::Value &conf)
             cJsonUtil::ParseAsValue("cloth_stretch_stiffness", conf))
             .segment(0, 3)
             .cast<float>();
+
+    mRayleighA = cJsonUtil::ParseAsDouble("rayleigh_damping_a", conf);
+    mRayleighB = cJsonUtil::ParseAsDouble("rayleigh_damping_b", conf);
     /*
         2. init base class; N; mass
     */
@@ -128,12 +131,13 @@ void cBaraffClothGPU::Init(const Json::Value &conf)
     // 2.1 init CPU material (for comparision)
     {
         // cTimeUtil::Begin("CPU material");
-        mStretchMaterialCPU = std::make_shared<cBaraffMaterial>();
+        mStretchMaterialCPU = std::make_shared<cBaraffMaterialUnstable>();
         mStretchMaterialCPU->Init(shared_from_this(), mStretchK.cast<double>());
         mQBendingMaterialCPU = std::make_shared<cQBendingMaterial>();
         mQBendingMaterialCPU->Init(GetVertexArray(), GetEdgeArray(),
                                    GetTriangleArray(),
                                    mBendingK.cast<double>());
+
         // cTimeUtil::End("CPU material");
     }
 
@@ -151,6 +155,7 @@ void cBaraffClothGPU::Init(const Json::Value &conf)
     // cTimeUtil::Begin("Init GPU data");
     InitGpuData();
     UpdateGpuData();
+    // VerifyData();
     // cTimeUtil::End("Init GPU data");
 
     // begin to add random noise on vertex data, and then check the result
@@ -202,7 +207,7 @@ static std::vector<tTimeRecms> gProfRec;
 void cBaraffClothGPU::UpdatePos(double dt)
 {
     // std::cout << "dt = " << dt << std::endl;
-    printf("-------new frame---------\n");
+    printf("-------frame %d---------\n", frame++);
     dt = this->mIdealDefaultTimestep;
     UpdateFixedPt();
     // data, CPU->GPU, update pos, pre on CUDA, set dt
@@ -238,25 +243,35 @@ void cBaraffClothGPU::ApplyUserPerturbForceOnce(tPerturb *pert)
 {
     if (pert == nullptr)
         return;
-    int max_id = 0;
-    float max_bary = 0;
+    // int max_id = 0;
+    // float max_bary = 0;
+    // auto tri = mTriangleArrayShared[pert->mAffectedTriId];
+    // std::vector<int> res = {tri->mId0, tri->mId1, tri->mId2};
+    // for (max_id = 0; max_id < 3; max_id++)
+    // {
+    //     if (pert->mBarycentricCoords[max_id] > max_bary)
+    //     {
+    //         max_bary = pert->mBarycentricCoords[max_id];
+    //         mDragPointVertexId = res[max_id];
+    //     }
+    // }
+    // mDragPointTargetPos = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
+    //     tVector3f(pert->GetGoalPos().segment(0, 3).cast<float>()));
     auto tri = mTriangleArrayShared[pert->mAffectedTriId];
-    std::vector<int> res = {tri->mId0, tri->mId1, tri->mId2};
-    for (max_id = 0; max_id < 3; max_id++)
-    {
-        if (pert->mBarycentricCoords[max_id] > max_bary)
-        {
-            max_bary = pert->mBarycentricCoords[max_id];
-            mDragPointVertexId = res[max_id];
-        }
-    }
-    mDragPointTargetPos = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
-        tVector3f(pert->GetGoalPos().segment(0, 3).cast<float>()));
+    const tVector &tar_eigen = pert->GetGoalPos();
+    tCudaVector3f tar_pos({static_cast<float>(tar_eigen[0]),
+                           static_cast<float>(tar_eigen[1]),
+                           static_cast<float>(tar_eigen[2])});
+    mXcurCpu[tri->mId0] = tar_pos;
+    mXpreCpu[tri->mId0] = tar_pos;
+    mXcurCuda.Upload(mXcurCpu);
+    mXpreCuda.Upload(mXpreCpu);
 }
 
 void cBaraffClothGPU::UpdateImGui()
 {
-
+    ImGui::SliderFloat("dampingA", &mRayleighA, 0, 1);
+    ImGui::SliderFloat("dampingB", &mRayleighB, -1e-1, 0);
     for (auto &x : gProfRec)
     {
         ImGui::Text("%s %d ms", x.first.c_str(), int(x.second));
@@ -503,6 +518,22 @@ void cBaraffClothGPU::InitGpuData()
         }
         // mFixedVertexTargetPos.Upload(fixed_pos);
     }
+
+    // calculate init triangle area
+    {
+        const auto &tri_lst = GetTriangleArray();
+        std::vector<float> tri_area_cpu(GetNumOfTriangles(), 0);
+        for (int i = 0; i < GetNumOfTriangles(); i++)
+        {
+            auto cur_tri = tri_lst[i];
+
+            tri_area_cpu[i] = cMathUtil::CalcTriangleArea(
+                mVertexArrayShared[cur_tri->mId0]->mPos,
+                mVertexArrayShared[cur_tri->mId1]->mPos,
+                mVertexArrayShared[cur_tri->mId2]->mPos);
+        }
+        mTriangleAreaCuda.Upload(tri_area_cpu);
+    }
 }
 
 void cBaraffClothGPU::ClearDragPt()
@@ -602,8 +633,8 @@ namespace BaraffClothGpu
 extern void UpdateStretch_StiffnessMatrix_Fint(
     float K0, float K1, const cCudaArray<tCudaVector3f> &pos_lst,
     const cCudaArray<tCudaVector3i> &tri_vertices_lst,
-    cCudaArray<tCudaMatrix32f> &N_lst, cCudaArray<tCudaMatrix32f> &F_lst,
-    cCudaArray<tCudaMatrix32f> &n_lst,
+    const cCudaArray<float> &tri_area_lst, cCudaArray<tCudaMatrix32f> &N_lst,
+    cCudaArray<tCudaMatrix32f> &F_lst, cCudaArray<tCudaMatrix32f> &n_lst,
     cCudaArray<tCudaVector2f> &C_lst, // condition
     cCudaArray<tCudaMatrix92f> &g_lst, cCudaArray<tCudaMatrix9f> &K_lst,
     cCudaArray<tCudaVector9f> &fint_lst_in_each_triangle);
@@ -614,8 +645,6 @@ extern void AssembleStretch_StiffnessMatrix_Fint(
     const cCudaArray<tCudaVector3i> &vertex_id_of_triangle_lst,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
     const cCudaArray<tCudaVector9f> &ele_fint,
-    const cCudaArray<int> &fixed_vertex_indices_lst,
-    const cCudaArray<tCudaVector3f> &fixed_vertex_target_pos_lst,
     const cCudaArray<tCudaVector3f> &vertex_pos_lst,
     cCuda2DArray<tCudaMatrix3f> &global_K,
     cCudaArray<tCudaVector3f> &global_fint);
@@ -631,9 +660,12 @@ extern void UpdateBendingIntForce(
     const cCuda2DArray<tCudaMatrix3f> &bending_hessian,
     const cCudaArray<tCudaVector3f> &vertex_pos_lst,
     cCudaArray<tCudaVector3f> &bending_fint);
-
+extern void ApplyFixWeightOnSystemMatrix(
+    const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+    const cCudaArray<int> &fixed_vertex_array,
+    cCuda2DArray<tCudaMatrix3f> &global_K);
 extern void AssembleSystemMatrix(
-    float dt,
+    float dt, const float rayleigh_damping_a, const float rayleigh_damping_b,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
     const cCuda2DArray<tCudaMatrix3f> &K, const cCudaArray<tCudaVector3f> &M,
     cCuda2DArray<tCudaMatrix3f> &W);
@@ -907,6 +939,7 @@ void cBaraffClothGPU::ClearForce()
 #include <cuda.h>
 void cBaraffClothGPU::Reset()
 {
+    frame = 0;
     std::cout << "[log] Cloth reset\n";
     SetPos(mClothInitPos);
     mXpre.noalias() = mClothInitPos;
@@ -1197,19 +1230,19 @@ void cBaraffClothGPU::UpdateStiffnessMatrixAndIntForce()
     // update stretch stiffness and fint
     BaraffClothGpu::UpdateStretch_StiffnessMatrix_Fint(
         mStretchK[0], mStretchK[1], mXcurCuda, mTriangleVerticesIdLstCuda,
-        mNLstCuda, mFLstCuda, mnLstCuda, mCLstCuda, mgLstCuda,
-        mEleStretchStiffnessMatrixLstCuda, mEleStretchInternalForceCuda);
+        mTriangleAreaCuda, mNLstCuda, mFLstCuda, mnLstCuda, mCLstCuda,
+        mgLstCuda, mEleStretchStiffnessMatrixLstCuda,
+        mEleStretchInternalForceCuda);
     BaraffClothGpu::UpdateStretch_StiffnessMatrix_Fint(
         mStretchK[2], mStretchK[2], mXcurCuda, mTriangleVerticesIdLstCuda,
-        mNprimeLstCuda, mFprimeLstCuda, mnprimeLstCuda, mCprimeLstCuda,
-        mgprimeLstCuda, mEleStretchStiffnessMatrixLstCuda,
+        mTriangleAreaCuda, mNprimeLstCuda, mFprimeLstCuda, mnprimeLstCuda,
+        mCprimeLstCuda, mgprimeLstCuda, mEleStretchStiffnessMatrixLstCuda,
         mEleStretchInternalForceCuda);
 
     BaraffClothGpu::AssembleStretch_StiffnessMatrix_Fint(
         mEleStretchStiffnessMatrixLstCuda, mVerticesTriangleIdLstCuda,
         mTriangleVerticesIdLstCuda, mELLLocalVidToGlobalVid,
-        this->mEleStretchInternalForceCuda, this->mFixedVertexIndicesCUDA,
-        this->mFixedVertexTargetPosCUDA, this->mXcurCuda,
+        this->mEleStretchInternalForceCuda, this->mXcurCuda,
         this->mGlobalStiffnessMatrix_stretch, mIntForceCuda_stretch);
 
     // update bending stiffness and fint
@@ -1222,10 +1255,17 @@ void cBaraffClothGPU::UpdateStiffnessMatrixAndIntForce()
         mELLLocalVidToGlobalVid, mGlobalStiffnessMatrix_bending,
         this->mXcurCuda, mIntForceCuda_bending);
 
+    // std::cout << "K bending = \n"
+    //           << FromELLMatrixToEigenMatrix(mGlobalStiffnessMatrix_bending)
+    //           << std::endl;
+    // std::cout << "K stretch = \n"
+    //           << FromELLMatrixToEigenMatrix(mGlobalStiffnessMatrix_stretch)
+    //           << std::endl;
     // sum global stiffness
     GPUMatrixOps::ELLMatrixAdd(mGlobalStiffnessMatrix_bending,
                                mGlobalStiffnessMatrix_stretch,
                                mGlobalStiffnessMatrix);
+
     // sum global fint
     // mIntForceCuda_stretch.MemsetAsync(tCudaVector3f::Zero());
     // printf("[error] int force is set to zero\n");
@@ -1254,8 +1294,14 @@ void cBaraffClothGPU::UpdateLinearSystem(float dt)
         3. assemble W
     */
     BaraffClothGpu::AssembleSystemMatrix(
-        dt, this->mELLLocalVidToGlobalVid, this->mGlobalStiffnessMatrix,
-        this->mMassMatrixDiagCuda, this->mSystemMatrixCuda);
+        dt, this->mRayleighA, this->mRayleighB, this->mELLLocalVidToGlobalVid,
+        this->mGlobalStiffnessMatrix, this->mMassMatrixDiagCuda,
+        this->mSystemMatrixCuda);
+
+    // 3.1 change diagnoal: it will make the system ill-conditioned, do not use it
+    // BaraffClothGpu::ApplyFixWeightOnSystemMatrix(mELLLocalVidToGlobalVid,
+    //                                              mFixedVertexIndicesCUDA,
+    //                                              this->mSystemMatrixCuda);
 
     // 4. assemble b
     // 4.1 calculate current velocity
@@ -1275,14 +1321,13 @@ void cBaraffClothGPU::UpdateLinearSystem(float dt)
         this->mELLLocalVidToGlobalVid, this->mMassMatrixDiagCuda,
         this->mVelCuda, this->mSystemRHSCuda);
 }
-// namespace GDSolver
-// {
-// extern void
-// Solve(const cCudaArray<tCudaVector32i>
-// &ELL_local_vertex_id_to_global_vertex_id,
-//       const cCuda2DArray<tCudaMatrix3f> &A, const cCudaArray<tCudaVector3f>
-//       &b, cCudaArray<tCudaVector3f> &x, cCudaArray<tCudaVector3f> &r_buf);
-// }
+namespace GDSolver
+{
+extern void
+Solve(const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+      const cCuda2DArray<tCudaMatrix3f> &A, const cCudaArray<tCudaVector3f> &b,
+      cCudaArray<tCudaVector3f> &x, cCudaArray<tCudaVector3f> &r_buf);
+}
 namespace JacobSolver
 {
 extern void
@@ -1297,7 +1342,13 @@ void cBaraffClothGPU::SolveLinearSystem()
     // GDSolver::Solve(mELLLocalVidToGlobalVid, mSystemMatrixCuda,
     // mSystemRHSCuda,
     //                 mSolutionCuda, mPCGResidualCuda);
+
     // 1. create the preconditioner
+    // PCGSolver::CalcBlockJacobiPreconditioner(
+    //     mELLLocalVidToGlobalVid, mSystemMatrixCuda, mPreconditionerCuda);
+    // PCGSolver::CalcJacobiPreconditioner(mELLLocalVidToGlobalVid,
+    //                                     mSystemMatrixCuda,
+    //                                     mPreconditionerCuda);
     PCGSolver::CalcBlockJacobiPreconditioner(
         mELLLocalVidToGlobalVid, mSystemMatrixCuda, mPreconditionerCuda);
 
@@ -1306,6 +1357,23 @@ void cBaraffClothGPU::SolveLinearSystem()
                      mSystemMatrixCuda, mSystemRHSCuda, this->mPCGResidualCuda,
                      this->mPCGDirectionCuda, this->mPCGzCuda,
                      this->mPCG_rMinvr_arrayCuda, this->mSolutionCuda);
+
+    // tMatrixXd A =
+    //     this->FromELLMatrixToEigenMatrix(mSystemMatrixCuda).cast<double>();
+
+    // double max_symmtric_diff = (A - A.transpose()).cwiseAbs().maxCoeff();
+    // std::cout << "max_symmtric_diff = " << max_symmtric_diff << std::endl;
+    // tVectorXd b =
+    // cCudaMatrixUtil::CudaVectorArrayToEigenVector(mSystemRHSCuda); std::cout
+    // << "A = \n" << A << std::endl; std::cout << "b = " << b.transpose() <<
+    // std::endl; tVectorXd x_acc = A.inverse() * b; std::cout << "x_solved = "
+    //           << cCudaMatrixUtil::CudaVectorArrayToEigenVector(mSolutionCuda)
+    //                  .transpose()
+    //           << std::endl;
+    // std::cout << "x_acc = " << x_acc.transpose() << std::endl;
+    // std::cout << "residual = " << (A * x_acc - b).norm() << std::endl;
+    // exit(1);
+
     // {
     // cCudaArray<float> debugEnergy, pap, rdotz;
     // cCudaArray<tCudaVector3f> Ap;
@@ -1387,21 +1455,21 @@ void cBaraffClothGPU::UpdateCollisionForceAndUserForce()
     // begin to add user for
     if (this->mDragPointVertexId != -1)
     {
-        this->mUserForceCpu.resize(num_of_v);
-        for (int i = 0; i < num_of_v; i++)
-            mUserForceCpu[i].setZero();
-        float k = 1;
-        mUserForceCpu[mDragPointVertexId] +=
-            k * (mDragPointTargetPos - mXcurCpu[mDragPointVertexId]);
+        // this->mUserForceCpu.resize(num_of_v);
+        // for (int i = 0; i < num_of_v; i++)
+        //     mUserForceCpu[i].setZero();
+        // float k = 1;
+        // mUserForceCpu[mDragPointVertexId] +=
+        //     k * (mDragPointTargetPos - mXcurCpu[mDragPointVertexId]);
 
-        std::cout << "[fixed] add force = "
-                  << mUserForceCpu[mDragPointVertexId].transpose()
-                  << " tar pos = " << mDragPointTargetPos.transpose()
-                  << " cur pos = " << mXcurCpu[mDragPointVertexId].transpose()
-                  << " cur new = "
-                  << mXcur.segment(3 * mDragPointVertexId, 3).transpose()
-                  << std::endl;
-        mUserForceCuda.Upload(mUserForceCpu);
+        // std::cout << "[fixed] add force = "
+        //           << mUserForceCpu[mDragPointVertexId].transpose()
+        //           << " tar pos = " << mDragPointTargetPos.transpose()
+        //           << " cur pos = " << mXcurCpu[mDragPointVertexId].transpose()
+        //           << " cur new = "
+        //           << mXcur.segment(3 * mDragPointVertexId, 3).transpose()
+        //           << std::endl;
+        // mUserForceCuda.Upload(mUserForceCpu);
     }
 }
 

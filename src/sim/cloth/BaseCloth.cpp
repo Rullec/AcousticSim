@@ -9,7 +9,8 @@
 
 #include <iostream>
 const std::string gClothTypeStr[eClothType::NUM_OF_CLOTH_TYPE] = {
-    "semi_implicit", "implicit", "pbd", "pd", "linctex", "empty", "fem", "fem_gpu"};
+    "semi_implicit", "implicit", "pbd", "pd",
+    "linctex",       "empty",    "fem", "fem_gpu"};
 cBaseCloth::cBaseCloth(eClothType cloth_type, int id_)
     : cBaseObject(eObjectType::CLOTH_TYPE, id_), mClothType(cloth_type)
 {
@@ -64,9 +65,10 @@ void cBaseCloth::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
 {
     for (auto &tri : mTriangleArrayShared)
     {
-        cRenderUtil::CalcTriangleDrawBufferSingle(this->mVertexArrayShared[tri->mId0],
-                                                  this->mVertexArrayShared[tri->mId1],
-                                                  this->mVertexArrayShared[tri->mId2], res, st);
+        cRenderUtil::CalcTriangleDrawBufferSingle(
+            this->mVertexArrayShared[tri->mId0],
+            this->mVertexArrayShared[tri->mId1],
+            this->mVertexArrayShared[tri->mId2], res, st);
     }
 }
 
@@ -122,7 +124,8 @@ void cBaseCloth::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
             // std::cout << "[warn] failed to determine the edge color\n";
         }
         // 2. calculate the edge draw position
-        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
+        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0],
+                                              mVertexArrayShared[e->mId1],
                                               normal, res, st, cur_color);
     }
 }
@@ -142,12 +145,12 @@ void cBaseCloth::ApplyPerturb(tPerturb *pert)
     if (pert == nullptr)
         return;
     tVector force = pert->GetPerturbForce();
-    mUserForce.segment(mTriangleArrayShared[pert->mAffectedTriId]->mId0 * 3, 3) +=
-        force.segment(0, 3) / 3;
-    mUserForce.segment(mTriangleArrayShared[pert->mAffectedTriId]->mId1 * 3, 3) +=
-        force.segment(0, 3) / 3;
-    mUserForce.segment(mTriangleArrayShared[pert->mAffectedTriId]->mId2 * 3, 3) +=
-        force.segment(0, 3) / 3;
+    mUserForce.segment(mTriangleArrayShared[pert->mAffectedTriId]->mId0 * 3,
+                       3) += force.segment(0, 3) / 3;
+    mUserForce.segment(mTriangleArrayShared[pert->mAffectedTriId]->mId1 * 3,
+                       3) += force.segment(0, 3) / 3;
+    mUserForce.segment(mTriangleArrayShared[pert->mAffectedTriId]->mId2 * 3,
+                       3) += force.segment(0, 3) / 3;
 }
 /**
  * \brief           add damping forces
@@ -166,7 +169,8 @@ void cBaseCloth::SetPos(const tVectorXd &newpos)
 #endif
     for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
-        mVertexArrayShared[i]->mPos.segment(0, 3).noalias() = mXcur.segment(i * 3, 3);
+        mVertexArrayShared[i]->mPos.segment(0, 3).noalias() =
+            mXcur.segment(i * 3, 3);
     }
 }
 
@@ -180,13 +184,12 @@ void cBaseCloth::CalcExtForce(tVectorXd &ext_force) const
 #endif
     for (int i = 0; i < mVertexArrayShared.size(); i++)
     {
-        ext_force.segment(3 * i, 3) +=
-            mGravity * mVertexArrayShared[i]->mMass;
+        ext_force.segment(3 * i, 3) += mGravity * mVertexArrayShared[i]->mMass;
     }
 
     // std::cout << "add ext noise\n";
-    // ext_force.segment(3 * (mVertexArrayShared.size() - 1), 3) += tVector3d(0, 0,
-    // 10);
+    // ext_force.segment(3 * (mVertexArrayShared.size() - 1), 3) += tVector3d(0,
+    // 0, 10);
 
     //  2. add perturb force
     // if (mPerturb != nullptr)
@@ -273,12 +276,13 @@ void cBaseCloth::InitConstraint(const Json::Value &root)
 
         // 2. iterate over all vertices to find which point should be finally
         // constraint_static
-        mConstraint_StaticPointIds =
-            FindVerticesIdFromUV(constraint_static_tex_coords, mVertexArrayShared);
+        mConstraint_StaticPointIds = FindVerticesIdFromUV(
+            constraint_static_tex_coords, mVertexArrayShared);
         // output
         for (int i = 0; i < num_of_constraint_static_pts; i++)
         {
-            printf("[debug] constraint_static uv (%.3f %.3f) selected v_id %d uv (%.3f, %.3f)\n",
+            printf("[debug] constraint_static uv (%.3f %.3f) selected v_id %d "
+                   "uv (%.3f, %.3f)\n",
                    constraint_static_tex_coords[i][0],
                    constraint_static_tex_coords[i][1],
                    mConstraint_StaticPointIds[i],
@@ -367,7 +371,8 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
         }
         cObjUtil::tParams params;
         params.mPath = mClothObjPath;
-        cObjUtil::LoadObj(params, mVertexArrayShared, mEdgeArrayShared, mTriangleArrayShared);
+        cObjUtil::LoadObj(params, mVertexArrayShared, mEdgeArrayShared,
+                          mTriangleArrayShared);
         for (auto &x : mVertexArrayShared)
         {
             // x->mPos /= 1e3;
@@ -398,7 +403,8 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
         mClothSizes = res.segment(0, 2);
         std::cout << "load obj done, num of ver = " << mVertexArrayShared.size()
                   << " num of edge " << mEdgeArrayShared.size()
-                  << " num of triangles " << mTriangleArrayShared.size() << std::endl;
+                  << " num of triangles " << mTriangleArrayShared.size()
+                  << std::endl;
         tVector aabbmin, aabbmax;
         this->CalcAABB(aabbmin, aabbmax);
         std::cout << "aabbmin = " << aabbmin.transpose()
@@ -488,25 +494,32 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
 void cBaseCloth::InitMass(const Json::Value &conf)
 {
     // 1. get the mass
-    mClothMass = cJsonUtil::ParseAsDouble("cloth_mass", conf);
     mClothDensity = cJsonUtil::ParseAsDouble("cloth_density", conf);
 
-    // 2. get the density, confirm the correspondence
-    if (std::fabs(mClothSizes.x() * mClothSizes.y() * mClothDensity -
-                  mClothMass) > 1e-6)
-    {
-        std::cout << "cloth area = " << mClothSizes.x() * mClothSizes.y()
-                  << std::endl;
-        std::cout << "cloth density = " << mClothDensity << std::endl;
-        std::cout << "cloth mass = " << mClothMass << std::endl;
-        SIM_ERROR("mass {} != density * area {} mismatch", mClothMass,
-                  mClothSizes.x() * mClothSizes.y() * mClothDensity);
-        exit(1);
-    }
     // 3. averge the mass to the vertices
-    for (auto &x : mVertexArrayShared)
+    int num_of_triangles = GetNumOfTriangles();
+    const auto &tri_array = GetTriangleArray();
+    const auto &v_array = GetVertexArray();
+
+    int num_of_v = GetNumOfVertices();
+    tVectorXd vertex_shared_area = tVectorXd::Zero(num_of_v);
+    for (int i = 0; i < num_of_triangles; i++)
     {
-        x->mMass = mClothMass / mVertexArrayShared.size();
+        int vid0 = tri_array[i]->mId0;
+        int vid1 = tri_array[i]->mId1;
+        int vid2 = tri_array[i]->mId2;
+        const tVector &v0 = v_array[vid0]->mPos;
+        const tVector &v1 = v_array[vid1]->mPos;
+        const tVector &v2 = v_array[vid2]->mPos;
+        double area = cMathUtil::CalcTriangleArea(v0, v1, v2);
+        vertex_shared_area[vid0] += area / 3;
+        vertex_shared_area[vid1] += area / 3;
+        vertex_shared_area[vid2] += area / 3;
+    }
+    vertex_shared_area *= this->mClothDensity; // convert to mass
+    for (int i = 0; i < num_of_v; i++)
+    {
+        mVertexArrayShared[i]->mMass = vertex_shared_area[i];
     }
 }
 void cBaseCloth::CalcNodePositionVector(tVectorXd &pos) const
@@ -643,11 +656,6 @@ void cBaseCloth::MoveTranslation(const tVector3d &incremental_move)
     SetPos(mXcur);
 }
 
-void cBaseCloth::ApplyUserPerturbForceOnce(tPerturb *)
-{
-}
+void cBaseCloth::ApplyUserPerturbForceOnce(tPerturb *) {}
 
-void cBaseCloth::Update(float dt)
-{
-    this->UpdatePos(dt);
-}
+void cBaseCloth::Update(float dt) { this->UpdatePos(dt); }

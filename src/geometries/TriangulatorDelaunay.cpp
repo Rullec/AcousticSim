@@ -150,9 +150,9 @@ void cTriangulator::DelaunayTriangulation(float cloth_width, float cloth_height,
                    e->mTriangleId0, e->mTriangleId1);
             exit(1);
         }
-        std::cout << "e " << i << " is boundary " << e->mIsBoundary << " tri0 "
-                  << e->mTriangleId0 << " tri1 " << e->mTriangleId1
-                  << std::endl;
+        // std::cout << "e " << i << " is boundary " << e->mIsBoundary << " tri0 "
+        //           << e->mTriangleId0 << " tri1 " << e->mTriangleId1
+        //           << std::endl;
         e->mRawLength =
             (v_array[e->mId0]->mPos - v_array[e->mId1]->mPos).norm();
         e->mK_spring = 0;
@@ -166,19 +166,19 @@ void cTriangulator::DelaunayTriangulation(float cloth_width, float cloth_height,
            v_array.size(), e_array.size(), tri_array.size());
 
     // judge: edge raw length = texture coords
-    for (int i = 0; i < e_array.size(); i++)
-    {
-        auto cur_e = e_array[i];
+    // for (int i = 0; i < e_array.size(); i++)
+    // {
+    //     auto cur_e = e_array[i];
 
-        auto v0 = v_array[cur_e->mId0], v1 = v_array[cur_e->mId1];
-        float uv_dist = (v0->muv - v1->muv).norm(),
-              cartesian_dist = (v0->mPos - v1->mPos).norm();
-        float diff = std::fabs(uv_dist - cartesian_dist);
-        std::cout << "edge " << i << " v" << cur_e->mId0 << " to v"
-                  << cur_e->mId1 << " uv dist = " << uv_dist
-                  << " car dist = " << cartesian_dist << " diff = " << diff
-                  << std::endl;
-    }
+    //     auto v0 = v_array[cur_e->mId0], v1 = v_array[cur_e->mId1];
+    //     float uv_dist = (v0->muv - v1->muv).norm(),
+    //           cartesian_dist = (v0->mPos - v1->mPos).norm();
+    //     float diff = std::fabs(uv_dist - cartesian_dist);
+    //     std::cout << "edge " << i << " v" << cur_e->mId0 << " to v"
+    //               << cur_e->mId1 << " uv dist = " << uv_dist
+    //               << " car dist = " << cartesian_dist << " diff = " << diff
+    //               << std::endl;
+    // }
 }
 
 tEigenArr<tVector2f> cTriangulator::BuildRectangleBoundary(float width,

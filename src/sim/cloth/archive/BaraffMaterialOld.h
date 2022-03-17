@@ -4,10 +4,10 @@ typedef Eigen::Matrix<double, 3, 2> tMatrix32d;
 typedef Eigen::Matrix<double, 9, 1> tVector9d;
 typedef Eigen::Matrix<double, 9, 9> tMatrix9d;
 
-class cBaraffMaterial
+class cBaraffMaterialUnstable
 {
 public:
-    explicit cBaraffMaterial();
+    explicit cBaraffMaterialUnstable();
     // stretch
     virtual void SetStretchK(double Kwarp, double Kweft);
     virtual void SetSheaingK(double Kwarp);

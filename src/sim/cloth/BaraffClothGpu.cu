@@ -20,8 +20,8 @@ __global__ void UpdateEleStretchStiffAndFint_Kernel(
     int num_of_triangles, float k0, float k1,
     devPtr<const tCudaVector3f> pos_lst,
     devPtr<const tCudaVector3i> tri_vertices_id_lst,
-    devPtr<const tCudaMatrix32f> N_lst, devPtr<tCudaMatrix32f> F_lst,
-    devPtr<tCudaMatrix32f> n_lst,
+    devPtr<const float> tri_area_lst, devPtr<const tCudaMatrix32f> N_lst,
+    devPtr<tCudaMatrix32f> F_lst, devPtr<tCudaMatrix32f> n_lst,
     devPtr<tCudaVector2f> C_lst, // condition
     devPtr<tCudaMatrix92f> g_lst, devPtr<tCudaMatrix9f> K_lst,
     devPtr<tCudaVector9f> fint_lst_each_triangle)
@@ -31,7 +31,7 @@ __global__ void UpdateEleStretchStiffAndFint_Kernel(
     int tri_id = blockIdx.x * blockDim.x + threadIdx.x;
     if (tri_id >= num_of_triangles)
         return;
-
+    float tri_area = tri_area_lst[tri_id];
     // for current triangle
     // 1. get X
     tCudaMatrix3f X;
@@ -111,9 +111,10 @@ __global__ void UpdateEleStretchStiffAndFint_Kernel(
                     .KroneckerProduct(P[j]);
             assert(false == cCudaMath::IsNan(part2));
             // return;
-            K_lst[tri_id] += cur_k * (part1 - C[j] / X_Ni_norm[j] * part2
+            K_lst[tri_id] += tri_area * cur_k *
+                             (part1 - C[j] / X_Ni_norm[j] * part2
 
-                                     );
+                             );
             assert(false == cCudaMath::IsNan(K_lst[tri_id]));
         }
     }
@@ -122,7 +123,7 @@ __global__ void UpdateEleStretchStiffAndFint_Kernel(
     for (int i = 0; i < 2; i++)
     {
         float cur_k = i == 0 ? k0 : k1;
-        fint_lst_each_triangle[tri_id] += -cur_k * C[i] * g.col(i);
+        fint_lst_each_triangle[tri_id] += -tri_area * cur_k * C[i] * g.col(i);
     }
 }
 
@@ -249,9 +250,7 @@ __global__ void DispatchStretch_StiffnessMatrix_and_fint(
     devPtr<const tCudaVector32i> vertex_connected_triangles_lst,
     devPtr<const tCudaVector3i> vertex_id_in_triangle_lst,
     devPtr<const tCudaVector32i> ELL_local_vertex_id_to_global_vertex_id,
-    devPtr<const tCudaVector9f> ele_fint, const int num_of_fixed_vertices,
-    devPtr<const int> fixed_vertex_indices_lst,
-    devPtr<const tCudaVector3f> fixed_vertex_target_pos_lst,
+    devPtr<const tCudaVector9f> ele_fint,
     devPtr<const tCudaVector3f> vertex_pos_lst, devPtr2<tCudaMatrix3f> global_K,
     devPtr<tCudaVector3f> global_fint)
 {
@@ -310,29 +309,30 @@ __global__ void DispatchStretch_StiffnessMatrix_and_fint(
 
     // 2. add fixed point stiffness (implicit spring)
     {
-        float fixed_point_K = 1e1;
-        for (int i = 0; i < num_of_fixed_vertices; i++)
-        {
-            if (v_id == fixed_vertex_indices_lst[i])
-            {
-                // printf("need to fix vertex %d\n", v_id);
-                // add fixed!
-                tCudaVector3f target_pos = fixed_vertex_target_pos_lst[i];
-                // printf("vertex %d tar pos %.3f %.3f %.3f\n", v_id,
-                //    target_pos[0], target_pos[1], target_pos[2]);
-                tCudaVector3f cur_pos = vertex_pos_lst[v_id];
-                // printf("vertex %d cur pos %.3f %.3f %.3f\n", v_id,
-                // cur_pos[0],
-                //    cur_pos[1], cur_pos[2]);
-                // fint = K (p - x)
-                // global_fint[v_id] += fixed_point_K * (target_pos - cur_pos);
-                // H = -K, add to ELL
-                int v_local_id = global_to_local(
-                    ELL_local_vertex_id_to_global_vertex_id[v_id], v_id);
-                global_K[v_id][v_local_id] += 1e12;
-                // -fixed_point_K * tCudaMatrix3f::Identity();
-            }
-        }
+        // float fixed_point_K = 1e1;
+        // for (int i = 0; i < num_of_fixed_vertices; i++)
+        // {
+        //     if (v_id == fixed_vertex_indices_lst[i])
+        //     {
+        //         // printf("need to fix vertex %d\n", v_id);
+        //         // add fixed!
+        //         tCudaVector3f target_pos = fixed_vertex_target_pos_lst[i];
+        //         // printf("vertex %d tar pos %.3f %.3f %.3f\n", v_id,
+        //         //    target_pos[0], target_pos[1], target_pos[2]);
+        //         tCudaVector3f cur_pos = vertex_pos_lst[v_id];
+        //         // printf("vertex %d cur pos %.3f %.3f %.3f\n", v_id,
+        //         // cur_pos[0],
+        //         //    cur_pos[1], cur_pos[2]);
+        //         // fint = K (p - x)
+        //         // global_fint[v_id] += fixed_point_K * (target_pos -
+        //         cur_pos);
+        //         // H = -K, add to ELL
+        //         int v_local_id = global_to_local(
+        //             ELL_local_vertex_id_to_global_vertex_id[v_id], v_id);
+        //         global_K[v_id][v_local_id] += 1e12;
+        //         // -fixed_point_K * tCudaMatrix3f::Identity();
+        //     }
+        // }
     }
 }
 
@@ -341,17 +341,17 @@ namespace BaraffClothGpu
 void UpdateStretch_StiffnessMatrix_Fint(
     float K0, float K1, const cCudaArray<tCudaVector3f> &pos_lst,
     const cCudaArray<tCudaVector3i> &tri_vertices_lst,
-    cCudaArray<tCudaMatrix32f> &N_lst, cCudaArray<tCudaMatrix32f> &F_lst,
-    cCudaArray<tCudaMatrix32f> &n_lst,
+    const cCudaArray<float> &tri_area_lst, cCudaArray<tCudaMatrix32f> &N_lst,
+    cCudaArray<tCudaMatrix32f> &F_lst, cCudaArray<tCudaMatrix32f> &n_lst,
     cCudaArray<tCudaVector2f> &C_lst, // condition
     cCudaArray<tCudaMatrix92f> &g_lst, cCudaArray<tCudaMatrix9f> &K_lst,
     cCudaArray<tCudaVector9f> &fint_lst_in_each_triangle)
 {
     int num_of_tri = tri_vertices_lst.Size();
     UpdateEleStretchStiffAndFint_Kernel CUDA_at(num_of_tri, 128)(
-        num_of_tri, K0, K1, pos_lst.Ptr(), tri_vertices_lst.Ptr(), N_lst.Ptr(),
-        F_lst.Ptr(), n_lst.Ptr(), C_lst.Ptr(), g_lst.Ptr(), K_lst.Ptr(),
-        fint_lst_in_each_triangle.Ptr());
+        num_of_tri, K0, K1, pos_lst.Ptr(), tri_vertices_lst.Ptr(),
+        tri_area_lst.Ptr(), N_lst.Ptr(), F_lst.Ptr(), n_lst.Ptr(), C_lst.Ptr(),
+        g_lst.Ptr(), K_lst.Ptr(), fint_lst_in_each_triangle.Ptr());
     CUDA_ERR("UpdateStretch_StiffnessMatrix_Fint");
 }
 
@@ -362,10 +362,7 @@ void AssembleStretch_StiffnessMatrix_Fint(
     const cCudaArray<tCudaVector3i> &vertex_id_of_triangle_lst,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
     const cCudaArray<tCudaVector9f> &ele_fint,
-    const cCudaArray<int> &fixed_vertex_indices_lst,
-    const cCudaArray<tCudaVector3f> &fixed_vertex_target_pos_lst,
     const cCudaArray<tCudaVector3f> &vertex_pos_lst,
-
     cCuda2DArray<tCudaMatrix3f> &global_K,
     cCudaArray<tCudaVector3f> &global_fint)
 {
@@ -377,9 +374,7 @@ void AssembleStretch_StiffnessMatrix_Fint(
         num_of_v, ele_K_lst_per_triangle.Ptr(),
         vertex_connected_triangle_lst.Ptr(), vertex_id_of_triangle_lst.Ptr(),
         ELL_local_vertex_id_to_global_vertex_id.Ptr(), ele_fint.Ptr(),
-        fixed_vertex_indices_lst.Size(), fixed_vertex_indices_lst.Ptr(),
-        fixed_vertex_target_pos_lst.Ptr(), vertex_pos_lst.Ptr(), global_K.Ptr(),
-        global_fint.Ptr());
+        vertex_pos_lst.Ptr(), global_K.Ptr(), global_fint.Ptr());
 
     CUDA_ERR("dispatch stretch stiffness matrix and fint");
 }
@@ -443,6 +438,7 @@ __global__ void CalcBendingIntForceKernel(
         }
     }
 }
+
 void UpdateBendingIntForce(
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
     const cCuda2DArray<tCudaMatrix3f> &bending_hessian,
@@ -464,7 +460,8 @@ void UpdateBendingIntForce(
  *  V_cur = (mXcur - mXpre) / dt
  */
 __global__ void AssembleSystemMatrixKernel(
-    int num_of_v, float dt,
+    int num_of_v, float dt, const float rayleigh_damping_alpha,
+    const float rayleigh_damping_beta,
     devPtr<const tCudaVector32i> ELL_local_vertex_id_to_global_vertex_id,
     devPtr2<const tCudaMatrix3f> K, devPtr<const tCudaVector3f> M,
     devPtr2<tCudaMatrix3f> W)
@@ -474,7 +471,7 @@ __global__ void AssembleSystemMatrixKernel(
     if (v_id >= num_of_v)
         return;
 
-    float alpha = 0, beta = 0;
+    float alpha = rayleigh_damping_alpha, beta = rayleigh_damping_beta;
     // handle W.row(3 * v_id + [0, 3])
     tCudaVector32i ell_local_id_to_global_id =
         ELL_local_vertex_id_to_global_vertex_id[v_id];
@@ -504,15 +501,16 @@ __global__ void AssembleSystemMatrixKernel(
     }
 }
 void AssembleSystemMatrix(
-    float dt,
+    float dt, const float rayleigh_damping_a, const float rayleigh_damping_b,
     const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
     const cCuda2DArray<tCudaMatrix3f> &K, const cCudaArray<tCudaVector3f> &M,
     cCuda2DArray<tCudaMatrix3f> &W)
 {
     int num_of_v = ELL_local_vertex_id_to_global_vertex_id.Size();
     AssembleSystemMatrixKernel CUDA_at(num_of_v, 128)(
-        num_of_v, dt, ELL_local_vertex_id_to_global_vertex_id.Ptr(), K.Ptr(),
-        M.Ptr(), W.Ptr());
+        num_of_v, dt, rayleigh_damping_a, rayleigh_damping_b,
+        ELL_local_vertex_id_to_global_vertex_id.Ptr(), K.Ptr(), M.Ptr(),
+        W.Ptr());
     CUDA_ERR("assembly system matrix W");
 }
 
@@ -631,5 +629,56 @@ void CalcCurVelocity(float dt, const cCudaArray<tCudaVector3f> &mXcur,
     CalcCurVelKernel CUDA_at(num_of_v, 128)(num_of_v, dt, mXcur.Ptr(),
                                             mXpre.Ptr(), mVel.Ptr());
     CUDA_ERR("calcualte current velocity");
+}
+
+__global__ void ApplyFixWeightKernel(
+    int num_of_v,
+    devPtr<const tCudaVector32i> ELL_local_vertex_id_to_global_vertex_id,
+    const int num_of_fixed_pts, devPtr<const int> fix_pt_id_array,
+    devPtr2<tCudaMatrix3f> K)
+{
+    CUDA_function;
+    int v_id = threadIdx.x + blockIdx.x * blockDim.x;
+    if (v_id >= num_of_v)
+        return;
+
+    bool is_fixed = false;
+    for (int i = 0; i < num_of_fixed_pts; i++)
+    {
+        // check if this pts is fixed
+        if (fix_pt_id_array[i] == v_id)
+        {
+            is_fixed = true;
+            break;
+        }
+    }
+    if (is_fixed)
+    {
+        const tCudaVector32i &local_to_global_id =
+            ELL_local_vertex_id_to_global_vertex_id[v_id];
+        for (int i = 0; i < local_to_global_id.size(); i++)
+        {
+            if (v_id == local_to_global_id[i])
+            {
+                K[v_id][i](0, 0) += 1e6;
+                K[v_id][i](1, 1) += 1e6;
+                K[v_id][i](2, 2) += 1e6;
+                printf("[apply] fix v %d, diag %.2f\n", v_id, K[v_id][i](0, 0));
+                break;
+            }
+        }
+    }
+}
+void ApplyFixWeightOnSystemMatrix(
+    const cCudaArray<tCudaVector32i> &ELL_local_vertex_id_to_global_vertex_id,
+    const cCudaArray<int> &fixed_vertex_array,
+    cCuda2DArray<tCudaMatrix3f> &global_K)
+{
+    int num_of_v = ELL_local_vertex_id_to_global_vertex_id.Size();
+
+    ApplyFixWeightKernel CUDA_at(num_of_v, 128)(
+        num_of_v, ELL_local_vertex_id_to_global_vertex_id.Ptr(),
+        fixed_vertex_array.Size(), fixed_vertex_array.Ptr(), global_K.Ptr());
+    CUDA_ERR("apply fix weight");
 }
 } // namespace BaraffClothGpu

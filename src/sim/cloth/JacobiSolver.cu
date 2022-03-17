@@ -26,7 +26,7 @@ __global__ void CalcResidual(
         int v_column_global_id = ell_local_to_global_id[i];
         if (v_column_global_id == -1)
             break;
-
+        // if (v_id != v_column_global_id)
         cur_sum_vec += A[v_id][i] * x[v_column_global_id];
     }
 
@@ -52,23 +52,30 @@ __global__ void CalcUpdateVec(
     tCudaVector32i ell_local_to_global_id =
         ELL_local_vertex_id_to_global_vertex_id[v_id];
     tCudaVector3f b_minu_Rx = tCudaVector3f::Zero();
-    tCudaMatrix3f cur_diag_inv = tCudaMatrix3f::Zero();
+    tCudaVector3f cur_diag_inv = tCudaVector3f::Zero();
     for (int i = 0; i < ell_local_to_global_id.size(); i++)
     {
         int v_column_global_id = ell_local_to_global_id[i];
         if (v_column_global_id == -1)
             break;
+        tCudaMatrix3f cur_block = A[v_id][i];
         if (v_column_global_id == v_id)
         {
-            cur_diag_inv = A[v_id][i].inverse();
+            cur_diag_inv[0] = 1.0 / cur_block(0, 0);
+            cur_diag_inv[1] = 1.0 / cur_block(1, 1);
+            cur_diag_inv[2] = 1.0 / cur_block(2, 2);
+            cur_block(0, 0) = 0;
+            cur_block(1, 1) = 0;
+            cur_block(2, 2) = 0;
         }
-        else
-        {
-            b_minu_Rx -= A[v_id][i] * x[v_column_global_id];
-        }
+
+        b_minu_Rx -= cur_block * x[v_column_global_id];
     }
     b_minu_Rx += b[v_id];
-    update_dir[v_id] = cur_diag_inv * b_minu_Rx;
+    b_minu_Rx[0] *= cur_diag_inv[0];
+    b_minu_Rx[1] *= cur_diag_inv[1];
+    b_minu_Rx[2] *= cur_diag_inv[2];
+    update_dir[v_id] = b_minu_Rx;
 }
 
 __global__ void Update(int num_of_v, devPtr<const tCudaVector3f> dir,

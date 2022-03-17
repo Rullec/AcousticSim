@@ -52,7 +52,6 @@ protected:
     cCollisionDetecterPtr mColDetecter;
     double mIdealDefaultTimestep; // default substep dt
     tVector2d mClothSizes;
-    double mClothMass;            // SI key
     float mClothDensity;          // SI kg/m^2
     tVectorXd mMassMatrixDiag; // diag inv mass matrix
     std::string mGeometryType;

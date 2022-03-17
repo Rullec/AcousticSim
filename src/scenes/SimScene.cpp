@@ -1,16 +1,17 @@
-#include <iostream>
 #include "SimScene.h"
-#include "utils/ColorUtil.h"
-#include "utils/JsonUtil.h"
 #include "geometries/CollisionDetecter.h"
 #include "geometries/Primitives.h"
 #include "geometries/Triangulator.h"
+#include "imgui.h"
+#include "scenes/SimStateMachine.h"
 #include "sim/KinematicBody.h"
 #include "sim/Perturb.h"
 #include "sim/SimObjectBuilder.h"
-#include "scenes/SimStateMachine.h"
-#include "imgui.h"
-// std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim", "acoustic"};
+#include "utils/ColorUtil.h"
+#include "utils/JsonUtil.h"
+#include <iostream>
+// std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim",
+// "acoustic"};
 std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim"};
 
 eSceneType cSimScene::BuildSceneType(const std::string &str)
@@ -57,15 +58,17 @@ void cSimScene::Init(const std::string &conf_path)
     mEnableCollisionDetection =
         cJsonUtil::ParseAsBool(cSimScene::ENABLE_COLLISION_DETECTION_KEY, root);
     // gAudioOutput->Init();
-    BuildObjects(
-        cJsonUtil::ParseAsValue(cSimScene::OBJECT_LIST_KEY, root));
+    BuildObjects(cJsonUtil::ParseAsValue(cSimScene::OBJECT_LIST_KEY, root));
 
     CreateCollisionDetecter();
 
     InitDrawBuffer();
     InitRaycaster(root);
 
-    mSimStateMachine->SimulatorInitDone(cJsonUtil::ParseAsBool("pause_at_first", root) == true ? eSimState::SIMSTATE_PAUSE : eSimState::SIMSTATE_RUN);
+    mSimStateMachine->SimulatorInitDone(
+        cJsonUtil::ParseAsBool("pause_at_first", root) == true
+            ? eSimState::SIMSTATE_PAUSE
+            : eSimState::SIMSTATE_RUN);
 }
 void cSimScene::BuildObjects(const Json::Value &obj_conf_)
 {
@@ -89,7 +92,8 @@ void cSimScene::SaveCurrentScene()
 {
     // for (auto &x : mObstacleList)
     // {
-    //     cObjExporter::ExportObj(x->GetObjName() + ".obj", x->GetVertexArray(),
+    //     cObjExporter::ExportObj(x->GetObjName() + ".obj",
+    //     x->GetVertexArray(),
     //                             x->GetTriangleArray());
     // }
 }
@@ -129,7 +133,8 @@ void cSimScene::InitRaycaster(const Json::Value &conf)
     {
         mRaycaster->AddResources(x);
     }
-    std::cout << "[debug] add resources to raycaster done, num of objects = " << mObjectList.size() << std::endl;
+    std::cout << "[debug] add resources to raycaster done, num of objects = "
+              << mObjectList.size() << std::endl;
 }
 /**
  * \brief           Update the simulation procedure
@@ -192,6 +197,7 @@ void cSimScene::PerformCollisionDetection()
 void cSimScene::Reset()
 {
     cScene::Reset();
+    ReleasePerturb();
     ClearForce();
     for (auto &x : mObjectList)
         x->Reset();
@@ -319,9 +325,7 @@ void cSimScene::UpdatePerturbPos(const tVector &camera_pos, const tVector &dir)
  * \brief               Event response (add perturb)
  */
 
-void cSimScene::MouseButton(int button, int action, int mods)
-{
-}
+void cSimScene::MouseButton(int button, int action, int mods) {}
 
 #include "GLFW/glfw3.h"
 void cSimScene::Key(int key, int scancode, int action, int mods)
@@ -357,7 +361,7 @@ bool cSimScene::CreatePerturb(tRay *ray)
 
     mPerturb->mObject = res.mObject;
     mPerturb->mAffectedTriId = res.mLocalTriangleId;
-    std::cout << "[debug] affect id = " << res.mLocalTriangleId << std::endl;
+    // std::cout << "[debug] affect id = " << res.mLocalTriangleId << std::endl;
     const auto &ver_array = mPerturb->mObject->GetVertexArray();
     const auto &tri_array = mPerturb->mObject->GetTriangleArray();
 
@@ -368,10 +372,25 @@ bool cSimScene::CreatePerturb(tRay *ray)
             ver_array[tri_array[res.mLocalTriangleId]->mId1]->mPos,
             ver_array[tri_array[res.mLocalTriangleId]->mId2]->mPos)
             .segment(0, 3);
-    std::cout
-        << "uv = "
-        << ver_array[tri_array[res.mLocalTriangleId]->mId0]->muv.transpose()
-        << " vid = " << tri_array[res.mLocalTriangleId]->mId0 << std::endl;
+    // std::cout << "[perturb] intersection pt (from raycast) = "
+    //           << res.mIntersectionPoint.transpose() << std::endl;
+    // std::cout << "[perturb] bary = " << mPerturb->mBarycentricCoords.transpose()
+    //           << std::endl;
+
+    tVector restore_intersection_pt =
+        ver_array[tri_array[res.mLocalTriangleId]->mId0]->mPos *
+            mPerturb->mBarycentricCoords[0] +
+        ver_array[tri_array[res.mLocalTriangleId]->mId1]->mPos *
+            mPerturb->mBarycentricCoords[1] +
+        ver_array[tri_array[res.mLocalTriangleId]->mId2]->mPos *
+            mPerturb->mBarycentricCoords[2];
+    // std::cout << "[perturb] restore_intersection_pt = "
+    //           << restore_intersection_pt.transpose() << std::endl;
+    
+    // std::cout
+    //     << "uv = "
+    //     << ver_array[tri_array[res.mLocalTriangleId]->mId0]->muv.transpose()
+    //     << " vid = " << tri_array[res.mLocalTriangleId]->mId0 << std::endl;
     SIM_ASSERT(mPerturb->mBarycentricCoords.hasNaN() == false);
     mPerturb->InitTangentRect(-1 * ray->mDir);
     mPerturb->UpdatePerturbPos(ray->mOrigin, ray->mDir);
@@ -388,8 +407,7 @@ void cSimScene::ReleasePerturb()
         // restore the color
 
         mPerturb->mObject->ChangeTriangleColor(
-            mPerturb->mAffectedTriId,
-            ColorBlue.segment(0, 3).cast<float>());
+            mPerturb->mAffectedTriId, ColorBlue.segment(0, 3).cast<float>());
         // 1, 0);
         delete mPerturb;
         mPerturb = nullptr;
@@ -460,16 +478,20 @@ std::vector<cKinematicBodyPtr> cSimScene::GetObstacleList()
 /**
  * \brief                   Is sim paused
  */
-bool cSimScene::IsSimPaused() const { return mSimStateMachine->IsRunning() == false; }
+bool cSimScene::IsSimPaused() const
+{
+    return mSimStateMachine->IsRunning() == false;
+}
 
 /**
  * \brief                   Update imgui for simulation scene
-*/
+ */
 void cSimScene::UpdateImGui()
 {
     auto cur_state = mSimStateMachine->GetCurrentState();
     auto name = tSimStateMachine::BuildStateStr(cur_state);
-    // std::cout << "cSimScene::UpdateImGui, cur state = " << cur_state << " name = " << name << std::endl;
+    // std::cout << "cSimScene::UpdateImGui, cur state = " << cur_state << "
+    // name = " << name << std::endl;
     ImGui::Text("simulation state: %s", name.c_str());
     for (auto &obj : this->mObjectList)
     {
