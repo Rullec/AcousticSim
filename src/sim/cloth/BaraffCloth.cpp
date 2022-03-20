@@ -351,6 +351,8 @@ void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
 {
 
     K_global = mMaterial->CalcTotalStiffnessMatrix();
+    // std::cout << "K = \n" << K_global << std::endl;
+    // exit(1);
     // +
     //            this->mBendingMaterial->GetStiffnessMatrix();
 
@@ -473,6 +475,9 @@ void cBaraffCloth::SolveForNextPos(double dt)
     tVectorXd dx = mXcur - mXpre;
     float threshold = 1e-12, residual = 0;
     int iters = 0;
+    // std::cout << "cpu A = \n" << W.toDense() << std::endl;
+    // std::cout << "cpu b = " << b.transpose() << std::endl;
+    // exit(1);
     Solve(W, b, dx, threshold, iters, residual, this->mDragVertexIdx);
     {
         // dx = W.toDense().inverse() * b;
@@ -668,7 +673,7 @@ tVectorXd ApplyMatmul(const tSparseMatd &A, const tVectorXd &b,
                (cur_idx == 3 * drag_pt_idx + 2);
     };
     tVectorXd res = tVectorXd::Zero(b.size());
-OMP_PARALLEL_FOR
+    OMP_PARALLEL_FOR
     for (int k = 0; k < A.outerSize(); ++k)
     {
         if (should_remove(drag_pt, k))

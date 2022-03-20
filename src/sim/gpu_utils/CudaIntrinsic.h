@@ -30,6 +30,7 @@ template <typename Type> __device__ Type AtomicAdd(Type *Address, Type Val)
 {
     return atomicAdd(Address, Val);
 }
+
 template <typename Type> __device__ Type AtomicSub(Type *Address, Type Val)
 {
     return atomicSub(Address, Val);
@@ -43,7 +44,20 @@ __device__ Type AtomicCAS(Type *Address, Type Exp, Type Val)
 {
     return atomicCAS(Address, Exp, Val);
 }
-
+__inline__ __device__ void AtomicAdd(tCudaMatrix3f *address,
+                                     tCudaMatrix3f value)
+{
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            atomicAdd(&(*address)(i, j), value(i, j));
+}
+__inline__ __device__ void AtomicAdd(tCudaVector3f *address,
+                                     tCudaVector3f value)
+{
+    atomicAdd(&((*address)[0]), value[0]);
+    atomicAdd(&((*address)[1]), value[1]);
+    atomicAdd(&((*address)[2]), value[2]);
+}
 #else
 template <typename Type> inline Type AtomicOr(Type *Address, Type Val)
 {

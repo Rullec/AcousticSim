@@ -4,23 +4,23 @@
         {
             "object_name": "a_cloth",
             "object_type": "Cloth",
-            "cloth_type": "fem",
+            "cloth_type": "fem_gpu",
             "geometry_type.bak": "delaunay",
             "geometry_type": "regular_triangle",
             "damping": 1e-5,
-            "default_timestep": 5e-3,
+            "default_timestep": 1e-2,
             "cloth_size": [
                 0.3,
                 0.3
             ],
             "subdivision": [
-                70,
-                70
-            ],
-            "cloth_stretch_stiffness": [
-                100,
                 100,
                 100
+            ],
+            "cloth_stretch_stiffness": [
+                1,
+                1,
+                1
             ],
             "cloth_bending_stiffness": [
                 0,

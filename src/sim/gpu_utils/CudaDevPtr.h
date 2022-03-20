@@ -3,7 +3,7 @@
 #include "CudaMath.h"
 // #include "SeMath.h"
 
-//#define ENABLE_CUDA_MEMORY_CHECK
+#define ENABLE_CUDA_MEMORY_CHECK
 
 #ifndef ENABLE_CUDA_MEMORY_CHECK
 

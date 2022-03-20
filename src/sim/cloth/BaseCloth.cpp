@@ -6,8 +6,9 @@
 #include "utils/JsonUtil.h"
 #include "utils/LogUtil.h"
 #include "utils/RenderUtil.h"
-
 #include <iostream>
+#include <set>
+
 const std::string gClothTypeStr[eClothType::NUM_OF_CLOTH_TYPE] = {
     "semi_implicit", "implicit", "pbd", "pd",
     "linctex",       "empty",    "fem", "fem_gpu"};
@@ -173,6 +174,8 @@ void cBaseCloth::SetPos(const tVectorXd &newpos)
             mXcur.segment(i * 3, 3);
     }
 }
+
+void cBaseCloth::SetPrePos(const tVectorXd &newpos) { mXpre = newpos; }
 
 // extern tVector gGravity;
 const tVectorXd &cBaseCloth::GetPos() const { return this->mXcur; }
@@ -344,6 +347,17 @@ void MoveObjPos(std::vector<tVertexPtr> &mVertexArrayShared)
     // 5. add the shift value
 }
 
+int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1)
+{
+    SIM_ASSERT(tri != nullptr);
+    std::set<int> vid_set = {tri->mId0, tri->mId1, tri->mId2};
+    // printf("[debug] select another vertex in triangle 3 vertices (%d, %d, %d)
+    // besides %d %d\n", tri->mId0, tri->mId1, tri->mId2, v0, v1);
+    vid_set.erase(vid_set.find(v0));
+    vid_set.erase(vid_set.find(v1));
+    return *vid_set.begin();
+};
+
 void cBaseCloth::InitGeometry(const Json::Value &conf)
 {
     // 1. build the geometry
@@ -430,58 +444,38 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
                 exit(1);
             }
         }
-
-        // mVertexArrayShared.clear();
-        // mEdgeArrayShared.clear();
-        // mTriangleArrayShared.clear();
-        // {
-        //     auto v0 = std::make_shared<tVertex>();
-        //     v0->mColor = ColorBlue;
-        //     v0->mPos = tVector(0, 0.1, 0, 1);
-        //     v0->muv = tVector2f(0, 0);
-
-        //     auto v1 = std::make_shared<tVertex>();
-        //     v1->mColor = ColorBlue;
-        //     v1->mPos = tVector(0.1, 0.1, 0, 1);
-        //     v1->muv = tVector2f(0.1, 0);
-
-        //     auto v2 = std::make_shared<tVertex>();
-        //     v2->mColor = ColorBlue;
-        //     v2->mPos = tVector(0.05, 0.2, 0, 1);
-        //     v2->muv = tVector2f(0.05, 0.1);
-        //     mVertexArrayShared = {v0, v1, v2};
-
-        //     auto e0 = std::make_shared<tEdge>();
-        //     e0->mId0 = 0;
-        //     e0->mId1 = 1;
-        //     e0->mTriangleId0 = 0;
-        //     auto e1 = std::make_shared<tEdge>();
-        //     e1->mId0 = 1;
-        //     e1->mId1 = 2;
-        //     e1->mTriangleId0 = 0;
-
-        //     auto e2 = std::make_shared<tEdge>();
-        //     e2->mId0 = 2;
-        //     e2->mId1 = 0;
-        //     e2->mTriangleId0 = 0;
-
-        //     mEdgeArrayShared = {e0, e1, e2};
-        //     auto t = std::make_shared<tTriangle>();
-        //     t->mId0 = 0;
-        //     t->mId1 = 1;
-        //     t->mId2 = 2;
-
-        //     mTriangleArrayShared = {t};
-        // }
     }
 
     CalcNodePositionVector(mClothInitPos);
 
-    // init the inv mass vector
-    mMassMatrixDiag.noalias() = tVectorXd::Zero(GetNumOfFreedom());
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    // create triangle area
+    mTriangleInitArea.resize(GetNumOfTriangles());
+    for (int i = 0; i < GetNumOfTriangles(); i++)
     {
-        mMassMatrixDiag.segment(i * 3, 3).fill(mVertexArrayShared[i]->mMass);
+        auto tri = mTriangleArrayShared[i];
+
+        mTriangleInitArea[i] =
+            cMathUtil::CalcTriangleArea(mVertexArrayShared[tri->mId0]->mPos,
+                                        mVertexArrayShared[tri->mId1]->mPos,
+                                        mVertexArrayShared[tri->mId2]->mPos);
+    }
+
+    // add edge affect vertex
+    int num_of_e = GetNumOfEdges();
+    mEdgeAffectVertexId.resize(num_of_e, tVector4i::Zero());
+    for (int i = 0; i < num_of_e; i++)
+    {
+        auto cur_e = mEdgeArrayShared[i];
+        if (cur_e->mIsBoundary == true)
+            continue;
+        int v0 = cur_e->mId0;
+        int v1 = cur_e->mId1;
+
+        int v2 = SelectAnotherVerteix(mTriangleArrayShared[cur_e->mTriangleId0],
+                                      v0, v1);
+        int v3 = SelectAnotherVerteix(mTriangleArrayShared[cur_e->mTriangleId1],
+                                      v0, v1);
+        mEdgeAffectVertexId[i] = tVector4i(v0, v1, v2, v3);
     }
 
     // update the normal information
@@ -508,10 +502,8 @@ void cBaseCloth::InitMass(const Json::Value &conf)
         int vid0 = tri_array[i]->mId0;
         int vid1 = tri_array[i]->mId1;
         int vid2 = tri_array[i]->mId2;
-        const tVector &v0 = v_array[vid0]->mPos;
-        const tVector &v1 = v_array[vid1]->mPos;
-        const tVector &v2 = v_array[vid2]->mPos;
-        double area = cMathUtil::CalcTriangleArea(v0, v1, v2);
+
+        double area = mTriangleInitArea[i];
         vertex_shared_area[vid0] += area / 3;
         vertex_shared_area[vid1] += area / 3;
         vertex_shared_area[vid2] += area / 3;

@@ -39,6 +39,7 @@ protected:
     cQBendingMaterialPtr mBendingMaterial;
     float mRayleighA, mRayleighB; // rayleigh damping
     int mDragVertexIdx;
+    tVectorXd mMassMatrixDiag;
     // virtual void InitBuffer();
     virtual void InitMass(const Json::Value &conf) override;
     virtual void InitMaterialCoords();

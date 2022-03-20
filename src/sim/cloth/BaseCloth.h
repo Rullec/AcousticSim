@@ -37,6 +37,7 @@ public:
     virtual void UpdatePos(double dt) = 0;
     virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
     virtual void SetPos(const tVectorXd &newpos);
+    virtual void SetPrePos(const tVectorXd &newpos);
     virtual const tVectorXd &GetPos() const;
     virtual double GetDefaultTimestep() { return mIdealDefaultTimestep; }
     virtual tVector2d GetClothShape() const;
@@ -53,16 +54,18 @@ protected:
     double mIdealDefaultTimestep; // default substep dt
     tVector2d mClothSizes;
     float mClothDensity;          // SI kg/m^2
-    tVectorXd mMassMatrixDiag; // diag inv mass matrix
     std::string mGeometryType;
     double mDamping;                             // damping coeff
     tVectorXd mIntForce, mGravityForce, mUserForce, mCollisionForce, mDampingForce;
+    tEigenArr<tVector4i> mEdgeAffectVertexId;
     
     bool mEnableClothFromObj;                    // the cloth mesh comes from obj or not
     std::string mClothObjPath;                   // if the cloth mesh comes from obj, the path
     tVectorXd mXpre, mXcur;                      // previous node position & current node position
     std::vector<int> mConstraint_StaticPointIds; // fixed constraint point
     tVectorXd mClothInitPos;                     // init position of the cloth
+    std::vector<float> mTriangleInitArea;
+
     virtual void InitGeometry(
         const Json::Value &conf); // discretazation from square cloth to
     virtual void InitMass(const Json::Value &conf);

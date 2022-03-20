@@ -1,6 +1,6 @@
 #pragma once
-#include "Rand.h"
 #include "EigenUtil.h"
+#include "Rand.h"
 #include <random>
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288
@@ -9,7 +9,6 @@
 const int gInvalidIdx = -1;
 
 // for convenience define standard vector for rendering
-
 
 const double gRadiansToDegrees = 57.2957795;
 const double gDegreesToRadians = 1.0 / gRadiansToDegrees;
@@ -123,8 +122,7 @@ public:
     static void ThresholdOp(tVectorXd &v, double threshold = 1e-6);
     static tVector CalcAxisAngleFromOneVectorToAnother(const tVector &v0,
                                                        const tVector &v1);
-    template <typename T>
-    static const std::string EigenToString(const T &mat)
+    template <typename T> static const std::string EigenToString(const T &mat)
     {
         std::stringstream ss;
         ss << mat;
@@ -143,13 +141,11 @@ public:
     {
         mat = (threshold < mat.array().abs()).select(mat, 0.0f);
     }
-    template <typename T>
-    static tVector Expand(const T &vec, double n)
+    template <typename T> static tVector Expand(const T &vec, double n)
     {
         return tVector(vec[0], vec[1], vec[2], n);
     }
-    template <typename T>
-    static tMatrix ExpandMat(const T &raw_mat)
+    template <typename T> static tMatrix ExpandMat(const T &raw_mat)
     {
         tMatrix mat = tMatrix::Zero();
         mat.block(0, 0, 3, 3) = raw_mat.block(0, 0, 3, 3);
@@ -178,14 +174,26 @@ public:
     static float CalcTriangleArea3d(const tVector3d &p0, const tVector3d &p1,
                                     const tVector3d &p2);
     static int RandIntCategorical(const std::vector<double> &prop);
+    template <typename dtype, int N>
+    static int Argmax(const Eigen::Matrix<dtype, N, 1> &vec)
+    {
+        int arg_max = 0;
+        dtype cur_max = vec[0];
+        for (int i = 1; i < N; i++)
+        {
+            if (vec[i] > cur_max)
+            {
+                arg_max = i, cur_max = vec[i];
+            }
+        }
+        return arg_max;
+    }
 
 private:
     static cRand gRand;
 
-    template <typename T>
-    static T SignAux(T val)
+    template <typename T> static T SignAux(T val)
     {
         return (T(0) < val) - (val < T(0));
     }
-
 };

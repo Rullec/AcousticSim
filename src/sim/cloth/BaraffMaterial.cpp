@@ -15,7 +15,7 @@ cBaraffMaterial::cBaraffMaterial()
     mNumOfTriangles = 0;
 }
 
-void CalcCoef(const tMatrix2d &mat, tVector3d &coef_u, tVector3d &coef_v)
+void CalcBaraffStretchCoef(const tMatrix2d &mat, tVector3d &coef_u, tVector3d &coef_v)
 {
     float a = mat(0, 0);
     float b = mat(0, 1);
@@ -65,9 +65,9 @@ void cBaraffMaterial::Init(cBaseObjectPtr object,
         Dminv.col(1) = (v2->muv - v0->muv).cast<double>();
         Dminv = Dminv.inverse().eval();
 
-        CalcCoef(Dminv, mCoefFu_warp_weft[i], mCoefFv_warp_weft[i]);
+        CalcBaraffStretchCoef(Dminv, mCoefFu_warp_weft[i], mCoefFv_warp_weft[i]);
         Dminv = Dminv * R45.transpose();
-        CalcCoef(Dminv, mCoefFu_diag[i], mCoefFv_diag[i]);
+        CalcBaraffStretchCoef(Dminv, mCoefFu_diag[i], mCoefFv_diag[i]);
         mTriangleAreaArray[i] =
             cMathUtil::CalcTriangleArea(v0->mPos, v1->mPos, v2->mPos);
     }

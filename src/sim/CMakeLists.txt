@@ -16,20 +16,22 @@ set(CLOTH_SRC
     cloth/BaseCloth.cpp
     cloth/ClothBuilder.cpp
     cloth/BaraffCloth.cpp
-    cloth/BaraffMaterialUnstable.cpp
+    # cloth/BaraffMaterialUnstable.cpp
     cloth/BaraffMaterial.cpp
     cloth/QBendingMaterial.cpp
     cloth/BaraffClothGpu.cpp
     cloth/BaraffClothGpu.cu
-    cloth/PCGSolver.cu
-    cloth/FRPCGSolver.cu
-    cloth/GDSolver.cu
-    cloth/JacobiSolver.cu
+    # cloth/BaraffClothGpu.cu
+    # cloth/PCGSolver.cu
+    # cloth/FRPCGSolver.cu
+    # cloth/GDSolver.cu
+    # cloth/JacobiSolver.cu
     gpu_utils/CudaMemory.cpp
     gpu_utils/CudaArray.cpp
     gpu_utils/CudaELLMatrix.cpp
     gpu_utils/GPUMatrixOps.cu
     gpu_utils/CudaAsync.cu
+    gpu_solvers/PCGSolver.cu
     # cloth/ImplicitCloth.cpp   
     # cloth/PBDCloth.cpp
     # cloth/PDCloth.cpp
@@ -62,5 +64,8 @@ set(
 )
 
 add_library(sim_lib ${SIM_SRC})
+
+# disable warnings of nvcc
+target_compile_options(sim_lib PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-w>)
 # target_link_libraries(sim_lib)
 # target_link_libraries(sim_lib OpenMP::OpenMP_CXX)

@@ -37,7 +37,7 @@ cBaseObjectPtr BuildCloth(Json::Value conf, int obj_id)
         ptr = std::make_shared<cBaraffCloth>(obj_id);
         break;
     case eClothType::FEM_CLOTH_GPU:
-        ptr = std::make_shared<cBaraffClothGPU>(obj_id);
+        ptr = std::make_shared<cBaraffClothGpu>(obj_id);
         break;
     default:
         // std::cout << "pbd type = " << eClothType::PBD_CLOTH

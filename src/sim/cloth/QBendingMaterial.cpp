@@ -2,6 +2,7 @@
 #include "geometries/Primitives.h"
 #include "utils/LogUtil.h"
 #include <iostream>
+#include <set>
 // #define _CRTDBG_MAP_ALLOC
 // #include <stdlib.h>
 // #include <crtdbg.h>
@@ -143,7 +144,7 @@ tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1,
 // }
 
 cQBendingMaterial::cQBendingMaterial() {}
-#include <set>
+
 int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1)
 {
     SIM_ASSERT(tri != nullptr);
@@ -154,7 +155,6 @@ int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1)
     vid_set.erase(vid_set.find(v1));
     return *vid_set.begin();
 };
-
 void cQBendingMaterial::Init(const std::vector<tVertexPtr> &v_array,
                              const std::vector<tEdgePtr> &e_array,
                              const std::vector<tTrianglePtr> &t_array,
