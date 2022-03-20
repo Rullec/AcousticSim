@@ -204,6 +204,7 @@ void cQBendingMaterial::Init(const std::vector<tVertexPtr> &v_array,
             {
                 // handle (i, j) block 3 * 3
                 double cur_coef = coef[i] * coef[j] * prefix_coef;
+                // printf("[bending] cpu, coef ij %.1f, %.1f, prefix 0.1f");
                 for (int k = 0; k < 3; k++)
                 {
                     triplet_lst.push_back(

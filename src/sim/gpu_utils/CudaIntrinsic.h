@@ -51,6 +51,10 @@ __inline__ __device__ void AtomicAdd(tCudaMatrix3f *address,
         for (int j = 0; j < 3; j++)
             atomicAdd(&(*address)(i, j), value(i, j));
 }
+__inline__ __device__ void AtomicAdd(float *address, float value)
+{
+    atomicAdd(address, value);
+}
 __inline__ __device__ void AtomicAdd(tCudaVector3f *address,
                                      tCudaVector3f value)
 {

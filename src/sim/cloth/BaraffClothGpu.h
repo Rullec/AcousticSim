@@ -28,10 +28,14 @@ public:
 
 protected:
     float mRayleighDampingA, mRayleighDampingB;
-    tCudaVector3f mStretchK, mBendingK;
+    tCudaVector3f mStretchK;
+    tCudaVector2f mBendingK;
     cQBendingMaterialPtr mBendingMaterial;
     // cPCGSolverPtr mSolver;
     std::vector<tFixPointPtr> mConstrainedPt;
+    std::vector<float> mEdgeDirectionAngles;   // [0, pi/2]
+    std::vector<float> mEdgeBendintgStiffness; // K(theta) = K_u * cos^2 theta +
+                                               // Kv * sin^2 theta
     tFixPointPtr mDragPt;
 
     cCudaArray<tCudaVector3f> mXcurCuda, mXpreCuda;  // node pos on Cuda
@@ -44,10 +48,18 @@ protected:
     cCudaArray<tCudaVector3f> mCoefFu_warp_weft, mCoefFv_warp_weft;
     cCudaArray<tCudaVector3f> mCoefFu_diag, mCoefFv_diag;
 
+    // =================bending info===================
+    cCudaArray<tVector4i> mEdgeAffectVertexIdCuda;
+    cCudaArray<float>
+        mBendingStiffnessMatrixBaseDiagCuda; // base_diag * edge_K = ele_K
+    cCuda2DArray<tCudaMatrix3f> mBendingStiffnessMatrixCuda;
+
+    // =================global info====================
     cCudaArray<tELLLocal2GlobalInfo>
         mELLVidToGlobalVid; // ELL index to global vid
     cCudaArray<tCudaVector3f> mIntForceCuda, mGravityForceCuda;
-    cCuda2DArray<tCudaMatrix3f> mStiffnessMatrixCuda;
+
+    cCuda2DArray<tCudaMatrix3f> mGlobalStiffnessMatrixCuda;
 
     cCuda2DArray<tCudaMatrix3f> mSystemMatrixCuda;
     cCudaArray<tCudaVector3f> mSystemRHSCuda;
@@ -69,4 +81,6 @@ protected:
     virtual void InitELLMatrix();
     virtual void InitStretchCoef();
     virtual void InitGravity();
+    virtual void InitBendingMatrix();
+    virtual void UpdateBendingMatrix();
 };

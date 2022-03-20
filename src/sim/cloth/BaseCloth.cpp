@@ -58,7 +58,7 @@ void cBaseCloth::Reset()
 {
     std::cout << "reset\n";
     SetPos(mClothInitPos);
-    mXpre.noalias() = mClothInitPos;
+    SetPrePos(mClothInitPos);
     ClearForce();
 }
 void cBaseCloth::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
@@ -462,20 +462,26 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
 
     // add edge affect vertex
     int num_of_e = GetNumOfEdges();
-    mEdgeAffectVertexId.resize(num_of_e, tVector4i::Zero());
+    mEdgeAffectVertexId.resize(num_of_e, -1 * tVector4i::Ones());
     for (int i = 0; i < num_of_e; i++)
     {
         auto cur_e = mEdgeArrayShared[i];
         if (cur_e->mIsBoundary == true)
-            continue;
-        int v0 = cur_e->mId0;
-        int v1 = cur_e->mId1;
+        {
+            mEdgeAffectVertexId[i] = -1 * tVector4i::Ones();
+        }
+        else
+        {
 
-        int v2 = SelectAnotherVerteix(mTriangleArrayShared[cur_e->mTriangleId0],
-                                      v0, v1);
-        int v3 = SelectAnotherVerteix(mTriangleArrayShared[cur_e->mTriangleId1],
-                                      v0, v1);
-        mEdgeAffectVertexId[i] = tVector4i(v0, v1, v2, v3);
+            int v0 = cur_e->mId0;
+            int v1 = cur_e->mId1;
+
+            int v2 = SelectAnotherVerteix(
+                mTriangleArrayShared[cur_e->mTriangleId0], v0, v1);
+            int v3 = SelectAnotherVerteix(
+                mTriangleArrayShared[cur_e->mTriangleId1], v0, v1);
+            mEdgeAffectVertexId[i] = tVector4i(v0, v1, v2, v3);
+        }
     }
 
     // update the normal information

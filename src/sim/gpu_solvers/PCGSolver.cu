@@ -343,7 +343,7 @@ void Solve(
         num_of_v, ELL_local_vertex_id_to_global_vertex_id.Ptr(), A.Ptr(),
         Ainv_precond.Ptr());
 
-    int max_iters = 50;
+    int max_iters = 100;
     pcg_dTAd.Resize(1);
     pcg_dTAd.MemsetAsync(0);
     pcg_rbuf.Resize(num_of_v);

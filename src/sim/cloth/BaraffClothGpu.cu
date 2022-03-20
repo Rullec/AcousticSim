@@ -101,7 +101,7 @@ UpdateComponent(float Ku, float Kv, const tCudaVector3f &coef_Fu,
     float Cu = Fu.norm() - 1;
     float Cv = Fv.norm() - 1;
     // printf("Cu %.1e Cv %.1e, Fu %.1e %.1e %.1e Fv %.1e %.1e %.1e\n", Cu, Cv,
-        //    Fu[0], Fu[1], Fu[2], Fv[0], Fv[1], Fv[2]);
+    //    Fu[0], Fu[1], Fu[2], Fv[0], Fv[1], Fv[2]);
     Fint_total[0] +=
         CalcFint(tri_area, Ku, Kv, Cu, Cv, coef_Fu, coef_Fv, Fu, Fv);
 
@@ -155,9 +155,9 @@ __global__ void UpdateStretch_K_fint(
     const tCudaVector3f v2 = x_cur[v_id[2]];
 
     // printf(
-    //     "v0(%d) %.1e %.1e %.1e v1(%d) %.1e %.1e %.1e v2(%d) %.1e %.1e %.1e\n",
-    //     v_id[0], v0[0], v0[1], v0[2], v_id[1], v1[0], v1[1], v1[2], v_id[2],
-    //     v2[0], v2[1], v2[2]);
+    //     "v0(%d) %.1e %.1e %.1e v1(%d) %.1e %.1e %.1e v2(%d) %.1e %.1e
+    //     %.1e\n", v_id[0], v0[0], v0[1], v0[2], v_id[1], v1[0], v1[1], v1[2],
+    //     v_id[2], v2[0], v2[1], v2[2]);
 
     UpdateComponent(Ku, Kv, coef_Fu_warpweft[tri_id], coef_Fv_warpweft[tri_id],
                     v0, v1, v2, tri_area, Fint_total, Hessian);
@@ -193,7 +193,7 @@ __global__ void UpdateStretch_K_fint(
     }
 }
 
-void UpdateStiffnessMatrixAndFint(
+void UpdateStretchStiffnessMatrixAndFint(
     const cCudaArray<tCudaVector3i> &mTriangleVertexIdCuda,
     const cCudaArray<float> &mTriangleInitAreaCuda,
     const cCudaArray<tCudaVector3f> &mXcurCuda, const tCudaVector3f &mStretchK,
@@ -203,11 +203,12 @@ void UpdateStiffnessMatrixAndFint(
     const cCudaArray<tCudaVector3f> &mCoefFv_diag,
     const cCudaArray<tCudaVector32i> &mELLVidToGlobalVid,
     cCudaArray<tCudaVector3f> &mIntForceCuda,
-    cCuda2DArray<tCudaMatrix3f> &mStiffnessMatrixCuda)
+    cCuda2DArray<tCudaMatrix3f> &mGlobalStiffnessMatrixCuda)
 {
-    // printf("mStiffnessMatrixCuda = %d %d\n", mStiffnessMatrixCuda.Rows(),
-    //        mStiffnessMatrixCuda.Columns());
-    mStiffnessMatrixCuda.MemsetAsync(tCudaMatrix3f::Zero());
+    // printf("mGlobalStiffnessMatrixCuda = %d %d\n",
+    // mGlobalStiffnessMatrixCuda.Rows(),
+    //        mGlobalStiffnessMatrixCuda.Columns());
+    mGlobalStiffnessMatrixCuda.MemsetAsync(tCudaMatrix3f::Zero());
     CUDA_ERR("clear K");
     // printf("fint size last = %d\n", mIntForceCuda.Size());
     mIntForceCuda.MemsetAsync(tCudaVector3f::Zero());
@@ -224,7 +225,7 @@ void UpdateStiffnessMatrixAndFint(
         mTriangleInitAreaCuda.Ptr(), mStretchK[0], mStretchK[1], mStretchK[2],
         mCoefFu_warp_weft.Ptr(), mCoefFv_warp_weft.Ptr(), mCoefFu_diag.Ptr(),
         mCoefFv_diag.Ptr(), mIntForceCuda.Ptr(), mELLVidToGlobalVid.Ptr(),
-        mStiffnessMatrixCuda.Ptr());
+        mGlobalStiffnessMatrixCuda.Ptr());
     CUDA_ERR("update K");
 }
 
@@ -383,6 +384,118 @@ void AssembleSystemRHS(
     // }
 }
 
-void UpdateLinearSystem() {}
-void SolveLinearSystem() {}
+__global__ void UpdateBendingStiffnessMatrixKernel(
+    int num_of_e, devPtr<const tVector4i> edge_affected_vertex_id_array,
+    devPtr<const float> edge_bending_stiffness,
+    devPtr<const float> edge_hessian_diag_float,
+    devPtr<const tCudaVector32i> mELLVidToGlobalVid,
+    devPtr2<tCudaMatrix3f> bending_matrix)
+{
+    int e_id = threadIdx.x + blockIdx.x * blockDim.x;
+    // if exceed or boundary edge, return
+    if (e_id >= num_of_e || edge_affected_vertex_id_array[e_id][0] == -1)
+    {
+        return;
+    }
+
+    int hessian_st_pos = 16 * e_id;
+    tVector4i edge_affect_vertices = edge_affected_vertex_id_array[e_id];
+    tCudaMatrix3f I3 = tCudaMatrix3f::Identity();
+    float K = edge_bending_stiffness[e_id];
+    for (int i = 0; i < 4; i++)
+    {
+        int vi_global_id = edge_affect_vertices[i];
+        tCudaVector32i ell_local_to_global = mELLVidToGlobalVid[vi_global_id];
+        for (int j = 0; j < 4; j++)
+        {
+            int bias = 4 * i + j;
+            int hessian_pos = hessian_st_pos + bias;
+            int vj_global_id = edge_affect_vertices[j];
+            float value = edge_hessian_diag_float[hessian_pos] * K;
+
+            int vj_ell_id =
+                global_to_local_same(ell_local_to_global, vj_global_id);
+            // printf("[bending_h] edge %d add value (%.3f) on (%d, %d)\n",
+            // e_id,
+            //        value, vi_global_id, vj_global_id);
+            // atomic add
+            cCudaIntrinsic::AtomicAdd(
+                &(bending_matrix[vi_global_id][vj_ell_id]), I3 * value);
+        }
+    }
+}
+
+void UpdateBendingStiffnessMatrix(
+    const cCudaArray<tVector4i> &edge_affected_vertex_id_array,
+    const cCudaArray<float> &edge_bending_stiffness,
+    const cCudaArray<float> &edge_hessian_diag_float,
+    const cCudaArray<tCudaVector32i> &mELLVidToGlobalVid,
+    cCuda2DArray<tCudaMatrix3f> &bending_matrix)
+{
+    bending_matrix.MemsetAsync(tCudaMatrix3f::Zero());
+    int num_of_edge = edge_affected_vertex_id_array.Size();
+
+    UpdateBendingStiffnessMatrixKernel CUDA_at(num_of_edge, 128)(
+        num_of_edge, edge_affected_vertex_id_array.Ptr(),
+        edge_bending_stiffness.Ptr(), edge_hessian_diag_float.Ptr(),
+        mELLVidToGlobalVid.Ptr(), bending_matrix.Ptr());
+
+    CUDA_ERR("UpdateBendingStiffnessMatrix");
+}
+__global__ void AddBendingHessianAndIntForceKernel(
+    int num_of_v, devPtr<const tCudaVector32i> mELLVidToGlobalVid,
+    devPtr2<const tCudaMatrix3f> mBendingStiffnessMatrixCuda,
+    devPtr<const tCudaVector3f> cur_pos_array,
+    devPtr<tCudaVector3f> mIntForceCuda,
+    devPtr2<tCudaMatrix3f> mGlobalStiffnessMatrixCuda)
+{
+    int v_id = threadIdx.x + blockIdx.x * blockDim.x;
+    if (v_id >= num_of_v)
+    {
+        return;
+    }
+
+    // 1. calcualte int force
+    auto ell_local_to_global = mELLVidToGlobalVid[v_id];
+    tCudaVector3f fint = tCudaVector3f::Zero();
+    for (int i = 0; i < ell_local_to_global.size(); i++)
+    // 2. add hessian
+    {
+        // printf("[bending_hessian] add global %d ell %d, %.1f\n", v_id, i,
+        //        -1 * mBendingStiffnessMatrixCuda[v_id][i](0, 0));
+        mGlobalStiffnessMatrixCuda[v_id][i] +=
+            -1 * mBendingStiffnessMatrixCuda[v_id][i];
+    }
+    for (int i = 0; i < ell_local_to_global.size(); i++)
+    {
+        if (ell_local_to_global[i] == -1)
+            break;
+
+        int global_id = ell_local_to_global[i];
+        // add fint force
+        fint += -1 * mBendingStiffnessMatrixCuda[v_id][i] *
+                cur_pos_array[global_id];
+    }
+    // printf("[bending] v %d add fint %.1e,%.1e,%.1e\n", v_id, fint[0],
+    // fint[1],
+    //        fint[2]);
+    mIntForceCuda[v_id] += fint;
+}
+extern void AddBendingHessianAndIntForce(
+    const cCudaArray<tCudaVector32i> &mELLVidToGlobalVid,
+    const cCuda2DArray<tCudaMatrix3f> &mBendingStiffnessMatrixCuda,
+    const cCudaArray<tCudaVector3f> &cur_pos_array,
+    cCudaArray<tCudaVector3f> &mIntForceCuda,
+    cCuda2DArray<tCudaMatrix3f> &mGlobalStiffnessMatrixCuda)
+{
+    int num_of_v = cur_pos_array.Size();
+
+    AddBendingHessianAndIntForceKernel CUDA_at(num_of_v, 128)(
+        num_of_v, mELLVidToGlobalVid.Ptr(), mBendingStiffnessMatrixCuda.Ptr(),
+        cur_pos_array.Ptr(), mIntForceCuda.Ptr(),
+        mGlobalStiffnessMatrixCuda.Ptr());
+
+    CUDA_ERR("AddBendingHessianAndIntForce");
+}
+
 } // namespace BaraffClothGpu

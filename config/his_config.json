@@ -8,7 +8,7 @@
             "geometry_type.bak": "delaunay",
             "geometry_type": "regular_triangle",
             "damping": 1e-5,
-            "default_timestep": 1e-2,
+            "default_timestep": 3e-2,
             "cloth_size": [
                 0.3,
                 0.3
@@ -18,17 +18,16 @@
                 100
             ],
             "cloth_stretch_stiffness": [
-                1,
-                1,
-                1
+                50,
+                50,
+                50
             ],
             "cloth_bending_stiffness": [
-                0,
-                0,
-                0
+                1e-5,
+                1e-5
             ],
-            "rayleigh_damping_a": 0,
-            "rayleigh_damping_b": 0,
+            "rayleigh_damping_a": 0.05,
+            "rayleigh_damping_b": -0.05,
             "enable_cloth_from_obj": false,
             "cloth_density": 0.1,
             "cloth_init_pos": [
@@ -44,7 +43,7 @@
                 0
             ],
             "constraints": {
-                "static_point.bak": [
+                "static_point": [
                     [
                         0.5,
                         0.5
