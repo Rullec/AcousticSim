@@ -15,8 +15,15 @@ void cCollisionDetecter::AddObject(cBaseObjectPtr obj,
     mEnableSelfCollision.push_back(enable_self_collision);
 }
 
+void cCollisionDetecter::Init() { mInited = true; }
+
 void cCollisionDetecter::PerformCD()
 {
+    if (mInited == false)
+    {
+        SIM_ERROR("the collision detecter hasn't been inited");
+        exit(1);
+    }
     cTimeUtil::Begin("DCD");
     // ! 1. clear all buffers
     Clear();

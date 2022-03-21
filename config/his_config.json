@@ -80,5 +80,5 @@
         "far": 100
     },
     "enable_profiling": false,
-    "enable_collision_detection": false
+    "enable_collision_detection": true
 }

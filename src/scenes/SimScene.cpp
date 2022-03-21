@@ -374,7 +374,8 @@ bool cSimScene::CreatePerturb(tRay *ray)
             .segment(0, 3);
     // std::cout << "[perturb] intersection pt (from raycast) = "
     //           << res.mIntersectionPoint.transpose() << std::endl;
-    // std::cout << "[perturb] bary = " << mPerturb->mBarycentricCoords.transpose()
+    // std::cout << "[perturb] bary = " <<
+    // mPerturb->mBarycentricCoords.transpose()
     //           << std::endl;
 
     tVector restore_intersection_pt =
@@ -386,7 +387,7 @@ bool cSimScene::CreatePerturb(tRay *ray)
             mPerturb->mBarycentricCoords[2];
     // std::cout << "[perturb] restore_intersection_pt = "
     //           << restore_intersection_pt.transpose() << std::endl;
-    
+
     // std::cout
     //     << "uv = "
     //     << ver_array[tri_array[res.mLocalTriangleId]->mId0]->muv.transpose()
@@ -446,13 +447,14 @@ void cSimScene::CreateCollisionDetecter()
 {
     if (mEnableCollisionDetection)
     {
-
         mColDetecter = std::make_shared<cCollisionDetecter>();
         // add resources into the collision detecter now
-        // for (auto &x : this->mObstacleList)
-        // {
-        //     mColDetecter->AddObject(x, false);
-        // }
+        for (auto &x : this->mObjectList)
+        {
+            bool enable_self_collision =
+                (x->GetObjectType() == eObjectType::CLOTH_TYPE);
+            mColDetecter->AddObject(x, enable_self_collision);
+        }
     }
 }
 
