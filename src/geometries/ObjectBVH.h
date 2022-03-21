@@ -4,10 +4,15 @@
 /**
  * \brief           A BVH tree for a single object
  */
-struct tBVHNode
+struct tBVHNode : std::enable_shared_from_this<tBVHNode>
 {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    tBVHNode();
     tVector mAABBMin, mAABBMax;
+    int mObjId, mTriangleId;
+    tBVHNode *mLeft, *mRight;
 };
+SIM_DECLARE_PTR(tBVHNode)
 class cObjBVH : std::enable_shared_from_this<cObjBVH>
 {
 public:
@@ -19,7 +24,8 @@ public:
 
 protected:
     int mObjId;
-    std::vector<tVertexPtr> v_array;
-    std::vector<tEdgePtr> e_array;
-    std::vector<tTrianglePtr> t_array;
+    std::vector<tVertexPtr> mVertexArray;
+    std::vector<tEdgePtr> mEdgeArray;
+    std::vector<tTrianglePtr> mTriangleArray;
+    std::vector<tBVHNodePtr> mNodes;
 };
