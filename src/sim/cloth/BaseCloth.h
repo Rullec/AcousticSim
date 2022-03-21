@@ -23,12 +23,12 @@ public:
                                     DEFAULT_TIMESTEP_KEY = "default_timestep";
     explicit cBaseCloth(eClothType cloth_type, int id_);
     virtual ~cBaseCloth();
-    virtual void Init(const Json::Value &conf);
-    virtual void Reset();
+    virtual void Init(const Json::Value &conf) override;
+    virtual void Reset() override;
     virtual void SetCollisionDetecter(cCollisionDetecterPtr);
     virtual void CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
                                         int &st) const;
-    virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const;
+    virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const override;
     static eClothType BuildClothType(std::string str);
     // virtual void Update(double dt);
     virtual void ClearForce();

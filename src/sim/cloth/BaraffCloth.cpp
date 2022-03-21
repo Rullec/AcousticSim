@@ -32,9 +32,9 @@ void cBaraffCloth::Init(const Json::Value &conf)
     // init material
     // mMaterial = std::make_shared<cBaraffMaterialUnstable>();
     mBendingMaterial = std::make_shared<cQBendingMaterial>();
-    mBendingK = cJsonUtil::ReadVectorJson(
+    mBendingK = tVector3f::Ones() * cJsonUtil::ReadVectorJson(
                     cJsonUtil::ParseAsValue("cloth_bending_stiffness", conf))
-                    .cast<float>();
+                    .cast<float>()[0];
     mBendingMaterial->Init(GetVertexArray(), GetEdgeArray(), GetTriangleArray(),
                            mBendingK.cast<double>());
     mStretchK = cJsonUtil::ReadVectorJson(

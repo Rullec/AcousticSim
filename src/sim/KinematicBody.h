@@ -47,7 +47,7 @@ public:
     // virtual void UpdatePos(double dt) override final;
     // virtual void UpdateRenderingResource() override final;
     virtual tMatrix GetCurWorldTransform() const; //
-    void Reset();
+    void Reset() override;
     virtual tVector CalcCOM() const;
     virtual void MoveTranslation(const tVector &shift);
     virtual void ApplyScale(float scale);

@@ -19,24 +19,28 @@ set(CLOTH_SRC
     # cloth/BaraffMaterialUnstable.cpp
     cloth/BaraffMaterial.cpp
     cloth/QBendingMaterial.cpp
+    # cloth/ImplicitCloth.cpp   
+    # cloth/PBDCloth.cpp
+    # cloth/PDCloth.cpp
+    # cloth/SemiCloth.cpp
+)
+
+set (
+    GPU_CLOTH_SRC
+
     cloth/BaraffClothGpu.cpp
     cloth/BaraffClothGpu.cu
-    # cloth/BaraffClothGpu.cu
-    # cloth/PCGSolver.cu
-    # cloth/FRPCGSolver.cu
-    # cloth/GDSolver.cu
-    # cloth/JacobiSolver.cu
     gpu_utils/CudaMemory.cpp
     gpu_utils/CudaArray.cpp
     gpu_utils/CudaELLMatrix.cpp
     gpu_utils/GPUMatrixOps.cu
     gpu_utils/CudaAsync.cu
     gpu_solvers/PCGSolver.cu
-    # cloth/ImplicitCloth.cpp   
-    # cloth/PBDCloth.cpp
-    # cloth/PDCloth.cpp
-    # cloth/SemiCloth.cpp
 )
+
+if(NOT APPLE)
+    set(CLOTH_SRC "${CLOTH_SRC} ${GPU_CLOTH_SRC}")
+endif()
 
 # add_executable(cuda_main cloth/BaraffClothGpu.cu)
 set(SOFTBODY_SRC

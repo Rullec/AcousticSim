@@ -1,7 +1,10 @@
 #include "sim/cloth/ClothBuilder.h"
 #include "sim/cloth/BaseCloth.h"
 #include "sim/cloth/BaraffCloth.h"
+#ifndef __APPLE__
 #include "sim/cloth/BaraffClothGpu.h"
+#endif
+
 // #include "sim/cloth/ImplicitCloth.h"
 // #include "sim/cloth/PBDCloth.h"
 // #include "sim/cloth/PDCloth.h"
@@ -36,9 +39,12 @@ cBaseObjectPtr BuildCloth(Json::Value conf, int obj_id)
     case eClothType::FEM_CLOTH:
         ptr = std::make_shared<cBaraffCloth>(obj_id);
         break;
+
+#ifndef __APPLE__
     case eClothType::FEM_CLOTH_GPU:
         ptr = std::make_shared<cBaraffClothGpu>(obj_id);
         break;
+#endif
     default:
         // std::cout << "pbd type = " << eClothType::PBD_CLOTH
         //           << " cur type = " << type << std::endl;

@@ -347,16 +347,16 @@ void MoveObjPos(std::vector<tVertexPtr> &mVertexArrayShared)
     // 5. add the shift value
 }
 
-int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1)
-{
-    SIM_ASSERT(tri != nullptr);
-    std::set<int> vid_set = {tri->mId0, tri->mId1, tri->mId2};
-    // printf("[debug] select another vertex in triangle 3 vertices (%d, %d, %d)
-    // besides %d %d\n", tri->mId0, tri->mId1, tri->mId2, v0, v1);
-    vid_set.erase(vid_set.find(v0));
-    vid_set.erase(vid_set.find(v1));
-    return *vid_set.begin();
-};
+extern int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1);
+// {
+//     SIM_ASSERT(tri != nullptr);
+//     std::set<int> vid_set = {tri->mId0, tri->mId1, tri->mId2};
+//     // printf("[debug] select another vertex in triangle 3 vertices (%d, %d, %d)
+//     // besides %d %d\n", tri->mId0, tri->mId1, tri->mId2, v0, v1);
+//     vid_set.erase(vid_set.find(v0));
+//     vid_set.erase(vid_set.find(v1));
+//     return *vid_set.begin();
+// };
 
 void cBaseCloth::InitGeometry(const Json::Value &conf)
 {

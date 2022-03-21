@@ -2,7 +2,7 @@
 #include "geometries/Primitives.h"
 #include "sim/BaseObject.h"
 #include "utils/RotUtil.h"
-
+#include "utils/DefUtil.h"
 cBaraffMaterial::cBaraffMaterial()
 {
     mObject = nullptr;
@@ -307,7 +307,7 @@ tSparseMatd cBaraffMaterial::CalcTotalStiffnessMatrix()
 #pragma omp parallel for num_threads(num_divide)
     for (int t = 0; t < mNumOfTriangles; t++)
     {
-        int thread_num = omp_get_thread_num();
+        int thread_num = OMP_GET_NUM_THREAD_NUM;
         auto &sub_triples = sub_triples_set[thread_num];
         sub_triples.clear();
         auto cur_tri = tri_lst[t];

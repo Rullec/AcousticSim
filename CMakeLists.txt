@@ -1,13 +1,28 @@
 
 cmake_minimum_required(VERSION 3.0.0)
-project(ClothSim VERSION 0.1.0 LANGUAGES CUDA CXX)
 
-enable_language(CUDA)
-include(CheckLanguage)
-check_language(CUDA)
+
+
+if(NOT APPLE)
+    project(ClothSim VERSION 0.1.0 LANGUAGES CUDA CXX)
+    enable_language(CUDA)
+    include(CheckLanguage)
+    check_language(CUDA)
+    set(CMAKE_CUDA_STANDARD 17)
+    message(STATUS "cuda compiler: " ${CMAKE_CUDA_COMPILER})
+    message(STATUS "cuda compiler id: " ${CMAKE_CUDA_COMPILER})
+    message(STATUS "cuda compiler version: " ${CMAKE_CUDA_COMPILER_VERSION})
+
+    # cuda CXX version
+    if(NOT DEFINED CMAKE_CUDA_STANDARD)
+        set(CMAKE_CUDA_STANDARD 11)
+        set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    endif()
+else()
+    project(ClothSim VERSION 0.1.0 LANGUAGES CXX)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_DEBUG_POSTFIX "d")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -15,16 +30,6 @@ include(configure_movecmd)
 include_directories(./includes)
 include_directories(./imgui)
 include_directories(./src)
-
-message(STATUS "cuda compiler: " ${CMAKE_CUDA_COMPILER})
-message(STATUS "cuda compiler id: " ${CMAKE_CUDA_COMPILER})
-message(STATUS "cuda compiler version: " ${CMAKE_CUDA_COMPILER_VERSION})
-
-# cuda CXX version
-if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 11)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-endif()
 
 set(DLL_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/dlls)
 if(NOT EXISTS ${DLL_OUTPUT_DIR})
