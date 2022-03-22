@@ -1,8 +1,8 @@
 #include "BaraffMaterial.h"
 #include "geometries/Primitives.h"
 #include "sim/BaseObject.h"
-#include "utils/RotUtil.h"
 #include "utils/DefUtil.h"
+#include "utils/RotUtil.h"
 cBaraffMaterial::cBaraffMaterial()
 {
     mObject = nullptr;
@@ -15,7 +15,8 @@ cBaraffMaterial::cBaraffMaterial()
     mNumOfTriangles = 0;
 }
 
-void CalcBaraffStretchCoef(const tMatrix2d &mat, tVector3d &coef_u, tVector3d &coef_v)
+void CalcBaraffStretchCoef(const tMatrix2d &mat, tVector3d &coef_u,
+                           tVector3d &coef_v)
 {
     float a = mat(0, 0);
     float b = mat(0, 1);
@@ -65,7 +66,8 @@ void cBaraffMaterial::Init(cBaseObjectPtr object,
         Dminv.col(1) = (v2->muv - v0->muv).cast<double>();
         Dminv = Dminv.inverse().eval();
 
-        CalcBaraffStretchCoef(Dminv, mCoefFu_warp_weft[i], mCoefFv_warp_weft[i]);
+        CalcBaraffStretchCoef(Dminv, mCoefFu_warp_weft[i],
+                              mCoefFv_warp_weft[i]);
         Dminv = Dminv * R45.transpose();
         CalcBaraffStretchCoef(Dminv, mCoefFu_diag[i], mCoefFv_diag[i]);
         mTriangleAreaArray[i] =
@@ -299,7 +301,7 @@ tSparseMatd cBaraffMaterial::CalcTotalStiffnessMatrix()
     mHessian.resize(3 * mNumOfVertices, 3 * mNumOfVertices);
     mHessian.setZero();
     total_triplets_buf.clear();
-    std::vector<tTriplet> sub_triples_set[num_divide];
+    std::vector<tTriplet> sub_triples_set[15];
     for (int i = 0; i < num_divide; i++)
     {
         sub_triples_set[i].reserve(3 * 3 * 9);
@@ -307,7 +309,11 @@ tSparseMatd cBaraffMaterial::CalcTotalStiffnessMatrix()
 #pragma omp parallel for num_threads(num_divide)
     for (int t = 0; t < mNumOfTriangles; t++)
     {
-        int thread_num = OMP_GET_NUM_THREAD_NUM;
+#ifndef __APPLE__
+        int thread_num = omp_get_thread_num();
+#else
+        int thread_num = 0;
+#endif
         auto &sub_triples = sub_triples_set[thread_num];
         sub_triples.clear();
         auto cur_tri = tri_lst[t];

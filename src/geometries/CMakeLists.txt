@@ -5,9 +5,9 @@ add_library(
     Primitives.cpp
     Triangulator.cpp
     Raycaster.cpp
-    CollisionDetecter.cpp
-    CollisionInfo.cpp
     BezierCurve.cpp
     Tetrahedron.cpp
     TriangulatorDelaunay.cpp
+    ObjectBVH.cpp
+    AABB.cpp
 )

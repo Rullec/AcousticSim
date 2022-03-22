@@ -3,9 +3,9 @@
 #include "utils/EigenUtil.h"
 #include "utils/MathUtil.h"
 #include "utils/SparseUtil.h"
-SIM_DECLARE_CLASS_AND_PTR(tVertex);
-SIM_DECLARE_CLASS_AND_PTR(tEdge);
-SIM_DECLARE_CLASS_AND_PTR(tTriangle);
+SIM_DECLARE_STRUCT_AND_PTR(tVertex);
+SIM_DECLARE_STRUCT_AND_PTR(tEdge);
+SIM_DECLARE_STRUCT_AND_PTR(tTriangle);
 using tMatrix12f = Eigen::Matrix<float, 12, 12>;
 
 class cQBendingMaterial : std::enable_shared_from_this<cQBendingMaterial>

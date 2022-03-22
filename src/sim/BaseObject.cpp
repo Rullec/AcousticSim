@@ -6,8 +6,7 @@
 
 #include <string>
 std::string gObjectTypeStr[eObjectType::NUM_OBJ_TYPES] = {
-    "KinematicBody", "RigidBody", "Cloth", "Fluid",
-    "SoftBody", "Acoustic"};
+    "KinematicBody", "RigidBody", "Cloth", "Fluid", "SoftBody", "Acoustic"};
 
 cBaseObject::cBaseObject(eObjectType type, int id_) : mType(type), mObjId(id_)
 {
@@ -15,7 +14,7 @@ cBaseObject::cBaseObject(eObjectType type, int id_) : mType(type), mObjId(id_)
     mEnableDrawBuffer = true;
     mGravity.setZero();
 }
-
+int cBaseObject::GetObjId() const { return this->mObjId; }
 /**
  * \brief           Set object name
  */
@@ -45,7 +44,10 @@ eObjectType cBaseObject::BuildObjectType(std::string str)
 
 eObjectType cBaseObject::GetObjectType() const { return this->mType; }
 
-int cBaseObject::GetNumOfTriangles() const { return mTriangleArrayShared.size(); }
+int cBaseObject::GetNumOfTriangles() const
+{
+    return mTriangleArrayShared.size();
+}
 int cBaseObject::GetNumOfEdges() const { return mEdgeArrayShared.size(); }
 int cBaseObject::GetNumOfVertices() const { return mVertexArrayShared.size(); }
 const std::vector<tVertexPtr> &cBaseObject::GetVertexArray() const
@@ -66,7 +68,10 @@ std::vector<tVertexPtr> &cBaseObject::GetVertexArrayRef()
     return mVertexArrayShared;
 }
 
-std::vector<tEdgePtr> &cBaseObject::GetEdgeArrayRef() { return mEdgeArrayShared; }
+std::vector<tEdgePtr> &cBaseObject::GetEdgeArrayRef()
+{
+    return mEdgeArrayShared;
+}
 std::vector<tTrianglePtr> &cBaseObject::GetTriangleArrayRef()
 {
     return mTriangleArrayShared;
@@ -180,18 +185,14 @@ double cBaseObject::CalcTotalArea() const
     float total_area = 0;
     for (auto &t : mTriangleArrayShared)
     {
-        total_area += cMathUtil::CalcTriangleArea(mVertexArrayShared[t->mId0]->mPos,
-                                                  mVertexArrayShared[t->mId1]->mPos,
-                                                  mVertexArrayShared[t->mId2]->mPos);
+        total_area +=
+            cMathUtil::CalcTriangleArea(mVertexArrayShared[t->mId0]->mPos,
+                                        mVertexArrayShared[t->mId1]->mPos,
+                                        mVertexArrayShared[t->mId2]->mPos);
     }
     return total_area;
 }
 
-void cBaseObject::UpdateImGui()
-{
-}
+void cBaseObject::UpdateImGui() {}
 
-void cBaseObject::SetGravity(const tVector3d &g)
-{
-    mGravity.noalias() = g;
-}
+void cBaseObject::SetGravity(const tVector3d &g) { mGravity.noalias() = g; }

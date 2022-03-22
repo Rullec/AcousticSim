@@ -1,5 +1,5 @@
 #include "CollisionDetecter.h"
-#include "geometries/CollisionInfo.h"
+#include "CollisionInfo.h"
 #include "sim/BaseObject.h"
 #include "sim/KinematicBody.h"
 #include "utils/LogUtil.h"

@@ -1,6 +1,6 @@
 #pragma once
-#include "utils/MathUtil.h"
 #include "utils/DefUtil.h"
+#include "utils/MathUtil.h"
 #include <memory>
 #include <string>
 
@@ -25,7 +25,7 @@ enum eObjectType
  */
 namespace Json
 {
-    class Value;
+class Value;
 };
 
 struct tVertex;
@@ -41,6 +41,7 @@ public:
     inline static const std::string OBJECT_NAME_KEY = "object_name";
     explicit cBaseObject(eObjectType type, int obj_id);
     virtual ~cBaseObject();
+    virtual int GetObjId() const;
     virtual void SetObjName(std::string);
     virtual std::string GetObjName() const;
     virtual void Init(const Json::Value &conf);

@@ -39,7 +39,7 @@ set (
 )
 
 if(NOT APPLE)
-    set(CLOTH_SRC "${CLOTH_SRC} ${GPU_CLOTH_SRC}")
+    list(APPEND CLOTH_SRC ${GPU_CLOTH_SRC})
 endif()
 
 # add_executable(cuda_main cloth/BaraffClothGpu.cu)
@@ -65,6 +65,9 @@ set(
     Perturb.cpp
     # AudioOutput.cpp
     SimObjectBuilder.cpp
+    collision/CollisionDetecter.cpp
+    collision/BVHCollisionDetecter.cpp
+    collision/CollisionInfo.cpp
 )
 
 add_library(sim_lib ${SIM_SRC})

@@ -1,4 +1,4 @@
-#include "geometries/CollisionInfo.h"
+#include "sim/collision/CollisionInfo.h"
 #include "sim/BaseObject.h"
 #include "sim/KinematicBody.h"
 // ! Collision point for each pair of object

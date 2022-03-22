@@ -1,5 +1,6 @@
 #include "SimScene.h"
-#include "geometries/CollisionDetecter.h"
+// #include "sim/collision/CollisionDetecter.h"
+#include "sim/collision/BVHCollisionDetecter.h"
 #include "geometries/Primitives.h"
 #include "geometries/Triangulator.h"
 #include "imgui.h"
@@ -447,7 +448,7 @@ void cSimScene::CreateCollisionDetecter()
 {
     if (mEnableCollisionDetection)
     {
-        mColDetecter = std::make_shared<cCollisionDetecter>();
+        mColDetecter = std::make_shared<cBVHCollisionDetecter>();
         // add resources into the collision detecter now
         for (auto &x : this->mObjectList)
         {
@@ -455,6 +456,7 @@ void cSimScene::CreateCollisionDetecter()
                 (x->GetObjectType() == eObjectType::CLOTH_TYPE);
             mColDetecter->AddObject(x, enable_self_collision);
         }
+        mColDetecter->Init();
     }
 }
 

@@ -347,7 +347,7 @@ void MoveObjPos(std::vector<tVertexPtr> &mVertexArrayShared)
     // 5. add the shift value
 }
 
-extern int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1);
+extern int SelectAnotherVertex(tTrianglePtr tri, int v0, int v1);
 // {
 //     SIM_ASSERT(tri != nullptr);
 //     std::set<int> vid_set = {tri->mId0, tri->mId1, tri->mId2};
@@ -476,9 +476,9 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
             int v0 = cur_e->mId0;
             int v1 = cur_e->mId1;
 
-            int v2 = SelectAnotherVerteix(
+            int v2 = SelectAnotherVertex(
                 mTriangleArrayShared[cur_e->mTriangleId0], v0, v1);
-            int v3 = SelectAnotherVerteix(
+            int v3 = SelectAnotherVertex(
                 mTriangleArrayShared[cur_e->mTriangleId1], v0, v1);
             mEdgeAffectVertexId[i] = tVector4i(v0, v1, v2, v3);
         }

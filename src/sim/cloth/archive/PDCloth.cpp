@@ -1,6 +1,9 @@
 #include "sim/cloth/PDCloth.h"
 #include "utils/JsonUtil.h"
 #include "geometries/Primitives.h"
+#include "sim/collision/CollisionDetecter.h"
+#include "sim/collision/CollisionInfo.h"
+#include "sim/collision/CollisionInfo.h"
 #include <iostream>
 
 extern int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1);
@@ -290,8 +293,7 @@ tVectorXd cPDCloth::CalcNextPosition() const
     // cTimeUtil::End("fast simulation calc next");
     return Xnext;
 }
-#include "geometries/CollisionDetecter.h"
-#include "geometries/CollisionInfo.h"
+
 void cPDCloth::UpdatePos(double dt)
 {
     // check the collision detecter

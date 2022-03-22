@@ -1,10 +1,10 @@
-{
+    {
     "scene_type": "sim",
     "obj_list": [
         {
             "object_name": "a_cloth",
             "object_type": "Cloth",
-            "cloth_type": "fem",
+            "cloth_type": "fem_gpu",
             "geometry_type.bak": "delaunay",
             "geometry_type": "regular_triangle",
             "damping": 1e-5,
