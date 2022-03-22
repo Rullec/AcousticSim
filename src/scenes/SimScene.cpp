@@ -1,6 +1,5 @@
 #include "SimScene.h"
 // #include "sim/collision/CollisionDetecter.h"
-#include "sim/collision/BVHCollisionDetecter.h"
 #include "geometries/Primitives.h"
 #include "geometries/Triangulator.h"
 #include "imgui.h"
@@ -8,6 +7,7 @@
 #include "sim/KinematicBody.h"
 #include "sim/Perturb.h"
 #include "sim/SimObjectBuilder.h"
+#include "sim/collision/BVHCollisionDetecter.h"
 #include "utils/ColorUtil.h"
 #include "utils/JsonUtil.h"
 #include <iostream>
@@ -141,11 +141,13 @@ void cSimScene::InitRaycaster(const Json::Value &conf)
  * \brief           Update the simulation procedure
  */
 #include "utils/TimeUtil.hpp"
+static int frame = 0;
 void cSimScene::Update(double delta_time)
 {
 
     if (mSimStateMachine->IsRunning() == true)
     {
+        std::cout << "--------------frame " << frame++ << "-----------\n";
         // double default_dt = mIdealDefaultTimestep;
         // if (delta_time < default_dt)
         //     default_dt = delta_time;
@@ -153,6 +155,7 @@ void cSimScene::Update(double delta_time)
         // printf("[debug] sim scene update cur time = %.4f\n", mCurTime);
         cScene::Update(delta_time);
 
+        PerformCollisionDetection();
         UpdateObjects();
         // clear force
         // apply ext force
@@ -187,6 +190,7 @@ void cSimScene::PerformCollisionDetection()
 {
     if (mEnableCollisionDetection == true)
     {
+        mColDetecter->Update();
         mColDetecter->PerformCD();
         // auto pts = mColDetecter->GetContactPoints();
         // std::cout << "[debug] num of contacts = " << pts.size() << std::endl;
@@ -501,4 +505,16 @@ void cSimScene::UpdateImGui()
     {
         obj->UpdateImGui();
     }
+    // update vertices and triangle number
+    int v_total = 0, t_total = 0;
+    for (auto &obj : this->mObjectList)
+    {
+        int num_of_v = obj->GetNumOfVertices();
+        int num_of_t = obj->GetNumOfTriangles();
+        v_total += num_of_v;
+        t_total += num_of_t;
+        ImGui::Text("%s v %d t %d", obj->GetObjName().c_str(), num_of_v,
+                    num_of_t);
+    }
+    ImGui::Text("total v %d t %d", v_total, t_total);
 }

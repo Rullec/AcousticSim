@@ -11,7 +11,6 @@
 #include "utils/TimeUtil.hpp"
 #include <imgui.h>
 #include <iostream>
-static int frame = 0;
 template <typename int N, int M>
 std::vector<tCudaMatrix<float, N, M>>
 FetchFromGPU(const cCudaArray<tCudaMatrix<float, N, M>> &cuda_array)

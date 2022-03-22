@@ -14,11 +14,12 @@ public:
     int GetMaxExtent() const;
     tVector GetExtent() const;
     tVector GetMiddle() const;
+    void Reset();
     void Expand(const tVector3d &);
     void Expand(const tVector &);
     void Expand(const tVertexPtr &);
     void Expand(const tAABB &);
-    bool IsValid() const;
-
+    bool IsInvalid() const;
+    bool Intersect(const tAABB &other_AABB);
     tVector mMin, mMax;
 };

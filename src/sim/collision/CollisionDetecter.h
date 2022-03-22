@@ -6,14 +6,15 @@ SIM_DECLARE_CLASS_AND_PTR(cBaseObject);
 SIM_DECLARE_CLASS_AND_PTR(cKinematicBody);
 SIM_DECLARE_CLASS_AND_PTR(tColPoint);
 
-class cCollisionDetecter : public std::enable_shared_from_this<cCollisionDetecter>
+class cCollisionDetecter
+    : public std::enable_shared_from_this<cCollisionDetecter>
 {
 public:
-
     cCollisionDetecter();
     virtual ~cCollisionDetecter();
     virtual void AddObject(cBaseObjectPtr obj,
                            bool enable_self_collision = false);
+    virtual void Update();
     virtual void Init();
     virtual void PerformCD();
     virtual void Clear();

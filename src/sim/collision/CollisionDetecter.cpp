@@ -97,7 +97,7 @@ void cCollisionDetecter::NarrowphaseCD()
     if (mColCandiadatePairs.size() == 0)
         return;
 
-    // ! begin to check eacy candidate collided obj pair
+    // ! begin to check eacy candidate collision obj pair
     for (auto &pair : mColCandiadatePairs)
     {
         int obj0_id = pair[0], obj1_id = pair[1];
@@ -105,3 +105,5 @@ void cCollisionDetecter::NarrowphaseCD()
                     type1 = mColObjs[obj1_id]->GetObjectType();
     }
 }
+
+void cCollisionDetecter::Update() {}

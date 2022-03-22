@@ -149,11 +149,9 @@ tMatrixXf FromELLMatrixToEigenMatrix(
     return mat;
 }
 
-static int frame = 0;
 
 void cBaraffClothGpu::UpdatePos(double dt)
 {
-    printf("-------frame %d---------\n", frame++);
     BEGIN_PROFILING("sim");
     dt = mIdealDefaultTimestep;
     gProfRec.clear();

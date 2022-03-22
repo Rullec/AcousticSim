@@ -1,5 +1,7 @@
 #include "geometries/ObjectBVH.h"
+#include "geometries/Primitives.h"
 #include "utils/LogUtil.h"
+#include "utils/TimeUtil.hpp"
 #include <iostream>
 #include <set>
 tBVHNode::tBVHNode()
@@ -7,14 +9,12 @@ tBVHNode::tBVHNode()
     mId = -1;
     mIsLeaf = false;
 
-    mObjId = -1;
     mTriangleId = -1;
     mLeft = nullptr;
     mRight = nullptr;
 }
 cObjBVH::cObjBVH()
 {
-    mObjId = -1;
     mVertexArray.clear();
     mEdgeArray.clear();
     mTriangleArray.clear();
@@ -57,19 +57,48 @@ void cObjBVH::Init(int obj_id, const std::vector<tVertexPtr> &v_array,
                    const std::vector<tEdgePtr> &e_array,
                    const std::vector<tTrianglePtr> &t_array)
 {
+    cTimeUtil::Begin("init_bvh");
     mObjId = obj_id;
     this->mVertexArray = v_array;
     this->mEdgeArray = e_array;
     this->mTriangleArray = t_array;
     mNodes.clear();
-
+    mLeafNodes.clear();
     RebuildTree();
+    printf("[log] init bvh cost %.1f ms\n", cTimeUtil::End("init_bvh", true));
 }
 
+void UpdateAABBSubtree(const std::vector<tVertexPtr> &v_array,
+                       const std::vector<tTrianglePtr> &t_array,
+                       tBVHNodePtr node)
+{
+    if (node == nullptr)
+        return;
+    if (node->mIsLeaf)
+    {
+        // this node works for a triangle
+        node->mAABB.Reset();
+        node->mAABB.Expand(v_array[t_array[node->mTriangleId]->mId0]);
+        node->mAABB.Expand(v_array[t_array[node->mTriangleId]->mId1]);
+        node->mAABB.Expand(v_array[t_array[node->mTriangleId]->mId2]);
+    }
+    else
+    {
+        UpdateAABBSubtree(v_array, t_array, node->mLeft);
+        UpdateAABBSubtree(v_array, t_array, node->mRight);
+        if (node->mLeft)
+            node->mAABB.Expand(node->mLeft->mAABB);
+        if (node->mRight)
+            node->mAABB.Expand(node->mRight->mAABB);
+    }
+}
 /**
  * \brief           only update the AABB from the leaf node
  */
-void cObjBVH::Update() {}
+void cObjBVH::UpdateAABB()
+{
+    UpdateAABBSubtree(mVertexArray, mTriangleArray, mNodes[0]);
+}
 
 template <int N> struct less_than_key
 {
@@ -113,6 +142,7 @@ cObjBVH::CreateSubTree(const tAABB &node_ideal_AABB_used_for_split,
         node->mTriangleId = vertices_array_in_this_node[0];
         node->mLeft = nullptr;
         node->mRight = nullptr;
+        mLeafNodes.push_back(node);
     }
     else
     {
@@ -249,3 +279,47 @@ void cObjBVH::RebuildTree()
     CreateSubTree(global_AABB, tri_id_lst, tri_centroid_lst);
 }
 void cObjBVH::Print() const { printBT(mNodes[0]); }
+
+int cObjBVH::GetNumOfLeaves() const { return this->mLeafNodes.size(); }
+
+const std::vector<tBVHNodePtr> cObjBVH::GetLeaves() const
+{
+    return this->mLeafNodes;
+}
+
+void IntersectWithTree(const tBVHNodePtr outer_node, const tBVHNodePtr cur_tree,
+                       std::vector<int> possible_collision_v)
+{
+    if (cur_tree == nullptr)
+        return;
+    if (false == outer_node->mAABB.Intersect(cur_tree->mAABB))
+    {
+        return;
+    }
+    else
+    {
+        // intersect!
+        if (cur_tree->mIsLeaf == true)
+        {
+            possible_collision_v.push_back(cur_tree->mTriangleId);
+        }
+        else
+        {
+            IntersectWithTree(outer_node, cur_tree->mLeft,
+                              possible_collision_v);
+            IntersectWithTree(outer_node, cur_tree->mRight,
+                              possible_collision_v);
+        }
+    }
+}
+/**
+ * \brief       query!
+ */
+std::vector<int> cObjBVH::Intersect(tBVHNodePtr outer_node) const
+{
+    std::vector<int> intersected_vid = {};
+    IntersectWithTree(outer_node, mNodes[0], intersected_vid);
+    return intersected_vid;
+}
+
+const tBVHNodePtr cObjBVH::GetRootNode() const { return mNodes[0]; }

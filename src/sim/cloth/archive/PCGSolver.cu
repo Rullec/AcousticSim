@@ -213,7 +213,7 @@ __global__ void Calc_rnext_rnextMinvrnext_xnext(
 
     if (diAdi[0] == 0.0f)
     {
-        printf("alpha is clamped to zero\n");
+        // printf("alpha is clamped to zero\n");
         alpha = 0;
     }
     r[v_id] -= alpha * zi[v_id];
@@ -240,7 +240,7 @@ __global__ void UpdateDirection(int num_of_v,
     float beta = rnextMinvrnext[0] / rcurMinvrcur[0];
     if (rcurMinvrcur[0] == 0.0f)
     {
-        printf("[warn] beta is clamped to zero\n");
+        // printf("[warn] beta is clamped to zero\n");
         beta = 0;
     }
     d[v_id] = Minv[v_id] * rnext[v_id] + beta * d[v_id];

@@ -8,7 +8,7 @@
 #include "utils/TimeUtil.hpp"
 #include <iostream>
 
-static int frame = 0;
+
 cBaraffCloth::cBaraffCloth(int id_) : cBaseCloth(eClothType::FEM_CLOTH, id_)
 {
     // mF.clear();
@@ -80,7 +80,7 @@ typedef std::pair<std::string, float> tTimeRecms;
 static std::vector<tTimeRecms> gProfRec;
 void cBaraffCloth::UpdatePos(double dt)
 {
-    std::cout << "--------------frame " << frame++ << "-----------\n";
+    
     gProfRec.clear();
     dt = mIdealDefaultTimestep;
     // CheckForce();

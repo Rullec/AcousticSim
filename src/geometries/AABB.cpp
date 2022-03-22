@@ -1,17 +1,11 @@
 #include "AABB.h"
 #include "geometries/Primitives.h"
 #include "utils/LogUtil.h"
-tAABB::tAABB()
-{
-    mMin = std::nan("") * tVector::Ones();
-    mMax = std::nan("") * tVector::Ones();
-    mMax[3] = 0;
-    mMin[3] = 0;
-}
+tAABB::tAABB() { Reset(); }
 
 void tAABB::Expand(const tVector &vec)
 {
-    if (IsValid() == true)
+    if (IsInvalid() == true)
     {
         mMin = vec;
         mMax = vec;
@@ -27,7 +21,7 @@ void tAABB::Expand(const tVector &vec)
 }
 void tAABB::Expand(const tVertexPtr &ptr) { Expand(ptr->mPos); }
 
-bool tAABB::IsValid() const
+bool tAABB::IsInvalid() const
 {
     SIM_ASSERT((mMax - mMin).minCoeff() >= 0);
     return mMin.hasNaN() || mMax.hasNaN();
@@ -35,7 +29,12 @@ bool tAABB::IsValid() const
 
 void tAABB::Expand(const tAABB &new_AABB)
 {
-    if (IsValid() == true)
+    if (new_AABB.IsInvalid())
+    {
+        SIM_WARN("new AABB is invalid!");
+        return;
+    }
+    if (IsInvalid() == true)
     {
         mMin = new_AABB.mMin;
         mMax = new_AABB.mMax;
@@ -78,4 +77,20 @@ tVector tAABB::GetMiddle() const
     tVector middle = (mMax + mMin) / 2;
     middle[3] = 0;
     return middle;
+}
+
+bool tAABB::Intersect(const tAABB &other_AABB)
+{
+    return ((mMin[0] <= other_AABB.mMax[0]) &&
+            (mMax[0] >= other_AABB.mMin[0])) &&
+           ((mMin[1] <= other_AABB.mMax[1]) &&
+            (mMax[1] >= other_AABB.mMin[1])) &&
+           ((mMin[2] <= other_AABB.mMax[2]) && (mMax[2] >= other_AABB.mMin[2]));
+}
+void tAABB::Reset()
+{
+    mMin = std::nan("") * tVector::Ones();
+    mMax = std::nan("") * tVector::Ones();
+    mMax[3] = 0;
+    mMin[3] = 0;
 }

@@ -1,15 +1,15 @@
 #include "KinematicBodyBuilder.h"
 #include "KinematicBody.h"
 #include "utils/JsonUtil.h"
-cKinematicBodyPtr BuildKinematicBody(const Json::Value &conf, int id)
+cBaseObjectPtr BuildKinematicBody(const Json::Value &conf, int id)
 {
-    cKinematicBodyPtr ptr = std::make_shared<cKinematicBody>(id);
+    cBaseObjectPtr ptr = std::make_shared<cKinematicBody>(id);
     ptr->Init(conf);
     return ptr;
 }
 
-cKinematicBodyPtr BuildKinematicBodyFromObjPath(std::string name,
-                                                std::string obj_path, int id_)
+cBaseObjectPtr BuildKinematicBodyFromObjPath(std::string name,
+                                             std::string obj_path, int id_)
 {
     Json::Value root;
     root["object_name"] = name;

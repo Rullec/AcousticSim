@@ -1,13 +1,14 @@
 #include "SimObjectBuilder.h"
-#include "utils/JsonUtil.h"
 #include "sim/BaseObject.h"
+#include "utils/JsonUtil.h"
 // #include "sim/softbody/SoftBody.h"
 // #include "sim/softbody/SoftBodyImplicit.h"
-// #include "sim/AcousticSoftBody.h"
+#include "sim/KinematicBodyBuilder.h"
 #include "sim/cloth/ClothBuilder.h"
 cBaseObjectPtr BuildSimObj(const Json::Value &conf, int id_)
 {
-    eObjectType type = cBaseObject::BuildObjectType(cJsonUtil::ParseAsString("object_type", conf));
+    eObjectType type = cBaseObject::BuildObjectType(
+        cJsonUtil::ParseAsString("object_type", conf));
     cBaseObjectPtr object = nullptr;
     switch (type)
     {
@@ -23,6 +24,11 @@ cBaseObjectPtr BuildSimObj(const Json::Value &conf, int id_)
     //     // object = std::make_shared<cAcousticSoftBody>(id_);
     //     break;
     // }
+    case eObjectType::KINEMATICBODY_TYPE:
+    {
+        object = BuildKinematicBody(conf, id_);
+        break;
+    }
     case eObjectType::CLOTH_TYPE:
     {
         object = BuildCloth(conf, id_);
