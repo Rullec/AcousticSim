@@ -625,7 +625,7 @@ void cSoftBodyImplicit::SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_ve
     {
         size_t v_id = mTetArrayShared[tet_id]->mVertexId[i];
         mXcur.segment(3 * v_id, 3) = tet_vertices_pos.segment(3 * i, 3);
-        mVertexArrayShared[v_id]->mPos.segment(0, 3) = tet_vertices_pos.segment(3 * i, 3);
+        mVertexArray[v_id]->mPos.segment(0, 3) = tet_vertices_pos.segment(3 * i, 3);
     }
 }
 
@@ -674,7 +674,7 @@ tMatrixXd cSoftBodyImplicit::CalcGlobalStiffnessMatrix()
 
 tSparseMatd cSoftBodyImplicit::CalcGlobalStiffnessSparseMatrix()
 {
-    size_t num_of_v = this->mVertexArrayShared.size();
+    size_t num_of_v = this->mVertexArray.size();
     std::vector<tTriplet> tripletList = {};
     tSparseMatd mat(3 * num_of_v, 3 * num_of_v);
     tripletList.reserve(GetNumOfTets() * 4 * 4 * 9);

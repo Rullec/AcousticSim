@@ -5,7 +5,7 @@
 
 namespace Json
 {
-    class Value;
+class Value;
 };
 
 enum eSceneType
@@ -43,6 +43,7 @@ public:
     virtual void Reset() override;
     virtual const tVectorXf &GetTriangleDrawBuffer();
     virtual const tVectorXf &GetEdgesDrawBuffer();
+    virtual const tVectorXf &GetPointDrawBuffer();
     static eSceneType BuildSceneType(const std::string &str);
     eSceneType GetSceneType() const;
     virtual bool CreatePerturb(tRay *ray);
@@ -70,8 +71,8 @@ protected:
     std::vector<cBaseObjectPtr> mObjectList;
     cRaycasterPtr mRaycaster; // raycaster
 
-    tVectorXf mTriangleDrawBuffer,
-        mEdgesDrawBuffer; // buffer to triangle buffer drawing (should use index
+    tVectorXf mTriangleDrawBuffer, mEdgesDrawBuffer,
+        mPointDrawBuffer; // buffer to triangle buffer drawing (should use index
                           // buffer to improve the velocity)
     std::vector<tRay *> mRayArray;
     // std::vector<tVertexPtr > mVertexArray;     // total vertices
@@ -89,7 +90,8 @@ protected:
     void SaveCurrentScene();
 
     virtual void BuildObjects(const Json::Value &obj_conf_path);
-    virtual void CalcTriangleDrawBuffer();       //
+    virtual void CalcTriangleDrawBuffer(); //
+    virtual void CalcPointDrawBuffer();
     virtual int CalcEdgesDrawBuffer(int st = 0); //
     virtual int GetNumOfVertices() const;
     virtual int GetNumOfFreedom() const;

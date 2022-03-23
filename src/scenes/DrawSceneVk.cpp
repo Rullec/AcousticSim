@@ -995,6 +995,23 @@ void cDrawScene::CreateLineCommandBuffers(int i)
 
     vkCmdDraw(mCommandBuffers[i], GetNumOfLineVertices(), 1, 0, 0);
 }
+void cDrawScene::CreatePointCommandBuffers(int i)
+{
+    vkCmdBindPipeline(mCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      mPointGraphicsPipeline);
+
+    // SIM_ERROR("VkBuffer mLineBuffer; vkDeviceMemory mLineBufferMemory; need
+    // to be inited");
+    VkBuffer pointBuffers[] = {mPointBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(mCommandBuffers[i], 0, 1, pointBuffers, offsets);
+
+    vkCmdBindDescriptorSets(mCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            mPipelineLayout, 0, 1, &mDescriptorSets[i], 0,
+                            nullptr);
+
+    vkCmdDraw(mCommandBuffers[i], GetNumOfDrawPoints(), 1, 0, 0);
+}
 
 void cDrawScene::CreateLineBuffer()
 {
@@ -1011,6 +1028,22 @@ void cDrawScene::CreateLineBuffer()
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                  mLineBuffer, mLineBufferMemory);
+}
+
+void cDrawScene::CreatePointBuffer()
+{
+    VkDeviceSize buffer_size = sizeof(axes_vertices[0]) * GetNumOfDrawPoints();
+    if (buffer_size > SIM_VK_POINT_BUFFER_SIZE)
+    {
+        SIM_ERROR("current point buffer size {} > max size {}, please increase "
+                  "SIM_VK_POINT_BUFFER_SIZE",
+                  buffer_size, SIM_VK_POINT_BUFFER_SIZE);
+        exit(1);
+    }
+    CreateBuffer(buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 mPointBuffer, mPointBufferMemory);
 }
 
 void cDrawScene::UpdateLineBuffer(int idx)
@@ -1367,4 +1400,14 @@ int cDrawScene::GetNumOfLineVertices() const
 {
     const tVectorXf &result = mSimScene->GetEdgesDrawBuffer();
     return axes_vertices.size() + result.size() / RENDERING_SIZE_PER_VERTICE;
+}
+
+/**
+ * \brief           get points we need to draw
+ */
+int cDrawScene::GetNumOfDrawPoints() const
+{
+    const tVectorXf &result = mSimScene->GetPointDrawBuffer();
+    int num = result.size() / RENDERING_SIZE_PER_VERTICE;
+    return num;
 }

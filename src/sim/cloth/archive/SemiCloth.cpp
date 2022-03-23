@@ -67,7 +67,7 @@ void cSemiCloth::InitGeometry(const Json::Value &conf)
     // in XOY plane
 
     mStiffness = cJsonUtil::ParseAsDouble("stiffness", conf);
-    for (auto &x : mEdgeArrayShared)
+    for (auto &x : mEdgeArray)
         x->mK_spring = mStiffness;
 }
 
@@ -178,30 +178,30 @@ void cSemiCloth::InitBendingHessian()
     mBendingHessianQ.resize(dof, dof);
 
     std::vector<tTriplet> Q_trilet_array(0);
-    for (int i = 0; i < mEdgeArrayShared.size(); i++)
+    for (int i = 0; i < mEdgeArray.size(); i++)
     {
-        const auto &e = this->mEdgeArrayShared[i];
+        const auto &e = this->mEdgeArray[i];
         if (e->mIsBoundary == false)
         {
             // printf("[debug] bending, tri %d and tri %d, shared edge: %d\n",
             //        e->mTriangleId0, e->mTriangleId1, i);
             int vid[4] = {e->mId0, e->mId1,
-                          SelectAnotherVerteix(mTriangleArrayShared[e->mTriangleId0],
+                          SelectAnotherVerteix(mTriangleArray[e->mTriangleId0],
                                                e->mId0, e->mId1),
-                          SelectAnotherVerteix(mTriangleArrayShared[e->mTriangleId1],
+                          SelectAnotherVerteix(mTriangleArray[e->mTriangleId1],
                                                e->mId0, e->mId1)};
             // printf("[debug] bending, tri %d and tri %d, shared edge: %d,
             // total vertices: %d %d %d %d\n",
             //        e->mTriangleId0, e->mTriangleId1, i, vid[0], vid[1],
             //        vid[2], vid[3]);
             tVector cot_vec = CalculateCotangentCoeff(
-                mVertexArrayShared[vid[0]]->mPos, mVertexArrayShared[vid[1]]->mPos,
-                mVertexArrayShared[vid[2]]->mPos, mVertexArrayShared[vid[3]]->mPos);
+                mVertexArray[vid[0]]->mPos, mVertexArray[vid[1]]->mPos,
+                mVertexArray[vid[2]]->mPos, mVertexArray[vid[3]]->mPos);
             // std::cout << "cot vec = " << cot_vec.transpose() << std::endl;
             for (int row_id = 0; row_id < 4; row_id++)
                 for (int col_id = 0; col_id < 4; col_id++)
                 {
-                    double square = 1.0 / mTriangleArrayShared.size() * 2;
+                    double square = 1.0 / mTriangleArray.size() * 2;
                     double value = mBendingStiffness * cot_vec[row_id] *
                                    cot_vec[col_id] * 3 / square;
                     for (int j = 0; j < 3; j++)

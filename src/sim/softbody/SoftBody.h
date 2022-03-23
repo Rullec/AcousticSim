@@ -25,8 +25,6 @@ public:
 
     virtual void Update(float dt) override;
     virtual void Init(const Json::Value &conf) override;
-    virtual void CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                        int &st) const override;
     virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                     int &st) const override;
     virtual int GetNumOfTriangles() const override;
@@ -41,9 +39,9 @@ public:
 
 protected:
     std::string mTetMeshPath = "";
-    // std::vector<tVertexPtr> mVertexArrayShared = {};
-    // std::vector<tEdgePtr> mEdgeArrayShared = {};
-    // std::vector<tTrianglePtr> mTriangleArrayShared = {};
+    // std::vector<tVertexPtr> mVertexArray = {};
+    // std::vector<tEdgePtr> mEdgeArray = {};
+    // std::vector<tTrianglePtr> mTriangleArray = {};
     std::vector<tTetPtr> mTetArrayShared = {};
     tEigenArr<tMatrix3d> mF;                                   // deformation gradient, F
     tEigenArr<tMatrix3d> mInvDm;                               // DmInv, used to calculate F, please read the SIGGRAPH 2012 course for more details

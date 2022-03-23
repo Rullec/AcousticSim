@@ -275,7 +275,7 @@ double cMathUtil::EvaluatePlane(const tVector &plane, const tVector &point)
  * \brief           calcualte the distance between given plane and point
  *
  *      1. select any point in the plane "A"
- *      2. given the point P calculat the vector "PA"
+ *      2. given the point P calculate the vector "PA"
  *      3. given the plane normal "n",  dist = n \cdot PA
  */
 double cMathUtil::CalcPlanePointDist(const tVector &plane,

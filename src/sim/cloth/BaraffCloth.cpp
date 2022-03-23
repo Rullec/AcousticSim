@@ -65,7 +65,7 @@ void cBaraffCloth::Init(const Json::Value &conf)
         this->mGravityForce.noalias() = tVectorXd::Zero(GetNumOfFreedom());
         for (int i = 0; i < GetNumOfVertices(); i++)
         {
-            mGravityForce[3 * i + 1] = -mVertexArrayShared[i]->mMass * 9.8;
+            mGravityForce[3 * i + 1] = -mVertexArray[i]->mMass * 9.8;
         }
         // std::cout << mGravityForce.transpose();
         // exit(1);
@@ -122,7 +122,7 @@ void cBaraffCloth::UpdatePos(double dt)
     gProfRec.push_back(
         tTimeRecms("calc_fint", cTimeUtil::End("calc_fint", true)));
 
-    // for (int i = 0; i < mVertexArrayShared.size(); i++)
+    // for (int i = 0; i < mVertexArray.size(); i++)
     // {
     //     std::cout << "fint" << i << " = " << mIntForce.segment(3 * i,
     //     3).transpose() << std::endl;
@@ -148,7 +148,7 @@ void cBaraffCloth::ApplyUserPerturbForceOnce(tPerturb *pert)
     this->mUserForce.setZero();
     if (pert)
     {
-        // auto t = this->mTriangleArrayShared[pert->mAffectedTriId];
+        // auto t = this->mTriangleArray[pert->mAffectedTriId];
         // tVector3d force = pert->GetPerturbForce().segment(0, 3);
         // std::cout << "force = " << force.transpose() << std::endl;
 
@@ -167,9 +167,9 @@ void cBaraffCloth::ApplyUserPerturbForceOnce(tPerturb *pert)
         // std::cout << "user force2 = "
         //           << mUserForce.segment(3 * t->mId2, 3).transpose()
         //           << std::endl;
-        int v0 = mTriangleArrayShared[pert->mAffectedTriId]->mId0;
-        int v1 = mTriangleArrayShared[pert->mAffectedTriId]->mId1;
-        int v2 = mTriangleArrayShared[pert->mAffectedTriId]->mId2;
+        int v0 = mTriangleArray[pert->mAffectedTriId]->mId0;
+        int v1 = mTriangleArray[pert->mAffectedTriId]->mId1;
+        int v2 = mTriangleArray[pert->mAffectedTriId]->mId2;
 
         mXcur.segment(3 * v0, 3) = pert->GetGoalPos().segment(0, 3);
         mXpre.segment(3 * v0, 3) = pert->GetGoalPos().segment(0, 3);
@@ -204,19 +204,19 @@ void cBaraffCloth::InitMaterialCoords()
 {
     // calculate material coordinates
     mVertexMateralCoords.noalias() = tMatrixXd::Zero(GetNumOfVertices(), 2);
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
         mVertexMateralCoords.row(i).noalias() =
-            mVertexArrayShared[i]->muv.cast<double>();
+            mVertexArray[i]->muv.cast<double>();
     }
 
     // // calculate the DInv (used in material point)
-    // mDInv.resize(mTriangleArrayShared.size(), tMatrix2d::Zero());
+    // mDInv.resize(mTriangleArray.size(), tMatrix2d::Zero());
 
     // tMatrix2d mat1;
-    // for (int i = 0; i < this->mTriangleArrayShared.size(); i++)
+    // for (int i = 0; i < this->mTriangleArray.size(); i++)
     // {
-    //     auto tri = mTriangleArrayShared[i];
+    //     auto tri = mTriangleArray[i];
     //     mat1.col(0).noalias() = (mVertexMateralCoords.row(tri->mId1) -
     //                              mVertexMateralCoords.row(tri->mId0))
     //                                 .transpose();
@@ -262,7 +262,7 @@ void cBaraffCloth::CalcIntForce(const tVectorXd &xcur,
     // int_force.noalias() = tVectorXd::Zero(dof);
     // for (int i = 0; i < GetNumOfTriangles(); i++)
     // {
-    //     auto &t = this->mTriangleArrayShared[i];
+    //     auto &t = this->mTriangleArray[i];
     //     // 1. calc ele stiffness
     //     // 1.1 assemble current pos,
     //     // 1.2 give the 3x2d texture coords
@@ -273,9 +273,9 @@ void cBaraffCloth::CalcIntForce(const tVectorXd &xcur,
     //     //     id1 = t->mId1,
     //     //     id2 = t->mId2;
     //     tMatrix32d uv_coords;
-    //     uv_coords.row(0) = mVertexArrayShared[v_id[0]]->muv.cast<double>();
-    //     uv_coords.row(1) = mVertexArrayShared[v_id[1]]->muv.cast<double>();
-    //     uv_coords.row(2) = mVertexArrayShared[v_id[2]]->muv.cast<double>();
+    //     uv_coords.row(0) = mVertexArray[v_id[0]]->muv.cast<double>();
+    //     uv_coords.row(1) = mVertexArray[v_id[1]]->muv.cast<double>();
+    //     uv_coords.row(2) = mVertexArray[v_id[2]]->muv.cast<double>();
 
     //     tVectorXd force = mMaterial->CalcForce(get_pos_mat(xcur, v_id[0],
     //     v_id[1], v_id[2]), uv_coords);
@@ -297,9 +297,9 @@ void cBaraffCloth::CalcIntForce(const tVectorXd &xcur,
 // cTimeUtil::Begin("CalculateF");
 // tMatrix32d mat0 = tMatrix32d::Zero();
 // tMatrix2d mat1 = tMatrix2d::Zero();
-// for (int i = 0; i < this->mTriangleArrayShared.size(); i++)
+// for (int i = 0; i < this->mTriangleArray.size(); i++)
 // {
-//     auto tri = mTriangleArrayShared[i];
+//     auto tri = mTriangleArray[i];
 //     const tVector3d &a = mXcur.segment(3 * tri->mId0, 3);
 //     const tVector3d &b = mXcur.segment(3 * tri->mId1, 3);
 //     const tVector3d &c = mXcur.segment(3 * tri->mId2, 3);
@@ -322,12 +322,12 @@ void cBaraffCloth::InitMass(const Json::Value &conf)
     mClothDensity = cJsonUtil::ParseAsDouble("cloth_density", conf);
     int dof = 3 * GetNumOfVertices();
     mMassMatrixDiag.noalias() = tVectorXd::Zero(dof);
-    for (auto &t : mTriangleArrayShared)
+    for (auto &t : mTriangleArray)
     {
         // 1. total area
-        auto v0 = mVertexArrayShared[t->mId0];
-        auto v1 = mVertexArrayShared[t->mId1];
-        auto v2 = mVertexArrayShared[t->mId2];
+        auto v0 = mVertexArray[t->mId0];
+        auto v1 = mVertexArray[t->mId1];
+        auto v2 = mVertexArray[t->mId2];
 
         double triangle_area =
             cMathUtil::CalcTriangleArea(v0->mPos, v1->mPos, v2->mPos);
@@ -340,8 +340,8 @@ void cBaraffCloth::InitMass(const Json::Value &conf)
     }
     for (int i = 0; i < GetNumOfVertices(); i++)
     {
-        mVertexArrayShared[i]->mMass = mMassMatrixDiag[3 * i];
-        // std::cout << "v" << i << " mass = " << mVertexArrayShared[i]->mMass
+        mVertexArray[i]->mMass = mMassMatrixDiag[3 * i];
+        // std::cout << "v" << i << " mass = " << mVertexArray[i]->mMass
         // << std::endl;
     }
 }
@@ -369,17 +369,17 @@ void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
 
     //     tEigenArr<tTriplet>
     //         total_triplets;
-    //     total_triplets.reserve(mTriangleArrayShared.size() * 3 * 3 * 9);
+    //     total_triplets.reserve(mTriangleArray.size() * 3 * 3 * 9);
 
     //     // __pragma(omp parallel for num_threads(3))
     //     int th_id, nthreads;
     // #pragma omp parallel for num_threads(8)
-    //     for (int idx = 0; idx < mTriangleArrayShared.size(); idx++)
+    //     for (int idx = 0; idx < mTriangleArray.size(); idx++)
     //     {
     //         // std::cout << "omp num thread = " << omp_get_num_threads() <<
     //         std::endl;
     //         // printf("Hello World from thread %d\n", omp_get_thread_num());
-    //         auto t = this->mTriangleArrayShared[idx];
+    //         auto t = this->mTriangleArray[idx];
     //         std::vector<tTriplet> sub_triples = {};
     //         sub_triples.reserve(3 * 3 * 9);
     //         // 1. calc ele stiffness
@@ -393,10 +393,10 @@ void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
     //         //     id2 = t->mId2;
     //         tMatrix32d uv_coords;
     //         uv_coords.row(0) =
-    //         mVertexArrayShared[v_id[0]]->muv.cast<double>(); uv_coords.row(1)
-    //         = mVertexArrayShared[v_id[1]]->muv.cast<double>();
+    //         mVertexArray[v_id[0]]->muv.cast<double>(); uv_coords.row(1)
+    //         = mVertexArray[v_id[1]]->muv.cast<double>();
     //         uv_coords.row(2) =
-    //         mVertexArrayShared[v_id[2]]->muv.cast<double>();
+    //         mVertexArray[v_id[2]]->muv.cast<double>();
 
     //         auto ele_K = mMaterial->CalcStiffMatrix(get_pos_mat(xcur,
     //         v_id[0], v_id[1], v_id[2]), uv_coords);
@@ -519,20 +519,20 @@ void cBaraffCloth::SolveForNextPos(double dt)
 
 void cBaraffCloth::UpdateCollisionForce(tVectorXd &col_force)
 {
-    int num_of_v = this->mVertexArrayShared.size();
+    int num_of_v = this->mVertexArray.size();
     double ground_height = 1e-3;
     double k = 1e2;
     float KinectFrictionCoef = 0.5;
     // mExtForce.fill(5);
     // mExtForce[3 * 1 + 1] = 10;
     col_force.setZero();
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        double dist = mVertexArrayShared[i]->mPos[1] - ground_height;
+        double dist = mVertexArray[i]->mPos[1] - ground_height;
 
         if (dist < 0)
         {
-            mVertexArrayShared[i]->mPos[1] = 0;
+            mVertexArray[i]->mPos[1] = 0;
             float normal_force_amp = -dist * k;
 
             tVector3d friction_dir =
@@ -637,14 +637,14 @@ void GetTrianglePosMatAndUV(tVector3d v0, tVector3d v1, tVector3d v2,
 double cBaraffCloth::CalcEnergy(const tVectorXd &xcur)
 {
     double e_total = 0;
-    for (auto &t : this->mTriangleArrayShared)
+    for (auto &t : this->mTriangleArray)
     {
         tMatrix3d pos_mat;
         tMatrix32d uv_mat;
         GetTrianglePosMatAndUV(
             xcur.segment(3 * t->mId0, 3), xcur.segment(3 * t->mId1, 3),
-            xcur.segment(3 * t->mId2, 3), mVertexArrayShared[t->mId0]->muv,
-            mVertexArrayShared[t->mId1]->muv, mVertexArrayShared[t->mId2]->muv,
+            xcur.segment(3 * t->mId2, 3), mVertexArray[t->mId0]->muv,
+            mVertexArray[t->mId1]->muv, mVertexArray[t->mId2]->muv,
             pos_mat, uv_mat);
         e_total += mMaterial->CalcTotalEnergy();
 

@@ -18,6 +18,7 @@ public:
     void Expand(const tVector3d &);
     void Expand(const tVector &);
     void Expand(const tVertexPtr &);
+    void Increase(const tVector & dist);
     void Expand(const tAABB &);
     bool IsInvalid() const;
     bool Intersect(const tAABB &other_AABB);

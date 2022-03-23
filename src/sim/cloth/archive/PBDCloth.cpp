@@ -48,26 +48,26 @@ extern tVector CalculateCotangentCoeff(const tVector &x0, tVector &x1,
                                        tVector &x2, tVector &x3);
 void cPBDCloth::InitBendingMatrixPBD()
 {
-    mBendingMatrixKArray.resize(mEdgeArrayShared.size(),
+    mBendingMatrixKArray.resize(mEdgeArray.size(),
                                 tVector::Ones() * std::nan(""));
-    for (int i = 0; i < mEdgeArrayShared.size(); i++)
+    for (int i = 0; i < mEdgeArray.size(); i++)
     {
-        const auto &e = mEdgeArrayShared[i];
+        const auto &e = mEdgeArray[i];
         if (e->mIsBoundary == false)
         {
             // it's an interior boundary, begin to calculate the K
             int vid[4] = {e->mId0, e->mId1,
-                          SelectAnotherVerteix(mTriangleArrayShared[e->mTriangleId0],
+                          SelectAnotherVerteix(mTriangleArray[e->mTriangleId0],
                                                e->mId0, e->mId1),
-                          SelectAnotherVerteix(mTriangleArrayShared[e->mTriangleId1],
+                          SelectAnotherVerteix(mTriangleArray[e->mTriangleId1],
                                                e->mId0, e->mId1)};
             // printf("[debug] bending, tri %d and tri %d, shared edge: %d,
             // total vertices: %d %d %d %d\n",
             //        e->mTriangleId0, e->mTriangleId1, i, vid[0], vid[1],
             //        vid[2], vid[3]);
             mBendingMatrixKArray[i].noalias() = CalculateCotangentCoeff(
-                mVertexArrayShared[vid[0]]->mPos, mVertexArrayShared[vid[1]]->mPos,
-                mVertexArrayShared[vid[2]]->mPos, mVertexArrayShared[vid[3]]->mPos);
+                mVertexArray[vid[0]]->mPos, mVertexArray[vid[1]]->mPos,
+                mVertexArray[vid[2]]->mPos, mVertexArray[vid[3]]->mPos);
             // std::cout << "[debug] pbd K for edge " << i << " = " <<
             // mBendingMatrixKArray[i].transpose() << std::endl;
         }
@@ -114,9 +114,9 @@ void cPBDCloth::StretchConstraintProcessPBD(double final_k)
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-    for (int e_id = 0; e_id < mEdgeArrayShared.size(); e_id++)
+    for (int e_id = 0; e_id < mEdgeArray.size(); e_id++)
     {
-        auto e = mEdgeArrayShared[e_id];
+        auto e = mEdgeArray[e_id];
         int id0 = e->mId0, id1 = e->mId1;
         const tVector3d &p1 = mXcur.segment(3 * id0, 3),
                         &p2 = mXcur.segment(3 * id1, 3);
@@ -155,7 +155,7 @@ void cPBDCloth::ConstraintProcessPBD()
     double stretch_k = 1 - std::pow((1 - mStiffnessPBD), 1.0 / iters);
     double bending_k = 1 - std::pow((1 - mBendingStiffnessPBD), 1.0 / iters);
     // std::cout << "X cur = " << mXcur.transpose() << std::endl;
-    // std::cout << "mEdgeArray size = " << mEdgeArrayShared.size() << std::endl;
+    // std::cout << "mEdgeArray size = " << mEdgeArray.size() << std::endl;
     for (int i = 0; i < iters; i++)
     {
         StretchConstraintProcessPBD(stretch_k);
@@ -177,9 +177,9 @@ void cPBDCloth::BendingConstraintProcessPBD(double final_k)
 {
     tMatrixXd K = tMatrixXd::Zero(3, 12);
     // for (auto &e : mEdgeArray)
-    for (int _i = 0; _i < mEdgeArrayShared.size(); _i++)
+    for (int _i = 0; _i < mEdgeArray.size(); _i++)
     {
-        const auto &e = mEdgeArrayShared[_i];
+        const auto &e = mEdgeArray[_i];
         if (e->mIsBoundary == false)
         {
             // for interior edges, calculate the nodal displacement "delta"
@@ -190,9 +190,9 @@ void cPBDCloth::BendingConstraintProcessPBD(double final_k)
                 Here we solve C_i(x) \in R individually.
             */
             int vid[4] = {e->mId0, e->mId1,
-                          SelectAnotherVerteix(mTriangleArrayShared[e->mTriangleId0],
+                          SelectAnotherVerteix(mTriangleArray[e->mTriangleId0],
                                                e->mId0, e->mId1),
-                          SelectAnotherVerteix(mTriangleArrayShared[e->mTriangleId1],
+                          SelectAnotherVerteix(mTriangleArray[e->mTriangleId1],
                                                e->mId0, e->mId1)};
             tVectorXd x_total = tVectorXd::Zero(12);
 

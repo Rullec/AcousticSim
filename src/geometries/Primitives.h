@@ -39,6 +39,7 @@ struct tTriangle
     explicit tTriangle(int a, int b, int c);
     int mId0, mId1, mId2;
     tVector mNormal;
+    tVector mColor;
 };
 SIM_DECLARE_PTR(tTriangle);
 /**

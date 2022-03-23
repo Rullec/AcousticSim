@@ -232,6 +232,9 @@ void cDrawScene::CleanVulkan()
     vkDestroyBuffer(mDevice, mLineBuffer, nullptr);
     vkFreeMemory(mDevice, mLineBufferMemory, nullptr);
 
+    vkDestroyBuffer(mDevice, mPointBuffer, nullptr);
+    vkFreeMemory(mDevice, mPointBufferMemory, nullptr);
+
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         vkDestroySemaphore(mDevice, mImageAvailableSemaphore[i], nullptr);
@@ -320,6 +323,10 @@ void cDrawScene::CreateGraphicsPipeline(const std::string mode,
     {
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
     }
+    else if (mode == "point")
+    {
+        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    }
     else
     {
         SIM_ERROR("unsupported mode {}", mode);
@@ -355,7 +362,7 @@ void cDrawScene::CreateGraphicsPipeline(const std::string mode,
         VK_FALSE; // clamp the data outside of the near-far plane insteand of
                   // deleting them
     raster_info.rasterizerDiscardEnable =
-        VK_FALSE;                                   // disable the rasterization, it certainly should be disable
+        VK_FALSE; // disable the rasterization, it certainly should be disable
     raster_info.polygonMode = VK_POLYGON_MODE_FILL; // normal
     raster_info.lineWidth =
         1.0f; // if not 1.0, we need to enable the GPU "line_width" feature
@@ -688,10 +695,7 @@ void cDrawScene::Scroll(double xoff, double yoff)
 /**
  * \brief           Reset the whole scene
  */
-void cDrawScene::Reset()
-{
-    mSimScene->Reset();
-}
+void cDrawScene::Reset() { mSimScene->Reset(); }
 
 /**
  * \brief           Do initialization for vulkan
@@ -711,6 +715,7 @@ void cDrawScene::InitVulkan()
     CreateDescriptorSetLayout();
     CreateGraphicsPipeline("triangle", mTriangleGraphicsPipeline);
     CreateGraphicsPipeline("line", mLinesGraphicsPipeline);
+    CreateGraphicsPipeline("point", mPointGraphicsPipeline);
     CreateCommandPool();
     CreateColorResources(); // MSAA
     CreateDepthResources();
@@ -721,6 +726,8 @@ void cDrawScene::InitVulkan()
     CreateVertexBufferSim();
     CreateVertexBufferGround();
     CreateLineBuffer();
+    CreatePointBuffer();
+
     CreateMVPUniformBuffer();
     CreateDescriptorPool();
     CreateDescriptorSets();
@@ -924,6 +931,7 @@ void cDrawScene::DrawFrame()
     UpdateVertexBufferGround(imageIndex);
     UpdateVertexBufferSimObj(imageIndex);
     UpdateLineBuffer(imageIndex);
+    UpdatePointBuffer(imageIndex);
     // cTimeUtil::End("update_buffers");
 
     // 2. submitting the command buffer
@@ -937,6 +945,26 @@ void cDrawScene::DrawFrame()
         mFrameBufferResized = false;
         RecreateSwapChain();
     }
+}
+
+void cDrawScene::UpdatePointBuffer(int idx)
+{
+    VkDeviceSize buffer_size =
+        sizeof(float) * RENDERING_SIZE_PER_VERTICE * GetNumOfDrawPoints();
+
+    // 5. copy the vertex data to the buffer
+    void *data = nullptr;
+    // map the memory to "data" ptr;
+    vkMapMemory(mDevice, mPointBufferMemory, 0, buffer_size, 0, &data);
+
+    // write the data
+    const tVectorXf &sim_point_data = mSimScene->GetPointDrawBuffer();
+    // std::cout << "point data = " << sim_point_data.transpose() << " buffer size = " << buffer_size << std::endl;
+    char *char_data = static_cast<char *>(data);
+    memcpy(char_data, sim_point_data.data(), buffer_size);
+
+    // unmap
+    vkUnmapMemory(mDevice, mPointBufferMemory);
 }
 
 void cDrawScene::SubmitCmdsAndPresent(std::vector<VkCommandBuffer> cmds,
@@ -1067,6 +1095,7 @@ void cDrawScene::CleanSwapChain()
     vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
     vkDestroyPipeline(mDevice, mTriangleGraphicsPipeline, nullptr);
     vkDestroyPipeline(mDevice, mLinesGraphicsPipeline, nullptr);
+    vkDestroyPipeline(mDevice, mPointGraphicsPipeline, nullptr);
     vkDestroyPipelineLayout(mDevice, mPipelineLayout, nullptr);
     vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
 
@@ -1108,7 +1137,7 @@ void cDrawScene::CreateDescriptorSetLayout()
     mvpLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     mvpLayoutBinding.descriptorCount = 1;
     mvpLayoutBinding.stageFlags =
-        VK_SHADER_STAGE_VERTEX_BIT;                // we use the descriptor in vertex shader
+        VK_SHADER_STAGE_VERTEX_BIT; // we use the descriptor in vertex shader
     mvpLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
     // sampler
@@ -1438,6 +1467,7 @@ void cDrawScene::CreateCommandBuffers()
 
         CreateTriangleCommandBuffers(i);
         CreateLineCommandBuffers(i);
+        CreatePointCommandBuffers(i);
 
         // end render pass
         vkCmdEndRenderPass(mCommandBuffers[i]);

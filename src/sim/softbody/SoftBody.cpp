@@ -29,7 +29,7 @@ void cSoftBody::InitTetTransform(const Json::Value &conf)
     transform.block(0, 3, 3, 1) = mInitTranslation.segment(0, 3);
     std::cout << "[debug] apply init rotation(AA) = " << mInitRotation.transpose() << std::endl;
     std::cout << "[debug] apply init translation = " << mInitTranslation.transpose() << std::endl;
-    for (auto &v : mVertexArrayShared)
+    for (auto &v : mVertexArray)
     {
         v->mPos[3] = 1;
         v->mPos = transform * v->mPos;
@@ -45,9 +45,9 @@ void cSoftBody::Init(const Json::Value &conf)
     mTetMeshPath = cJsonUtil::ParseAsString("tet_path", conf);
     mRho = cJsonUtil::ParseAsFloat("rho", conf);
     cTetUtil::LoadTet(mTetMeshPath,
-                      mVertexArrayShared,
-                      mEdgeArrayShared,
-                      mTriangleArrayShared,
+                      mVertexArray,
+                      mEdgeArray,
+                      mTriangleArray,
                       mTetArrayShared);
     InitTetTransform(conf);
     mMaterial = BuildMaterial(conf);
@@ -73,7 +73,7 @@ void cSoftBody::Init(const Json::Value &conf)
 }
 void cSoftBody::InitForceVector()
 {
-    int num_of_v = this->mVertexArrayShared.size();
+    int num_of_v = this->mVertexArray.size();
     mIntForce.noalias() = tVectorXd::Zero(3 * num_of_v);
     mExtForce.noalias() = tVectorXd::Zero(3 * num_of_v);
     mUserForce.noalias() = tVectorXd::Zero(3 * num_of_v);
@@ -85,18 +85,18 @@ void cSoftBody::InitForceVector()
 }
 void cSoftBody::InitPos()
 {
-    int num_of_v = this->mVertexArrayShared.size();
+    int num_of_v = this->mVertexArray.size();
     mXcur.resize(3 * num_of_v);
     for (int i = 0; i < num_of_v; i++)
     {
-        mXcur.segment(3 * i, 3) = mVertexArrayShared[i]->mPos.segment(0, 3).cast<double>();
+        mXcur.segment(3 * i, 3) = mVertexArray[i]->mPos.segment(0, 3).cast<double>();
     }
     mXprev.noalias() = mXcur;
 }
 
 void cSoftBody::SetVerticesPos(const tVectorXd &pos)
 {
-    int num_of_v = this->mVertexArrayShared.size();
+    int num_of_v = this->mVertexArray.size();
     SIM_ASSERT(pos.size() == 3 * num_of_v);
     mXcur.noalias() = pos;
     mXprev.noalias() = pos;
@@ -105,22 +105,11 @@ void cSoftBody::SetVerticesPos(const tVectorXd &pos)
 
 void cSoftBody::SyncPosToVectorArray()
 {
-    int num_of_v = this->mVertexArrayShared.size();
+    int num_of_v = this->mVertexArray.size();
     for (int i = 0; i < num_of_v; i++)
     {
-        mVertexArrayShared[i]->mPos.segment(0, 3) =
+        mVertexArray[i]->mPos.segment(0, 3) =
             mXcur.segment(3 * i, 3).cast<double>();
-    }
-}
-void cSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                       int &st) const
-{
-    // std::cout << "caclulate triangle draw buffer " << mTriangleArrayShared.size() << std::endl;
-    for (auto &x : mTriangleArrayShared)
-    {
-        cRenderUtil::CalcTriangleDrawBufferSingle(mVertexArrayShared[x->mId0],
-                                     mVertexArrayShared[x->mId1],
-                                     mVertexArrayShared[x->mId2], res, st);
     }
 }
 
@@ -129,17 +118,17 @@ void cSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
 {
     tVector normal = tVector::Zero();
     tVector black_color = tVector(0, 0, 0, 1);
-    for (auto &e : mEdgeArrayShared)
+    for (auto &e : mEdgeArray)
     {
         // 1. get the normal of this edge
-        normal = mTriangleArrayShared[e->mTriangleId0]->mNormal;
+        normal = mTriangleArray[e->mTriangleId0]->mNormal;
         if (e->mTriangleId1 != -1)
         {
-            normal += mTriangleArrayShared[e->mTriangleId1]->mNormal;
+            normal += mTriangleArray[e->mTriangleId1]->mNormal;
             normal /= 2;
         }
 
-        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
+        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArray[e->mId0], mVertexArray[e->mId1],
                                  normal, res, st, black_color);
     }
 }
@@ -149,12 +138,12 @@ void cSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
 */
 void cSoftBody::UpdateTriangleNormal()
 {
-    for (int i = 0; i < this->mTriangleArrayShared.size(); i++)
+    for (int i = 0; i < this->mTriangleArray.size(); i++)
     {
-        auto cur_t = mTriangleArrayShared[i];
-        tVector e01 = mVertexArrayShared[cur_t->mId1]->mPos - mVertexArrayShared[cur_t->mId0]->mPos;
+        auto cur_t = mTriangleArray[i];
+        tVector e01 = mVertexArray[cur_t->mId1]->mPos - mVertexArray[cur_t->mId0]->mPos;
 
-        tVector e12 = mVertexArrayShared[cur_t->mId2]->mPos - mVertexArrayShared[cur_t->mId1]->mPos;
+        tVector e12 = mVertexArray[cur_t->mId2]->mPos - mVertexArray[cur_t->mId1]->mPos;
         cur_t->mNormal = e01.cross3(e12).normalized();
     }
 }
@@ -162,35 +151,35 @@ void cSoftBody::UpdateVertexNormalFromTriangleNormal()
 {
     // 1. clear all vertex normal
     // cTimeUtil::Begin("update_v_normal");
-    for (auto &x : mVertexArrayShared)
+    for (auto &x : mVertexArray)
         x->mNormal.setZero();
     // 2. iter each edge
-    for (auto &x : mTriangleArrayShared)
+    for (auto &x : mTriangleArray)
     {
-        mVertexArrayShared[x->mId0]->mNormal += x->mNormal;
-        mVertexArrayShared[x->mId1]->mNormal += x->mNormal;
-        mVertexArrayShared[x->mId2]->mNormal += x->mNormal;
+        mVertexArray[x->mId0]->mNormal += x->mNormal;
+        mVertexArray[x->mId1]->mNormal += x->mNormal;
+        mVertexArray[x->mId2]->mNormal += x->mNormal;
     }
 
     // 3. averge each vertex
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        auto &v = mVertexArrayShared[i];
+        auto &v = mVertexArray[i];
         v->mNormal.normalize();
     }
     // cTimeUtil::End("update_v_normal");
 }
 int cSoftBody::GetNumOfTriangles() const
 {
-    return this->mTriangleArrayShared.size();
+    return this->mTriangleArray.size();
 }
 int cSoftBody::GetNumOfEdges() const
 {
-    return this->mEdgeArrayShared.size();
+    return this->mEdgeArray.size();
 }
 int cSoftBody::GetNumOfVertices() const
 {
-    return this->mVertexArrayShared.size();
+    return this->mVertexArray.size();
 }
 
 /**
@@ -207,19 +196,19 @@ void cSoftBody::Update(float dt)
 
 void cSoftBody::UpdateExtForce()
 {
-    int num_of_v = this->mVertexArrayShared.size();
+    int num_of_v = this->mVertexArray.size();
     double ground_height = 1e-3;
     double k = mCollisionK;
     float KinectFrictionCoef = mFrictionCoef;
     // mExtForce.fill(5);
     // mExtForce[3 * 1 + 1] = 10;
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        double dist = mVertexArrayShared[i]->mPos[1] - ground_height;
+        double dist = mVertexArray[i]->mPos[1] - ground_height;
 
         if (dist < 0)
         {
-            mVertexArrayShared[i]->mPos[1] = 0;
+            mVertexArray[i]->mPos[1] = 0;
             float normal_force_amp = -dist * k;
 
             tVector3d friction_dir = -1 * (mXcur.segment(3 * i, 3) - mXprev.segment(3 * i, 3));
@@ -265,10 +254,10 @@ void cSoftBody::InitInvDm()
     for (int i = 0; i < num_of_tet; i++)
     {
         auto cur_tet = mTetArrayShared[i];
-        tVector3d X1 = this->mVertexArrayShared[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<double>();
-        tVector3d X2 = this->mVertexArrayShared[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<double>();
-        tVector3d X3 = this->mVertexArrayShared[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<double>();
-        tVector3d X4 = this->mVertexArrayShared[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<double>();
+        tVector3d X1 = this->mVertexArray[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<double>();
+        tVector3d X2 = this->mVertexArray[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<double>();
+        tVector3d X3 = this->mVertexArray[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<double>();
+        tVector3d X4 = this->mVertexArray[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<double>();
         tMatrix3d cur_dm;
         cur_dm.col(0) = X1 - X4;
         cur_dm.col(1) = X2 - X4;
@@ -298,10 +287,10 @@ void cSoftBody::UpdateDeformationGradient()
 void cSoftBody::UpdateDeformationGradientForTet(int i)
 {
     auto cur_tet = mTetArrayShared[i];
-    tVector3d x1 = this->mVertexArrayShared[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<double>();
-    tVector3d x2 = this->mVertexArrayShared[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<double>();
-    tVector3d x3 = this->mVertexArrayShared[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<double>();
-    tVector3d x4 = this->mVertexArrayShared[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<double>();
+    tVector3d x1 = this->mVertexArray[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<double>();
+    tVector3d x2 = this->mVertexArray[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<double>();
+    tVector3d x3 = this->mVertexArray[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<double>();
+    tVector3d x4 = this->mVertexArray[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<double>();
     tMatrix3d Ds = tMatrix3d::Zero();
     Ds.col(0) = x1 - x4;
     Ds.col(1) = x2 - x4;
@@ -316,10 +305,10 @@ void cSoftBody::InitTetVolume()
     {
         auto tet = mTetArrayShared[i];
         mInitTetVolume[i] = cTetUtil::CalculateTetVolume(
-            mVertexArrayShared[tet->mVertexId[0]]->mPos,
-            mVertexArrayShared[tet->mVertexId[1]]->mPos,
-            mVertexArrayShared[tet->mVertexId[2]]->mPos,
-            mVertexArrayShared[tet->mVertexId[3]]->mPos);
+            mVertexArray[tet->mVertexId[0]]->mPos,
+            mVertexArray[tet->mVertexId[1]]->mPos,
+            mVertexArray[tet->mVertexId[2]]->mPos,
+            mVertexArray[tet->mVertexId[3]]->mPos);
     }
 }
 
@@ -404,9 +393,9 @@ void cSoftBody::ApplyUserPerturbForceOnce(tPerturb *pert)
     int tri_id = pert->mAffectedTriId;
     tVector3d bary = pert->mBarycentricCoords;
     tVector3d force = pert->GetPerturbForce().cast<double>().segment(0, 3) * 10;
-    int v0 = mTriangleArrayShared[tri_id]->mId0;
-    int v1 = mTriangleArrayShared[tri_id]->mId1;
-    int v2 = mTriangleArrayShared[tri_id]->mId2;
+    int v0 = mTriangleArray[tri_id]->mId0;
+    int v1 = mTriangleArray[tri_id]->mId1;
+    int v2 = mTriangleArray[tri_id]->mId2;
     mUserForce.segment(3 * v0, 3) += force * bary[0];
     mUserForce.segment(3 * v1, 3) += force * bary[1];
     mUserForce.segment(3 * v2, 3) += force * bary[2];

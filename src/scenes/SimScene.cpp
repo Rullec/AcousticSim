@@ -33,9 +33,9 @@ eSceneType cSimScene::BuildSceneType(const std::string &str)
 
 cSimScene::cSimScene()
 {
-    // mTriangleArrayShared.clear();
-    // mEdgeArrayShared.clear();
-    // mVertexArrayShared.clear();
+    // mTriangleArray.clear();
+    // mEdgeArray.clear();
+    // mVertexArray.clear();
 
     mPerturb = nullptr;
     mSimStateMachine = std::make_shared<tSimStateMachine>();
@@ -118,7 +118,10 @@ void cSimScene::InitDrawBuffer()
         int size_per_edge = 2 * RENDERING_SIZE_PER_VERTICE;
         mEdgesDrawBuffer.resize(GetNumOfDrawEdges() * size_per_edge);
     }
-
+    {
+        int num_of_v = GetNumOfVertices();
+        mPointDrawBuffer.resize(num_of_v * RENDERING_SIZE_PER_VERTICE);
+    }
     UpdateRenderingResource();
 }
 
@@ -155,8 +158,8 @@ void cSimScene::Update(double delta_time)
         // printf("[debug] sim scene update cur time = %.4f\n", mCurTime);
         cScene::Update(delta_time);
 
-        PerformCollisionDetection();
         UpdateObjects();
+        PerformCollisionDetection();
         // clear force
         // apply ext force
         // update position
@@ -178,8 +181,10 @@ void cSimScene::UpdateObjects()
     }
 
     // 2. update objects
+
     for (auto &obs : this->mObjectList)
     {
+
         obs->Update(mCurdt);
     }
 }
@@ -194,6 +199,12 @@ void cSimScene::PerformCollisionDetection()
         mColDetecter->PerformCD();
         // auto pts = mColDetecter->GetContactPoints();
         // std::cout << "[debug] num of contacts = " << pts.size() << std::endl;
+    }
+
+    for (auto &obs : this->mObjectList)
+    {
+        obs->SetPointTriangleCollisionInfo(
+            mColDetecter->GetObjPointTriangleCollisionInfo(obs->GetObjId()));
     }
 }
 /**
@@ -214,10 +225,10 @@ void cSimScene::Reset()
 int cSimScene::GetNumOfVertices() const
 {
     int num_of_vertices = 0;
-    // for (auto &x : mObstacleList)
-    // {
-    //     num_of_vertices += x->GetNumOfVertices();
-    // }
+    for (auto &x : mObjectList)
+    {
+        num_of_vertices += x->GetNumOfVertices();
+    }
     return num_of_vertices;
 }
 
@@ -281,6 +292,7 @@ void cSimScene::UpdateRenderingResource()
 {
     CalcEdgesDrawBuffer();
     CalcTriangleDrawBuffer();
+    CalcPointDrawBuffer();
 }
 
 int cSimScene::CalcEdgesDrawBuffer(int st /* = 0 */)
@@ -303,15 +315,15 @@ int cSimScene::CalcEdgesDrawBuffer(int st /* = 0 */)
 
 cSimScene::~cSimScene()
 {
-    // for (auto x : mVertexArrayShared)
+    // for (auto x : mVertexArray)
     //     delete x;
-    // mVertexArrayShared.clear();
+    // mVertexArray.clear();
     // for (auto &x : mTriangleArray)
     //     delete x;
-    // mTriangleArrayShared.clear();
+    // mTriangleArray.clear();
     // for (auto &x : mEdgeArray)
     //     delete x;
-    // mEdgeArrayShared.clear();
+    // mEdgeArray.clear();
 }
 
 /**
@@ -517,4 +529,21 @@ void cSimScene::UpdateImGui()
                     num_of_t);
     }
     ImGui::Text("total v %d t %d", v_total, t_total);
+}
+
+const tVectorXf &cSimScene::GetPointDrawBuffer() { return mPointDrawBuffer; }
+
+void cSimScene::CalcPointDrawBuffer()
+{
+    mPointDrawBuffer.fill(std::nan(""));
+
+    Eigen::Map<tVectorXf> render_ref(mPointDrawBuffer.data(),
+                                     mPointDrawBuffer.size());
+
+    // 2. for draw buffer
+    int st = 0;
+    for (auto &x : mObjectList)
+    {
+        x->CalcPointDrawBuffer(render_ref, st);
+    }
 }

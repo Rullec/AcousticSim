@@ -22,6 +22,7 @@ tTriangle::tTriangle()
 {
     mId0 = mId1 = mId2 = -1;
     mNormal.setZero();
+    mColor.setZero();
 }
 tTriangle::tTriangle(int a, int b, int c) : mId0(a), mId1(b), mId2(c)
 {

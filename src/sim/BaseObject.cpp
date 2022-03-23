@@ -3,7 +3,7 @@
 #include "utils/JsonUtil.h"
 #include "utils/LogUtil.h"
 #include "utils/MathUtil.h"
-
+#include "utils/RenderUtil.h"
 #include <string>
 std::string gObjectTypeStr[eObjectType::NUM_OBJ_TYPES] = {
     "KinematicBody", "RigidBody", "Cloth", "Fluid", "SoftBody", "Acoustic"};
@@ -44,37 +44,31 @@ eObjectType cBaseObject::BuildObjectType(std::string str)
 
 eObjectType cBaseObject::GetObjectType() const { return this->mType; }
 
-int cBaseObject::GetNumOfTriangles() const
-{
-    return mTriangleArrayShared.size();
-}
-int cBaseObject::GetNumOfEdges() const { return mEdgeArrayShared.size(); }
-int cBaseObject::GetNumOfVertices() const { return mVertexArrayShared.size(); }
+int cBaseObject::GetNumOfTriangles() const { return mTriangleArray.size(); }
+int cBaseObject::GetNumOfEdges() const { return mEdgeArray.size(); }
+int cBaseObject::GetNumOfVertices() const { return mVertexArray.size(); }
 const std::vector<tVertexPtr> &cBaseObject::GetVertexArray() const
 {
-    return this->mVertexArrayShared;
+    return this->mVertexArray;
 }
 const std::vector<tEdgePtr> &cBaseObject::GetEdgeArray() const
 {
-    return this->mEdgeArrayShared;
+    return this->mEdgeArray;
 }
 const std::vector<tTrianglePtr> &cBaseObject::GetTriangleArray() const
 {
-    return this->mTriangleArrayShared;
+    return this->mTriangleArray;
 }
 
 std::vector<tVertexPtr> &cBaseObject::GetVertexArrayRef()
 {
-    return mVertexArrayShared;
+    return mVertexArray;
 }
 
-std::vector<tEdgePtr> &cBaseObject::GetEdgeArrayRef()
-{
-    return mEdgeArrayShared;
-}
+std::vector<tEdgePtr> &cBaseObject::GetEdgeArrayRef() { return mEdgeArray; }
 std::vector<tTrianglePtr> &cBaseObject::GetTriangleArrayRef()
 {
-    return mTriangleArrayShared;
+    return mTriangleArray;
 }
 
 /**
@@ -82,10 +76,13 @@ std::vector<tTrianglePtr> &cBaseObject::GetTriangleArrayRef()
  */
 void cBaseObject::ChangeTriangleColor(int tri_id, const tVector3f &color)
 {
-    tVector new_color = tVector(color[0], color[1], color[2], mColorAlpha);
-    mVertexArrayShared[mTriangleArrayShared[tri_id]->mId0]->mColor = new_color;
-    mVertexArrayShared[mTriangleArrayShared[tri_id]->mId1]->mColor = new_color;
-    mVertexArrayShared[mTriangleArrayShared[tri_id]->mId2]->mColor = new_color;
+    mTriangleArray[tri_id]->mColor.segment(0, 3) = color.cast<double>();
+    // tVector new_color = tVector(color[0], color[1], color[2], mColorAlpha);
+    // mVertexArray[mTriangleArray[tri_id]->mId0]->mColor =
+    // new_color; mVertexArray[mTriangleArray[tri_id]->mId1]->mColor
+    // = new_color;
+    // mVertexArray[mTriangleArray[tri_id]->mId2]->mColor =
+    // new_color;
 }
 
 /**
@@ -96,7 +93,7 @@ void cBaseObject::CalcAABB(tVector &min, tVector &max) const
 {
     min = tVector::Ones() * std::numeric_limits<double>::max();
     max = tVector::Ones() * std::numeric_limits<double>::max() * -1;
-    for (auto &x : mVertexArrayShared)
+    for (auto &x : mVertexArray)
     {
         for (int i = 0; i < 3; i++)
         {
@@ -122,11 +119,11 @@ void cBaseObject::UpdateTriangleNormal()
 {
     // we assume the rotation axis of v0, v1, v2 is the normal direction here
     // cTimeUtil::Begin("update_normal");
-    for (auto &tri : mTriangleArrayShared)
+    for (auto &tri : mTriangleArray)
     {
-        const tVector &v0 = mVertexArrayShared[tri->mId0]->mPos;
-        const tVector &v1 = mVertexArrayShared[tri->mId1]->mPos;
-        const tVector &v2 = mVertexArrayShared[tri->mId2]->mPos;
+        const tVector &v0 = mVertexArray[tri->mId0]->mPos;
+        const tVector &v1 = mVertexArray[tri->mId1]->mPos;
+        const tVector &v2 = mVertexArray[tri->mId2]->mPos;
         tri->mNormal = (v1 - v0).cross3(v2 - v1).normalized();
         // std::cout << tri->mNormal.transpose() << std::endl;
     }
@@ -141,20 +138,20 @@ void cBaseObject::UpdateVertexNormalFromTriangleNormal()
 {
     // 1. clear all vertex normal
     // cTimeUtil::Begin("update_v_normal");
-    for (auto &x : mVertexArrayShared)
+    for (auto &x : mVertexArray)
         x->mNormal.setZero();
     // 2. iter each edge
-    for (auto &x : mTriangleArrayShared)
+    for (auto &x : mTriangleArray)
     {
-        mVertexArrayShared[x->mId0]->mNormal += x->mNormal;
-        mVertexArrayShared[x->mId1]->mNormal += x->mNormal;
-        mVertexArrayShared[x->mId2]->mNormal += x->mNormal;
+        mVertexArray[x->mId0]->mNormal += x->mNormal;
+        mVertexArray[x->mId1]->mNormal += x->mNormal;
+        mVertexArray[x->mId2]->mNormal += x->mNormal;
     }
 
     // 3. averge each vertex
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        auto &v = mVertexArrayShared[i];
+        auto &v = mVertexArray[i];
         v->mNormal.normalize();
     }
     // cTimeUtil::End("update_v_normal");
@@ -166,7 +163,7 @@ void cBaseObject::UpdateVertexNormalFromTriangleNormal()
 void cBaseObject::SetVertexColorAlpha(float val)
 {
     mColorAlpha = val;
-    for (auto &v : mVertexArrayShared)
+    for (auto &v : mVertexArray)
     {
         v->mColor[3] = val;
     }
@@ -183,12 +180,11 @@ float cBaseObject::GetVertexColorAlpha() const { return mColorAlpha; }
 double cBaseObject::CalcTotalArea() const
 {
     float total_area = 0;
-    for (auto &t : mTriangleArrayShared)
+    for (auto &t : mTriangleArray)
     {
-        total_area +=
-            cMathUtil::CalcTriangleArea(mVertexArrayShared[t->mId0]->mPos,
-                                        mVertexArrayShared[t->mId1]->mPos,
-                                        mVertexArrayShared[t->mId2]->mPos);
+        total_area += cMathUtil::CalcTriangleArea(mVertexArray[t->mId0]->mPos,
+                                                  mVertexArray[t->mId1]->mPos,
+                                                  mVertexArray[t->mId2]->mPos);
     }
     return total_area;
 }
@@ -196,3 +192,70 @@ double cBaseObject::CalcTotalArea() const
 void cBaseObject::UpdateImGui() {}
 
 void cBaseObject::SetGravity(const tVector3d &g) { mGravity.noalias() = g; }
+
+void cBaseObject::SetPointTriangleCollisionInfo(
+    const std::vector<tPointTriangleCollisionInfoPtr> &info)
+{
+    mPointTriangleCollisionInfo = info;
+}
+#include "sim/collision/CollisionInfo.h"
+#include "utils/ColorUtil.h"
+#include <set>
+void cBaseObject::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                         int &st) const
+{
+    int old_st = st;
+    for (auto &tri : mTriangleArray)
+    {
+        cRenderUtil::CalcTriangleDrawBufferSingle(
+            this->mVertexArray[tri->mId0], this->mVertexArray[tri->mId1],
+            this->mVertexArray[tri->mId2], tri->mColor, res, st);
+    }
+    // 1. calculate affected vid
+    for (auto info : mPointTriangleCollisionInfo)
+    {
+        // handle triangle
+        if (info->mObj1->GetObjId() == mObjId)
+        {
+            // std::cout << "change triangle color " << info->mTriangleId1
+            //           << std::endl;
+            // change triangle color
+            res.segment(
+                old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1 +
+                    0 * RENDERING_SIZE_PER_VERTICE + 3,
+                4) = ColorShoJoHi.cast<float>();
+            res.segment(
+                old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1 +
+                    1 * RENDERING_SIZE_PER_VERTICE + 3,
+                4) = ColorShoJoHi.cast<float>();
+            res.segment(
+                old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1 +
+                    2 * RENDERING_SIZE_PER_VERTICE + 3,
+                4) = ColorShoJoHi.cast<float>();
+        }
+    }
+}
+
+void cBaseObject::CalcPointDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
+{
+    // std::cout << "v0 color = " << mVertexArray[0]->mColor.transpose()
+    // << std::endl;
+    int old_st = st;
+    for (auto &v : mVertexArray)
+    {
+        cRenderUtil::CalcPointDrawBufferSingle(v->mPos, v->mColor, res, st);
+    }
+
+    for (auto info : mPointTriangleCollisionInfo)
+    {
+        // handle triangle
+        if (info->mObj0->GetObjId() == mObjId)
+        {
+            // std::cout << "change triangle color " << info->mTriangleId1
+            //           << std::endl;
+            // change triangle color
+            res.segment(
+                old_st + RENDERING_SIZE_PER_VERTICE * info->mVertexId0 + 3, 3).setZero();
+        }
+    }
+}

@@ -1,13 +1,15 @@
 #pragma once
 #include "CollisionDetecter.h"
 
-struct tBroadphaseInfo
+struct tPointTriangleInfo
 {
-    tBroadphaseInfo();
+    tPointTriangleInfo(int obj0, int obj1);
+    int GetNum() const { return mPointTrianglePair.size(); }
     int mObj0Id, mObj1Id;
-    std::vector<std::pair<int, int>> mTrianglePairInfo;
+    std::vector<std::pair<int, int>> mPointTrianglePair; // point id in obj0
 };
 
+SIM_DECLARE_STRUCT_AND_PTR(tPointTriangleCollisionInfo);
 SIM_DECLARE_CLASS_AND_PTR(cObjBVH);
 class cBVHCollisionDetecter : public cCollisionDetecter
 {
@@ -20,11 +22,16 @@ public:
     virtual void Update() override;
     virtual void PerformCD() override;
     virtual void Clear() override;
-    virtual std::vector<tColPointPtr> GetContactPoints() const override;
+    virtual std::vector<tPointTriangleCollisionInfoPtr>
+    GetAllPointTriangleCollisionInfo() const override;
+    std::vector<tPointTriangleCollisionInfoPtr>
+    GetObjPointTriangleCollisionInfo(int obj_id) const override;
 
 protected:
     std::vector<cObjBVHPtr> mBVHList;
+    std::vector<std::vector<tPointTriangleCollisionInfoPtr>>
+        mObjPointTriangleInfo;
     virtual void UpdateBVHAABB();
 
-    tBroadphaseInfo CheckBetweenTwoBVH(cObjBVHPtr t1, cObjBVHPtr t2) const;
+    // tPointTriangleInfo CheckBetweenTwoBVH(cObjBVHPtr t1, cObjBVHPtr t2) const;
 };

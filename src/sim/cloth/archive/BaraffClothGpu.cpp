@@ -244,7 +244,7 @@ void cBaraffClothGPU::ApplyUserPerturbForceOnce(tPerturb *pert)
         return;
     // int max_id = 0;
     // float max_bary = 0;
-    // auto tri = mTriangleArrayShared[pert->mAffectedTriId];
+    // auto tri = mTriangleArray[pert->mAffectedTriId];
     // std::vector<int> res = {tri->mId0, tri->mId1, tri->mId2};
     // for (max_id = 0; max_id < 3; max_id++)
     // {
@@ -256,7 +256,7 @@ void cBaraffClothGPU::ApplyUserPerturbForceOnce(tPerturb *pert)
     // }
     // mDragPointTargetPos = cCudaMatrixUtil::EigenMatrixToCudaMatrix(
     //     tVector3f(pert->GetGoalPos().segment(0, 3).cast<float>()));
-    auto tri = mTriangleArrayShared[pert->mAffectedTriId];
+    auto tri = mTriangleArray[pert->mAffectedTriId];
     const tVector &tar_eigen = pert->GetGoalPos();
     tCudaVector3f tar_pos({static_cast<float>(tar_eigen[0]),
                            static_cast<float>(tar_eigen[1]),
@@ -282,12 +282,12 @@ void cBaraffClothGPU::InitMass(const Json::Value &conf)
     mClothDensity = cJsonUtil::ParseAsDouble("cloth_density", conf);
     int dof = 3 * GetNumOfVertices();
     mMassMatrixDiag.noalias() = tVectorXd::Zero(dof);
-    for (auto &t : mTriangleArrayShared)
+    for (auto &t : mTriangleArray)
     {
         // 1. total area
-        auto v0 = mVertexArrayShared[t->mId0];
-        auto v1 = mVertexArrayShared[t->mId1];
-        auto v2 = mVertexArrayShared[t->mId2];
+        auto v0 = mVertexArray[t->mId0];
+        auto v1 = mVertexArray[t->mId1];
+        auto v2 = mVertexArray[t->mId2];
 
         double triangle_area =
             cMathUtil::CalcTriangleArea(v0->mPos, v1->mPos, v2->mPos);
@@ -300,8 +300,8 @@ void cBaraffClothGPU::InitMass(const Json::Value &conf)
     }
     for (int i = 0; i < GetNumOfVertices(); i++)
     {
-        mVertexArrayShared[i]->mMass = mMassMatrixDiag[3 * i];
-        // std::cout << "v" << i << " mass = " << mVertexArrayShared[i]->mMass
+        mVertexArray[i]->mMass = mMassMatrixDiag[3 * i];
+        // std::cout << "v" << i << " mass = " << mVertexArray[i]->mMass
         // << std::endl;
     }
     // mMassMatrixDiagf.noalias() = mMassMatrixDiag.cast<float>();
@@ -357,8 +357,8 @@ void cBaraffClothGPU::InitGpuData()
         for (size_t i = 0; i < num_of_tris; i++)
         {
             triangle_vid_lst[i] = tCudaVector3i(
-                {mTriangleArrayShared[i]->mId0, mTriangleArrayShared[i]->mId1,
-                 mTriangleArrayShared[i]->mId2});
+                {mTriangleArray[i]->mId0, mTriangleArray[i]->mId1,
+                 mTriangleArray[i]->mId2});
         }
         mTriangleVerticesIdLstCuda.Upload(triangle_vid_lst);
     }
@@ -370,11 +370,11 @@ void cBaraffClothGPU::InitGpuData()
         std::vector<tConnectedInfo> vertex_triangle_id_lst(num_of_v, -1);
         for (size_t tri_id = 0; tri_id < num_of_tris; tri_id++)
         {
-            AddInfo(vertex_triangle_id_lst[mTriangleArrayShared[tri_id]->mId0],
+            AddInfo(vertex_triangle_id_lst[mTriangleArray[tri_id]->mId0],
                     tri_id);
-            AddInfo(vertex_triangle_id_lst[mTriangleArrayShared[tri_id]->mId1],
+            AddInfo(vertex_triangle_id_lst[mTriangleArray[tri_id]->mId1],
                     tri_id);
-            AddInfo(vertex_triangle_id_lst[mTriangleArrayShared[tri_id]->mId2],
+            AddInfo(vertex_triangle_id_lst[mTriangleArray[tri_id]->mId2],
                     tri_id);
         }
         mVerticesTriangleIdLstCuda.Upload(vertex_triangle_id_lst);
@@ -527,9 +527,9 @@ void cBaraffClothGPU::InitGpuData()
             auto cur_tri = tri_lst[i];
 
             tri_area_cpu[i] = cMathUtil::CalcTriangleArea(
-                mVertexArrayShared[cur_tri->mId0]->mPos,
-                mVertexArrayShared[cur_tri->mId1]->mPos,
-                mVertexArrayShared[cur_tri->mId2]->mPos);
+                mVertexArray[cur_tri->mId0]->mPos,
+                mVertexArray[cur_tri->mId1]->mPos,
+                mVertexArray[cur_tri->mId2]->mPos);
         }
         mTriangleAreaCuda.Upload(tri_area_cpu);
     }
@@ -1108,22 +1108,22 @@ void cBaraffClothGPU::BuildEdgeInfo()
     {
         tCudaVector8i &cur_edge_info = edge_info_lst[all_e_id];
         cur_edge_info.setValue(-1);
-        auto e = mEdgeArrayShared[all_e_id];
+        auto e = mEdgeArray[all_e_id];
         cur_edge_info[0] = e->mId0;
         cur_edge_info[1] = e->mId1;
         cur_edge_info[2] = e->mTriangleId0;
         cur_edge_info[3] =
-            GetLocalId(mTriangleArrayShared[e->mTriangleId0], e->mId0);
+            GetLocalId(mTriangleArray[e->mTriangleId0], e->mId0);
         cur_edge_info[4] =
-            GetLocalId(mTriangleArrayShared[e->mTriangleId0], e->mId1);
+            GetLocalId(mTriangleArray[e->mTriangleId0], e->mId1);
 
         if (e->mTriangleId1 != -1)
         {
             cur_edge_info[5] = e->mTriangleId1;
             cur_edge_info[6] =
-                GetLocalId(mTriangleArrayShared[e->mTriangleId1], e->mId0);
+                GetLocalId(mTriangleArray[e->mTriangleId1], e->mId0);
             cur_edge_info[7] =
-                GetLocalId(mTriangleArrayShared[e->mTriangleId1], e->mId1);
+                GetLocalId(mTriangleArray[e->mTriangleId1], e->mId1);
         }
 
         if (e->mIsBoundary == false)
@@ -1131,22 +1131,22 @@ void cBaraffClothGPU::BuildEdgeInfo()
             // AddInfo(vertex_involved_inner_edges[e->mId0], inner_e_id);
             // AddInfo(vertex_involved_inner_edges[e->mId1], inner_e_id);
             AddInfo(vertex_involved_inner_edges
-                        [mTriangleArrayShared[e->mTriangleId0]->mId0],
+                        [mTriangleArray[e->mTriangleId0]->mId0],
                     inner_e_id);
             AddInfo(vertex_involved_inner_edges
-                        [mTriangleArrayShared[e->mTriangleId0]->mId1],
+                        [mTriangleArray[e->mTriangleId0]->mId1],
                     inner_e_id);
             AddInfo(vertex_involved_inner_edges
-                        [mTriangleArrayShared[e->mTriangleId0]->mId2],
+                        [mTriangleArray[e->mTriangleId0]->mId2],
                     inner_e_id);
             AddInfo(vertex_involved_inner_edges
-                        [mTriangleArrayShared[e->mTriangleId1]->mId0],
+                        [mTriangleArray[e->mTriangleId1]->mId0],
                     inner_e_id);
             AddInfo(vertex_involved_inner_edges
-                        [mTriangleArrayShared[e->mTriangleId1]->mId1],
+                        [mTriangleArray[e->mTriangleId1]->mId1],
                     inner_e_id);
             AddInfo(vertex_involved_inner_edges
-                        [mTriangleArrayShared[e->mTriangleId1]->mId2],
+                        [mTriangleArray[e->mTriangleId1]->mId2],
                     inner_e_id);
 
             inner_e_id += 1;

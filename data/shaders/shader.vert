@@ -29,4 +29,5 @@ void main() {
     fragCameraPos = vec3(ubo.camera_pos.xyz);
     fragVertexWorldPos = vec3((ubo.model * vec4(inPosition, 1.0)).xyz);
     fragNormal = inNormal;
+    gl_PointSize = 10;
 }

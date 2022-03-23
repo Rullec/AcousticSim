@@ -16,9 +16,9 @@ cBaseCloth::cBaseCloth(eClothType cloth_type, int id_)
     : cBaseObject(eObjectType::CLOTH_TYPE, id_), mClothType(cloth_type)
 {
 
-    mTriangleArrayShared.clear();
-    mEdgeArrayShared.clear();
-    mVertexArrayShared.clear();
+    mTriangleArray.clear();
+    mEdgeArray.clear();
+    mVertexArray.clear();
     mConstraint_StaticPointIds.clear();
 }
 
@@ -29,7 +29,7 @@ tVector cBaseCloth::CalcCOM() const
 {
     tVector com = tVector::Zero();
     double total_mass = 0;
-    for (auto &x : mVertexArrayShared)
+    for (auto &x : mVertexArray)
     {
         total_mass += x->mMass;
         com += x->mMass * x->mPos;
@@ -61,41 +61,30 @@ void cBaseCloth::Reset()
     SetPrePos(mClothInitPos);
     ClearForce();
 }
-void cBaseCloth::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                        int &st) const
-{
-    for (auto &tri : mTriangleArrayShared)
-    {
-        cRenderUtil::CalcTriangleDrawBufferSingle(
-            this->mVertexArrayShared[tri->mId0],
-            this->mVertexArrayShared[tri->mId1],
-            this->mVertexArrayShared[tri->mId2], res, st);
-    }
-}
 
 /**
  * \brief           calculate edge draw buffer
  */
 void cBaseCloth::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
 {
-    float alpha_channel = mVertexArrayShared[0]->mColor[3];
+    float alpha_channel = mVertexArray[0]->mColor[3];
 
     tVector WARP_COLOR = ColorShoJoHi, WEFT_COLOR = ColorShiQing;
     tVector BLACK_COLOR = ColorAn;
     tVector normal = tVector::Zero();
     tVector cur_color = tVector::Zero();
-    for (int idx = 0; idx < mEdgeArrayShared.size(); idx++)
+    for (int idx = 0; idx < mEdgeArray.size(); idx++)
     {
-        auto e = mEdgeArrayShared[idx];
+        auto e = mEdgeArray[idx];
         // 1. get the averge normal direction for this edge
-        normal = mTriangleArrayShared[e->mTriangleId0]->mNormal;
+        normal = mTriangleArray[e->mTriangleId0]->mNormal;
         if (e->mTriangleId1 != -1)
         {
-            normal += mTriangleArrayShared[e->mTriangleId1]->mNormal;
+            normal += mTriangleArray[e->mTriangleId1]->mNormal;
             normal /= 2;
         }
         tVector2f uv_move =
-            mVertexArrayShared[e->mId1]->muv - mVertexArrayShared[e->mId0]->muv;
+            mVertexArray[e->mId1]->muv - mVertexArray[e->mId0]->muv;
         float thre = 1e-3;
         if (std::abs(uv_move[1]) < thre)
         {
@@ -113,10 +102,10 @@ void cBaseCloth::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
         else
         {
             // std::cout << "v0 tex = " <<
-            // mVertexArrayShared[e->mId0]->muv.transpose()
+            // mVertexArray[e->mId0]->muv.transpose()
             //           << std::endl;
             // std::cout << "v1 tex = " <<
-            // mVertexArrayShared[e->mId1]->muv.transpose()
+            // mVertexArray[e->mId1]->muv.transpose()
             //           << std::endl;
             // std::cout << "uv move = " << uv_move.transpose() << std::endl;
             // std::cout << "edge id = " << idx << std::endl;
@@ -125,8 +114,8 @@ void cBaseCloth::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
             // std::cout << "[warn] failed to determine the edge color\n";
         }
         // 2. calculate the edge draw position
-        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0],
-                                              mVertexArrayShared[e->mId1],
+        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArray[e->mId0],
+                                              mVertexArray[e->mId1],
                                               normal, res, st, cur_color);
     }
 }
@@ -146,11 +135,11 @@ void cBaseCloth::ApplyPerturb(tPerturb *pert)
     if (pert == nullptr)
         return;
     tVector force = pert->GetPerturbForce();
-    mUserForce.segment(mTriangleArrayShared[pert->mAffectedTriId]->mId0 * 3,
+    mUserForce.segment(mTriangleArray[pert->mAffectedTriId]->mId0 * 3,
                        3) += force.segment(0, 3) / 3;
-    mUserForce.segment(mTriangleArrayShared[pert->mAffectedTriId]->mId1 * 3,
+    mUserForce.segment(mTriangleArray[pert->mAffectedTriId]->mId1 * 3,
                        3) += force.segment(0, 3) / 3;
-    mUserForce.segment(mTriangleArrayShared[pert->mAffectedTriId]->mId2 * 3,
+    mUserForce.segment(mTriangleArray[pert->mAffectedTriId]->mId2 * 3,
                        3) += force.segment(0, 3) / 3;
 }
 /**
@@ -168,9 +157,9 @@ void cBaseCloth::SetPos(const tVectorXd &newpos)
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        mVertexArrayShared[i]->mPos.segment(0, 3).noalias() =
+        mVertexArray[i]->mPos.segment(0, 3).noalias() =
             mXcur.segment(i * 3, 3);
     }
 }
@@ -185,13 +174,13 @@ void cBaseCloth::CalcExtForce(tVectorXd &ext_force) const
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        ext_force.segment(3 * i, 3) += mGravity * mVertexArrayShared[i]->mMass;
+        ext_force.segment(3 * i, 3) += mGravity * mVertexArray[i]->mMass;
     }
 
     // std::cout << "add ext noise\n";
-    // ext_force.segment(3 * (mVertexArrayShared.size() - 1), 3) += tVector3d(0,
+    // ext_force.segment(3 * (mVertexArray.size() - 1), 3) += tVector3d(0,
     // 0, 10);
 
     //  2. add perturb force
@@ -280,7 +269,7 @@ void cBaseCloth::InitConstraint(const Json::Value &root)
         // 2. iterate over all vertices to find which point should be finally
         // constraint_static
         mConstraint_StaticPointIds = FindVerticesIdFromUV(
-            constraint_static_tex_coords, mVertexArrayShared);
+            constraint_static_tex_coords, mVertexArray);
         // output
         for (int i = 0; i < num_of_constraint_static_pts; i++)
         {
@@ -289,8 +278,8 @@ void cBaseCloth::InitConstraint(const Json::Value &root)
                    constraint_static_tex_coords[i][0],
                    constraint_static_tex_coords[i][1],
                    mConstraint_StaticPointIds[i],
-                   mVertexArrayShared[mConstraint_StaticPointIds[i]]->muv[0],
-                   mVertexArrayShared[mConstraint_StaticPointIds[i]]->muv[1]);
+                   mVertexArray[mConstraint_StaticPointIds[i]]->muv[0],
+                   mVertexArray[mConstraint_StaticPointIds[i]]->muv[1]);
         }
     }
     // for (auto &i : mConstraint_StaticPointIds)
@@ -303,12 +292,12 @@ void cBaseCloth::InitConstraint(const Json::Value &root)
     // }
 }
 #include "utils/ObjUtil.h"
-void MoveObjPos(std::vector<tVertexPtr> &mVertexArrayShared)
+void MoveObjPos(std::vector<tVertexPtr> &mVertexArray)
 {
     // 1. detect the biggest y
     float highest_y = -1e3;
 
-    for (auto &x : mVertexArrayShared)
+    for (auto &x : mVertexArray)
     {
         if (x->mPos[1] > highest_y)
         {
@@ -318,14 +307,14 @@ void MoveObjPos(std::vector<tVertexPtr> &mVertexArrayShared)
     // 2. move this to given height
     double given_height = 0.27;
     double shift_value = given_height - highest_y;
-    for (auto &x : mVertexArrayShared)
+    for (auto &x : mVertexArray)
     {
         x->mPos[1] += shift_value;
     }
     double circle_height_threshold = 0.01; // 1cm
     tVector circle_origin = tVector::Zero();
     int counter = 0;
-    for (auto &x : mVertexArrayShared)
+    for (auto &x : mVertexArray)
     {
         if ((given_height - x->mPos[1]) < circle_height_threshold)
         {
@@ -336,7 +325,7 @@ void MoveObjPos(std::vector<tVertexPtr> &mVertexArrayShared)
     std::cout << "circle_origin = " << circle_origin.transpose() << std::endl;
     std::cout << "counter = " << counter << std::endl;
 
-    for (auto &x : mVertexArrayShared)
+    for (auto &x : mVertexArray)
     {
         x->mPos[0] -= circle_origin[0];
         x->mPos[2] -= circle_origin[2];
@@ -347,16 +336,16 @@ void MoveObjPos(std::vector<tVertexPtr> &mVertexArrayShared)
     // 5. add the shift value
 }
 
-extern int SelectAnotherVertex(tTrianglePtr tri, int v0, int v1);
-// {
-//     SIM_ASSERT(tri != nullptr);
-//     std::set<int> vid_set = {tri->mId0, tri->mId1, tri->mId2};
-//     // printf("[debug] select another vertex in triangle 3 vertices (%d, %d, %d)
-//     // besides %d %d\n", tri->mId0, tri->mId1, tri->mId2, v0, v1);
-//     vid_set.erase(vid_set.find(v0));
-//     vid_set.erase(vid_set.find(v1));
-//     return *vid_set.begin();
-// };
+int SelectAnotherVerteix(tTrianglePtr tri, int v0, int v1)
+{
+    SIM_ASSERT(tri != nullptr);
+    std::set<int> vid_set = {tri->mId0, tri->mId1, tri->mId2};
+    // printf("[debug] select another vertex in triangle 3 vertices (%d, %d, %d)
+    // besides %d %d\n", tri->mId0, tri->mId1, tri->mId2, v0, v1);
+    vid_set.erase(vid_set.find(v0));
+    vid_set.erase(vid_set.find(v1));
+    return *vid_set.begin();
+};
 
 void cBaseCloth::InitGeometry(const Json::Value &conf)
 {
@@ -385,9 +374,9 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
         }
         cObjUtil::tParams params;
         params.mPath = mClothObjPath;
-        cObjUtil::LoadObj(params, mVertexArrayShared, mEdgeArrayShared,
-                          mTriangleArrayShared);
-        for (auto &x : mVertexArrayShared)
+        cObjUtil::LoadObj(params, mVertexArray, mEdgeArray,
+                          mTriangleArray);
+        for (auto &x : mVertexArray)
         {
             // x->mPos /= 1e3;
             x->mPos /= 1;
@@ -395,29 +384,33 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
             // x->muv /= (10 / 3.0);
             x->muv *= (10 / 3.0);
             x->mNormal *= -1;
-            x->mColor = ColorBlue;
+            x->mColor = ColorAn;
             x->mPos += cMathUtil::Expand(cloth_obj_translation, 0);
         }
-        for (auto &x : mEdgeArrayShared)
+        for (auto &x : mEdgeArray)
         {
-            auto v0 = mVertexArrayShared[x->mId0];
-            auto v1 = mVertexArrayShared[x->mId1];
+            auto v0 = mVertexArray[x->mId0];
+            auto v1 = mVertexArray[x->mId1];
             tVector cartesian_dist = v0->mPos - v1->mPos;
             tVector2f uv_dist = v0->muv - v1->muv;
             // std::cout << "cartesian dist = " << cartesian_dist.norm()
             //           << " uv_dist = " << uv_dist.norm() << std::endl;
         }
+        for(auto & x : mTriangleArray)
+        {
+            x->mColor = ColorBlue;
+        }
         // exit(1);
         if (enabel_relocate_obj == true)
-            MoveObjPos(mVertexArrayShared);
+            MoveObjPos(mVertexArray);
         tVectorXd res = cJsonUtil::ReadVectorJson(
             cJsonUtil::ParseAsValue("cloth_obj_size", conf));
         SIM_ASSERT(res.size() == 2);
         SIM_DEBUG("Load obj as cloth from {}", cloth_obj_translation);
         mClothSizes = res.segment(0, 2);
-        std::cout << "load obj done, num of ver = " << mVertexArrayShared.size()
-                  << " num of edge " << mEdgeArrayShared.size()
-                  << " num of triangles " << mTriangleArrayShared.size()
+        std::cout << "load obj done, num of ver = " << mVertexArray.size()
+                  << " num of edge " << mEdgeArray.size()
+                  << " num of triangles " << mTriangleArray.size()
                   << std::endl;
         tVector aabbmin, aabbmax;
         this->CalcAABB(aabbmin, aabbmax);
@@ -432,11 +425,11 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
         SIM_ASSERT(res.size() == 2);
         mClothSizes = res.segment(0, 2);
 
-        cTriangulator::BuildGeometry(conf, mVertexArrayShared, mEdgeArrayShared,
-                                     mTriangleArrayShared);
-        for (int e_id = 0; e_id < mEdgeArrayShared.size(); e_id++)
+        cTriangulator::BuildGeometry(conf, mVertexArray, mEdgeArray,
+                                     mTriangleArray);
+        for (int e_id = 0; e_id < mEdgeArray.size(); e_id++)
         {
-            auto &e = mEdgeArrayShared[e_id];
+            auto &e = mEdgeArray[e_id];
             if ((e->mId0 >= e->mId1) == true)
             {
                 printf("[error] edge id %d, vid0 %d, vid1 %d\n", e_id, e->mId0,
@@ -452,12 +445,12 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
     mTriangleInitArea.resize(GetNumOfTriangles());
     for (int i = 0; i < GetNumOfTriangles(); i++)
     {
-        auto tri = mTriangleArrayShared[i];
+        auto tri = mTriangleArray[i];
 
         mTriangleInitArea[i] =
-            cMathUtil::CalcTriangleArea(mVertexArrayShared[tri->mId0]->mPos,
-                                        mVertexArrayShared[tri->mId1]->mPos,
-                                        mVertexArrayShared[tri->mId2]->mPos);
+            cMathUtil::CalcTriangleArea(mVertexArray[tri->mId0]->mPos,
+                                        mVertexArray[tri->mId1]->mPos,
+                                        mVertexArray[tri->mId2]->mPos);
     }
 
     // add edge affect vertex
@@ -465,7 +458,7 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
     mEdgeAffectVertexId.resize(num_of_e, -1 * tVector4i::Ones());
     for (int i = 0; i < num_of_e; i++)
     {
-        auto cur_e = mEdgeArrayShared[i];
+        auto cur_e = mEdgeArray[i];
         if (cur_e->mIsBoundary == true)
         {
             mEdgeAffectVertexId[i] = -1 * tVector4i::Ones();
@@ -476,10 +469,10 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
             int v0 = cur_e->mId0;
             int v1 = cur_e->mId1;
 
-            int v2 = SelectAnotherVertex(
-                mTriangleArrayShared[cur_e->mTriangleId0], v0, v1);
-            int v3 = SelectAnotherVertex(
-                mTriangleArrayShared[cur_e->mTriangleId1], v0, v1);
+            int v2 = SelectAnotherVerteix(
+                mTriangleArray[cur_e->mTriangleId0], v0, v1);
+            int v3 = SelectAnotherVerteix(
+                mTriangleArray[cur_e->mTriangleId1], v0, v1);
             mEdgeAffectVertexId[i] = tVector4i(v0, v1, v2, v3);
         }
     }
@@ -517,7 +510,7 @@ void cBaseCloth::InitMass(const Json::Value &conf)
     vertex_shared_area *= this->mClothDensity; // convert to mass
     for (int i = 0; i < num_of_v; i++)
     {
-        mVertexArrayShared[i]->mMass = vertex_shared_area[i];
+        mVertexArray[i]->mMass = vertex_shared_area[i];
     }
 }
 void cBaseCloth::CalcNodePositionVector(tVectorXd &pos) const
@@ -526,9 +519,9 @@ void cBaseCloth::CalcNodePositionVector(tVectorXd &pos) const
     {
         pos.noalias() = tVectorXd::Zero(GetNumOfFreedom());
     }
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        pos.segment(i * 3, 3) = mVertexArrayShared[i]->mPos.segment(0, 3);
+        pos.segment(i * 3, 3) = mVertexArray[i]->mPos.segment(0, 3);
     }
 }
 
@@ -549,9 +542,9 @@ void cBaseCloth::CalcIntForce(const tVectorXd &xcur, tVectorXd &int_force) const
 #ifdef USE_OPENMP
 #pragma omp parallel for private(id0, id1, dist)
 #endif
-    for (int i = 0; i < mEdgeArrayShared.size(); i++)
+    for (int i = 0; i < mEdgeArray.size(); i++)
     {
-        const auto &spr = mEdgeArrayShared[i];
+        const auto &spr = mEdgeArray[i];
         // 1. calcualte internal force for each spring
         id0 = spr->mId0;
         id1 = spr->mId1;
@@ -647,7 +640,7 @@ const tVectorXd &cBaseCloth::GetInitPos() const { return this->mClothInitPos; }
 
 void cBaseCloth::MoveTranslation(const tVector3d &incremental_move)
 {
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
         mXcur.segment(3 * i, 3) += incremental_move;
     }
@@ -656,4 +649,58 @@ void cBaseCloth::MoveTranslation(const tVector3d &incremental_move)
 
 void cBaseCloth::ApplyUserPerturbForceOnce(tPerturb *) {}
 
-void cBaseCloth::Update(float dt) { this->UpdatePos(dt); }
+#include "sim/collision/CollisionInfo.h"
+#include "utils/ColorUtil.h"
+void cBaseCloth::Update(float dt)
+{
+    // std::vector<tVector> old_color(0);
+    // for (auto &info : mPointTriangleCollisionInfo)
+    // {
+    //     if (info->mObj0->GetObjId() == this->mObjId)
+    //     {
+    //         // check connected triangle
+    //         old_color.push_back(mVertexArray[info->mVertexId0]->mColor);
+    //         mVertexArray[info->mVertexId0]->mColor = ColorShoJoHi;
+    //     }
+    //     else
+    //     {
+    //         old_color.push_back(
+    //             mVertexArray[mTriangleArray[info->mTriangleId1]
+    //                                    ->mId0]
+    //                 ->mColor);
+    //         old_color.push_back(
+    //             mVertexArray[mTriangleArray[info->mTriangleId1]
+    //                                    ->mId1]
+    //                 ->mColor);
+    //         old_color.push_back(
+    //             mVertexArray[mTriangleArray[info->mTriangleId1]
+    //                                    ->mId2]
+    //                 ->mColor);
+
+    //         ChangeTriangleColor(info->mTriangleId1,
+    //                             ColorShoJoHi.segment(0, 3).cast<float>());
+    //     }
+    // }
+    this->UpdatePos(dt);
+    // int cur_idx = 0;
+    // for (auto &info : mPointTriangleCollisionInfo)
+    // {
+    //     if (info->mObj0->GetObjId() == this->mObjId)
+    //     {
+    //         // check connected triangle
+    //         mVertexArray[info->mVertexId0]->mColor = old_color[cur_idx++];
+    //     }
+    //     else
+    //     {
+
+    //         mVertexArray[mTriangleArray[info->mTriangleId1]->mId0]
+    //             ->mColor = old_color[cur_idx++];
+
+    //         mVertexArray[mTriangleArray[info->mTriangleId1]->mId1]
+    //             ->mColor = old_color[cur_idx++];
+
+    //         mVertexArray[mTriangleArray[info->mTriangleId1]->mId2]
+    //             ->mColor = old_color[cur_idx++];
+    //     }
+    // }
+}

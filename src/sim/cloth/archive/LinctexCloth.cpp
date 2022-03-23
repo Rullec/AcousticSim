@@ -85,9 +85,9 @@ void cLinctexCloth ::Init(const Json::Value &conf)
 void cLinctexCloth::UpdatePos(double dt)
 {
     auto &pos = mSeCloth->FetchPositions();
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        mVertexArrayShared[i]->mPos.noalias() =
+        mVertexArray[i]->mPos.noalias() =
             tVector(pos[i][0], pos[i][1], pos[i][2], 1);
     }
 
@@ -226,16 +226,16 @@ SePiecePtr SePiece::Create(const std::vector<Int3> & triangles,
     std::vector<Int3> indices(0);
     std::vector<Float3> pos3D(0);
     std::vector<Float2> pos2D(0);
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        auto v = mVertexArrayShared[i];
+        auto v = mVertexArray[i];
         pos3D.push_back(Float3(v->mPos[0], v->mPos[1], v->mPos[2]));
         pos2D.push_back(Float2(v->muv[0], v->muv[1]));
     }
 
-    for (int i = 0; i < mTriangleArrayShared.size(); i++)
+    for (int i = 0; i < mTriangleArray.size(); i++)
     {
-        auto tri = mTriangleArrayShared[i];
+        auto tri = mTriangleArray[i];
         indices.push_back(Int3(tri->mId0, tri->mId1, tri->mId2));
         // triangle_array_se[i] = ;
         // printf("[debug] triangle %d: vertices: %d, %d, %d\n", i, tri->mId0,
@@ -387,7 +387,7 @@ int cLinctexCloth::GetClothFeatureSize() const { return mXcur.size(); }
  */
 void cLinctexCloth::InitClothFeatureVector()
 {
-    mXcur.noalias() = tVectorXd::Zero(mVertexArrayShared.size() * 3);
+    mXcur.noalias() = tVectorXd::Zero(mVertexArray.size() * 3);
     UpdateClothFeatureVector();
     // std::cout << "mXcur size = " << mXcur.size() << std::endl;
 }
@@ -397,9 +397,9 @@ void cLinctexCloth::InitClothFeatureVector()
  */
 void cLinctexCloth::UpdateClothFeatureVector()
 {
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        mXcur.segment(3 * i, 3).noalias() = mVertexArrayShared[i]->mPos.segment(0, 3);
+        mXcur.segment(3 * i, 3).noalias() = mVertexArray[i]->mPos.segment(0, 3);
     }
 }
 
@@ -412,7 +412,7 @@ void cLinctexCloth::SetPos(const tVectorXd &xcur)
     if (mSeCloth)
     {
         std::vector<Float3> pos(0);
-        for (int i = 0; i < mVertexArrayShared.size(); i++)
+        for (int i = 0; i < mVertexArray.size(); i++)
         {
             pos.push_back(
                 Float3(xcur[3 * i + 0], xcur[3 * i + 1], xcur[3 * i + 2]));
@@ -458,7 +458,7 @@ void cLinctexCloth::ApplyNoise(bool enable_y_random_rotation,
 
     tMatrix mat = cRotUtil::EulerAnglesToRotMat(
         tVector(0, rotation_angle, 0, 0), eRotationOrder::XYZ);
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
         // 1. apply rotation
         tVector cur_pos = tVector::Ones();
@@ -674,12 +674,12 @@ void cLinctexCloth::ApplyMultiFoldsNoise(int num_of_folds, double max_amp)
     std::vector<int> times(num_of_folds, 0);
     tVector com = CalcCOM();
     // int idx = 0;
-    for (int v_id = 0; v_id < mVertexArrayShared.size(); v_id++)
+    for (int v_id = 0; v_id < mVertexArray.size(); v_id++)
     {
-        auto &v = mVertexArrayShared[v_id];
+        auto &v = mVertexArray[v_id];
         // project the nodal vector to XOZ plane, calculate the "angle"
         tVector node_vec = v->mPos - com;
-        // double theta = 2 * M_PI / mVertexArrayShared.size() * (idx++);
+        // double theta = 2 * M_PI / mVertexArray.size() * (idx++);
         // tVector node_vec =
         //     tVector(
         //         std::cos(theta),
@@ -818,7 +818,7 @@ void cLinctexCloth::RotateMaterialCoordsAfterReset(const tMatrix &init_mat_inv,
 
 void cLinctexCloth::RotateMaterialCoords(int raw_angle, int new_angle)
 {
-    cTriangulator::RotateMaterialCoords(raw_angle, new_angle, mVertexArrayShared);
+    cTriangulator::RotateMaterialCoords(raw_angle, new_angle, mVertexArray);
     auto props = mSeCloth->GetSimulationProperties();
     props->SetWeftWarpAngle(float(new_angle) / 180 * M_PI);
 }
@@ -948,7 +948,7 @@ void cLinctexCloth::InitLinctexConstraintTargetDragVertices()
 {
     tVector2f min_uv = tVector2f::Ones() * 1e10;
     tVector2f max_uv = -tVector2f::Ones() * 1e10;
-    for (auto &v : mVertexArrayShared)
+    for (auto &v : mVertexArray)
     {
         if (v->muv[0] > max_uv[0])
             max_uv[0] = v->muv[0];
@@ -975,13 +975,13 @@ void cLinctexCloth::InitLinctexConstraintTargetDragVertices()
             FindTrianglesIdFromUV({v->mUV}, mVertexArray, mTriangleArray)[0];
         mTargetDragTriIdArray.push_back(bary.index);
         // std::cout << "set bary index = " << bary.index << std::endl;
-        // std::cout << "v 10098 uv = " << mVertexArrayShared[10098]->muv.transpose()
+        // std::cout << "v 10098 uv = " << mVertexArray[10098]->muv.transpose()
         //           << std::endl;
-        // std::cout << "v 10200 uv = " << mVertexArrayShared[10200]->muv.transpose()
+        // std::cout << "v 10200 uv = " << mVertexArray[10200]->muv.transpose()
         //           << std::endl;
-        SIM_ASSERT((bary.index >= 0) && (bary.index < mTriangleArrayShared.size()));
+        SIM_ASSERT((bary.index >= 0) && (bary.index < mTriangleArray.size()));
         tVector3f mid_pt =
-            GetTriangleMidPoint(mTriangleArrayShared[bary.index], mVertexArrayShared)
+            GetTriangleMidPoint(mTriangleArray[bary.index], mVertexArray)
                 .cast<float>();
         init_pos_array.push_back(mid_pt);
         std::shared_ptr<StyleEngine::SeDraggedPoints> drag_pt =
@@ -1168,30 +1168,30 @@ void cLinctexCloth::CalcMaxCurvature() const
     {
         if (cur_e->mTriangleId0 == -1 || cur_e->mTriangleId1 == -1)
             continue;
-        auto tri0 = mTriangleArrayShared[cur_e->mTriangleId0];
-        auto tri1 = mTriangleArrayShared[cur_e->mTriangleId1];
+        auto tri0 = mTriangleArray[cur_e->mTriangleId0];
+        auto tri1 = mTriangleArray[cur_e->mTriangleId1];
         // 1. calc normal0 and normal1
         tVector normal0 =
-            (mVertexArrayShared[tri0->mId1]->mPos - mVertexArrayShared[tri0->mId0]->mPos)
-                .cross3(mVertexArrayShared[tri0->mId2]->mPos -
-                        mVertexArrayShared[tri0->mId1]->mPos)
+            (mVertexArray[tri0->mId1]->mPos - mVertexArray[tri0->mId0]->mPos)
+                .cross3(mVertexArray[tri0->mId2]->mPos -
+                        mVertexArray[tri0->mId1]->mPos)
                 .normalized();
 
         tVector normal1 =
-            (mVertexArrayShared[tri1->mId1]->mPos - mVertexArrayShared[tri1->mId0]->mPos)
-                .cross3(mVertexArrayShared[tri1->mId2]->mPos -
-                        mVertexArrayShared[tri1->mId1]->mPos)
+            (mVertexArray[tri1->mId1]->mPos - mVertexArray[tri1->mId0]->mPos)
+                .cross3(mVertexArray[tri1->mId2]->mPos -
+                        mVertexArray[tri1->mId1]->mPos)
                 .normalized();
         float theta_rad = std::acos(normal0.dot(normal1));
         float edge_length =
-            (mVertexArrayShared[cur_e->mId0]->mPos - mVertexArrayShared[cur_e->mId1]->mPos)
+            (mVertexArray[cur_e->mId0]->mPos - mVertexArray[cur_e->mId1]->mPos)
                 .norm();
         float area0 = cMathUtil::CalcTriangleArea(
-            mVertexArrayShared[tri0->mId0]->mPos, mVertexArrayShared[tri0->mId1]->mPos,
-            mVertexArrayShared[tri0->mId2]->mPos);
+            mVertexArray[tri0->mId0]->mPos, mVertexArray[tri0->mId1]->mPos,
+            mVertexArray[tri0->mId2]->mPos);
         float area1 = cMathUtil::CalcTriangleArea(
-            mVertexArrayShared[tri1->mId0]->mPos, mVertexArrayShared[tri1->mId1]->mPos,
-            mVertexArrayShared[tri1->mId2]->mPos);
+            mVertexArray[tri1->mId0]->mPos, mVertexArray[tri1->mId1]->mPos,
+            mVertexArray[tri1->mId2]->mPos);
         float height0 = 2 * area0 / edge_length;
         float height1 = 2 * area1 / edge_length;
         float curvature = 2 * theta_rad / (height0 + height1);
@@ -1203,8 +1203,8 @@ void cLinctexCloth::CalcMaxCurvature() const
 
         cur_color[3] = GetVertexColorAlpha();
         {
-            mVertexArrayShared[cur_e->mId0]->mColor = cur_color;
-            mVertexArrayShared[cur_e->mId1]->mColor = cur_color;
+            mVertexArray[cur_e->mId0]->mColor = cur_color;
+            mVertexArray[cur_e->mId1]->mColor = cur_color;
         }
     }
     std::cout << "max K = " << max_K << std::endl;

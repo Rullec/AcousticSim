@@ -81,6 +81,9 @@ void UpdateAABBSubtree(const std::vector<tVertexPtr> &v_array,
         node->mAABB.Expand(v_array[t_array[node->mTriangleId]->mId0]);
         node->mAABB.Expand(v_array[t_array[node->mTriangleId]->mId1]);
         node->mAABB.Expand(v_array[t_array[node->mTriangleId]->mId2]);
+
+        // increase 5cm
+        node->mAABB.Increase(tVector::Ones() * 5e-3);
     }
     else
     {

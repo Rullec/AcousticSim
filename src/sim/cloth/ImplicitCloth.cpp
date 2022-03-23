@@ -17,14 +17,14 @@ void cImplicitCloth::Init(const Json::Value &conf)
     CalcNodePositionVector(mXpre);
     mXcur.noalias() = mXpre;
 
-    for (auto &x : mEdgeArrayShared)
+    for (auto &x : mEdgeArray)
         x->mK_spring = mStiffness;
 }
 
 void cImplicitCloth::InitGeometry(const Json::Value &conf)
 {
     cBaseCloth::InitGeometry(conf);
-    for (auto &x : mEdgeArrayShared)
+    for (auto &x : mEdgeArray)
         x->mK_spring = mStiffness;
 }
 void cImplicitCloth::UpdatePos(double dt)
@@ -154,7 +154,7 @@ void cImplicitCloth::CalcdGxdxImplicit(const tVectorXd &x,
     int id0, id1;
     double dist;
     tVector3d pos0, pos1;
-    for (auto &spr : this->mEdgeArrayShared)
+    for (auto &spr : this->mEdgeArray)
     {
         id0 = spr->mId0;
         id1 = spr->mId1;
@@ -226,7 +226,7 @@ void cImplicitCloth::CalcdGxdxImplicitSparse(const tVectorXd &x,
     tVector3d pos0, pos1;
     double dt2 = mIdealDefaultTimestep * mIdealDefaultTimestep;
     tEigenArr<tTriplet> tri_lst(0);
-    for (auto &spr : this->mEdgeArrayShared)
+    for (auto &spr : this->mEdgeArray)
     {
         id0 = spr->mId0;
         id1 = spr->mId1;

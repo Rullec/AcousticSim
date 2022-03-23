@@ -1,10 +1,11 @@
 #include "KinematicBody.h"
+#include "geometries/Primitives.h"
+#include "utils/ColorUtil.h"
+#include "utils/DefUtil.h"
 #include "utils/JsonUtil.h"
 #include "utils/ObjUtil.h"
-#include "utils/DefUtil.h"
 #include "utils/RenderUtil.h"
 #include "utils/RotUtil.h"
-#include "geometries/Primitives.h"
 #include <iostream>
 std::string gBodyShapeStr[eKinematicBodyShape::NUM_OF_KINEMATIC_SHAPE] = {
     "plane", "cube", "sphere", "capsule", "custom"};
@@ -140,9 +141,12 @@ void cKinematicBody::BuildPlane()
     // 1. build legacy XOZ plane, then do a transformation
     // for (int i = 0; i < 4; i++)
     cObjUtil::BuildPlaneGeometryData(mPlaneScale, this->mPlaneEquation,
-                                     mVertexArrayShared, mEdgeArrayShared, mTriangleArrayShared);
-    for (auto &x : mVertexArrayShared)
-        x->mColor = tVector(0.1f, 0.1f, 0.1f, 1);
+                                     mVertexArray, mEdgeArray,
+                                     mTriangleArray);
+    for (auto &x : mVertexArray)
+        x->mColor = ColorAn;
+    for(auto & x : mTriangleArray)
+        x->mColor = ColorMetalGray;
 }
 
 /**
@@ -156,21 +160,27 @@ void cKinematicBody::BuildCustomKinematicBody()
     // std::cout << "mesh path = " << mCustomMeshPath << std::endl;
     cObjUtil::tParams obj_params;
     obj_params.mPath = mCustomMeshPath;
-    cObjUtil::LoadObj(obj_params, mVertexArrayShared, mEdgeArrayShared, mTriangleArrayShared);
+    cObjUtil::LoadObj(obj_params, mVertexArray, mEdgeArray,
+                      mTriangleArray);
 
     // tMatrix trans = GetWorldTransform();
     tVector scale_vec = GetScaleVec();
-    mScaledMeshVertices.noalias() = tVectorXd::Zero(mVertexArrayShared.size() * 3);
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    mScaledMeshVertices.noalias() =
+        tVectorXd::Zero(mVertexArray.size() * 3);
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        auto &x = mVertexArrayShared[i];
+        auto &x = mVertexArray[i];
         mScaledMeshVertices.segment(3 * i, 3) =
             (scale_vec.cwiseProduct(x->mPos)).segment(0, 3);
-        x->mColor = tVector::Ones() * 0.3;
-        x->mColor[3] = 1.0;
+        x->mColor = ColorAn;
+    }
+    for(auto & tri : mTriangleArray)
+    {
+        tri->mColor = ColorMetalGray;
     }
     // exit(0);
-    cTriangulator::ValidateGeometry(mVertexArrayShared, mEdgeArrayShared, mTriangleArrayShared);
+    cTriangulator::ValidateGeometry(mVertexArray, mEdgeArray,
+                                    mTriangleArray);
 }
 
 /**
@@ -179,9 +189,9 @@ void cKinematicBody::BuildCustomKinematicBody()
 void cKinematicBody::SetMeshPos()
 {
     tMatrix trans = GetCurWorldTransform();
-    for (int i = 0; i < mVertexArrayShared.size(); i++)
+    for (int i = 0; i < mVertexArray.size(); i++)
     {
-        auto &x = mVertexArrayShared[i];
+        auto &x = mVertexArray[i];
         x->mPos =
             trans * cMathUtil::Expand(mScaledMeshVertices.segment(3 * i, 3), 1);
     }
@@ -189,21 +199,11 @@ void cKinematicBody::SetMeshPos()
 
 // int cKinematicBody::GetDrawNumOfTriangles() const
 // {
-//     return mTriangleArrayShared.size();
+//     return mTriangleArray.size();
 // }
 
-// int cKinematicBody::GetDrawNumOfEdges() const { return mEdgeArrayShared.size(); }
-
-void cKinematicBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                            int &st) const
-{
-    for (auto &x : mTriangleArrayShared)
-    {
-        cRenderUtil::CalcTriangleDrawBufferSingle(mVertexArrayShared[x->mId0],
-                                     mVertexArrayShared[x->mId1],
-                                     mVertexArrayShared[x->mId2], res, st);
-    }
-}
+// int cKinematicBody::GetDrawNumOfEdges() const { return
+// mEdgeArray.size(); }
 
 void cKinematicBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                         int &st) const
@@ -211,18 +211,19 @@ void cKinematicBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
 
     tVector normal = tVector::Zero();
     tVector black_color = tVector(0, 0, 0, 1);
-    for (auto &e : mEdgeArrayShared)
+    for (auto &e : mEdgeArray)
     {
         // 1. get the normal of this edge
-        normal = mTriangleArrayShared[e->mTriangleId0]->mNormal;
+        normal = mTriangleArray[e->mTriangleId0]->mNormal;
         if (e->mTriangleId1 != -1)
         {
-            normal += mTriangleArrayShared[e->mTriangleId1]->mNormal;
+            normal += mTriangleArray[e->mTriangleId1]->mNormal;
             normal /= 2;
         }
 
-        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArrayShared[e->mId0], mVertexArrayShared[e->mId1],
-                                 normal, res, st, black_color);
+        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArray[e->mId0],
+                                              mVertexArray[e->mId1],
+                                              normal, res, st, black_color);
     }
 }
 
@@ -309,11 +310,7 @@ tVector cKinematicBody::GetScaleVec() const
 void cKinematicBody::Update(float dt)
 {
     mCurTime += dt;
-    if (IsStatic() == true)
-    {
-        return;
-    }
-    else
+    if (IsStatic() == false)
     {
         UpdateCurWorldTransformByTime();
         SetMeshPos();
@@ -331,16 +328,16 @@ void cKinematicBody::Reset() { this->mCurTime = 0; }
 tVector cKinematicBody::CalcCOM() const
 {
     tVector com = tVector::Zero();
-    for (auto &v : this->mVertexArrayShared)
+    for (auto &v : this->mVertexArray)
     {
         com += v->mPos;
     }
-    com /= mVertexArrayShared.size();
+    com /= mVertexArray.size();
     return com;
 }
 void cKinematicBody::MoveTranslation(const tVector &shift)
 {
-    for (auto &v : this->mVertexArrayShared)
+    for (auto &v : this->mVertexArray)
     {
         v->mPos += shift;
     }
@@ -348,12 +345,10 @@ void cKinematicBody::MoveTranslation(const tVector &shift)
 
 void cKinematicBody::ApplyScale(float scale)
 {
-    for (auto &v : mVertexArrayShared)
+    for (auto &v : mVertexArray)
     {
         v->mPos.segment(0, 3) = v->mPos.segment(0, 3) * scale;
     }
 }
 
-void cKinematicBody::ApplyUserPerturbForceOnce(tPerturb *)
-{
-}
+void cKinematicBody::ApplyUserPerturbForceOnce(tPerturb *) {}

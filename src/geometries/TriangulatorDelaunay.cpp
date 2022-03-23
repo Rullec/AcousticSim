@@ -90,7 +90,7 @@ void cTriangulator::DelaunayTriangulation(float cloth_width, float cloth_height,
         new_v->mPos[0] = cur_v2d[0];
         new_v->mPos[1] = cur_v2d[1];
         new_v->mPos[2] = 0;
-        new_v->mColor = ColorBlue;
+        new_v->mColor = ColorAn;
         new_v->mMass = 0;
         new_v->mNormal = tVector(0, 0, 1, 0);
         v_array.push_back(new_v);

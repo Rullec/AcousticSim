@@ -8,14 +8,14 @@
                 "geometry_type.bak": "delaunay",
                 "geometry_type": "regular_triangle",
                 "damping": 1e-5,
-                "default_timestep": 3e-2,
+                "default_timestep": 1e-2,
                 "cloth_size": [
                     0.3,
                     0.3
                 ],
                 "subdivision": [
-                    1,
-                    1
+                    10,
+                    10
                 ],
                 "cloth_stretch_stiffness": [
                     50,
@@ -57,13 +57,13 @@
             },
             {
                 "object_type": "KinematicBody",
-                "object_name": "cylinder",
+                "object_name": "cube",
                 "type": "custom",
-                "mesh_path": "data/cylinder.obj",
+                "mesh_path": "data/cube.obj",
                 "target_aabb": [
-                    0.1,
-                    0.202,
-                    0.1
+                    0.2,
+                    0.2,
+                    0.2
                 ],
                 "scale": [
                     0,
@@ -72,7 +72,7 @@
                 ],
                 "translation": [
                     0,
-                    0.0635,
+                    0.0,
                     0
                 ],
                 "orientation": [

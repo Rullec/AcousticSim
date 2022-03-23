@@ -42,7 +42,7 @@ void cPDCloth::InitGeometry(const Json::Value &conf)
 {
     cBaseCloth::InitGeometry(conf);
     double mStiffness = cJsonUtil::ParseAsDouble("stiffness", conf);
-    for (auto &e : mEdgeArrayShared)
+    for (auto &e : mEdgeArray)
     {
         e->mK_spring = mStiffness;
     }
@@ -69,7 +69,7 @@ void cPDCloth::InitVarsOptImplicitSparse()
     // 2. J sparse and 2h2
     for (int i = 0; i < num_of_sprs; i++)
     {
-        auto spr = mEdgeArrayShared[i];
+        auto spr = mEdgeArray[i];
         int id0 = spr->mId0;
         int id1 = spr->mId1;
 
@@ -257,11 +257,11 @@ tVectorXd cPDCloth::CalcNextPosition() const
 
         for (int j = 0; j < GetNumOfEdges(); j++)
         {
-            int id0 = mEdgeArrayShared[j]->mId0, id1 = mEdgeArrayShared[j]->mId1;
+            int id0 = mEdgeArray[j]->mId0, id1 = mEdgeArray[j]->mId1;
             d.segment(j * 3, 3).noalias() =
                 (Xnext.segment(3 * id0, 3) - Xnext.segment(3 * id1, 3))
                     .normalized() *
-                mEdgeArrayShared[j]->mRawLength;
+                mEdgeArray[j]->mRawLength;
         }
         // cTimeUtil::End("calc_d");
         // std::cout << "d = " << d.transpose() << std::endl;
@@ -417,27 +417,27 @@ void cPDCloth::AddBendTriplet(tEigenArr<tTriplet> &old_lst) const
     {
         for (int i = 0; i < GetNumOfEdges(); i++)
         {
-            const auto &e = mEdgeArrayShared[i];
+            const auto &e = mEdgeArray[i];
             if (e->mIsBoundary == false)
             {
                 int vid[4] = {
                     e->mId0, e->mId1,
-                    SelectAnotherVerteix(mTriangleArrayShared[e->mTriangleId0],
+                    SelectAnotherVerteix(mTriangleArray[e->mTriangleId0],
                                          e->mId0, e->mId1),
-                    SelectAnotherVerteix(mTriangleArrayShared[e->mTriangleId1],
+                    SelectAnotherVerteix(mTriangleArray[e->mTriangleId1],
                                          e->mId0, e->mId1)};
                 // printf("[debug] bending, tri %d and tri %d, shared edge: %d,
                 // total vertices: %d %d %d %d\n",
                 //        e->mTriangleId0, e->mTriangleId1, i, vid[0], vid[1],
                 //        vid[2], vid[3]);
                 tVector cot_vec = CalculateCotangentCoeff(
-                    mVertexArrayShared[vid[0]]->mPos, mVertexArrayShared[vid[1]]->mPos,
-                    mVertexArrayShared[vid[2]]->mPos, mVertexArrayShared[vid[3]]->mPos);
+                    mVertexArray[vid[0]]->mPos, mVertexArray[vid[1]]->mPos,
+                    mVertexArray[vid[2]]->mPos, mVertexArray[vid[3]]->mPos);
                 double square =
-                    CalcTriangleSquare(mTriangleArrayShared[e->mTriangleId0],
-                                       mVertexArrayShared) +
-                    CalcTriangleSquare(mTriangleArrayShared[e->mTriangleId1],
-                                       mVertexArrayShared);
+                    CalcTriangleSquare(mTriangleArray[e->mTriangleId0],
+                                       mVertexArray) +
+                    CalcTriangleSquare(mTriangleArray[e->mTriangleId1],
+                                       mVertexArray);
                 for (int a = 0; a < 4; a++)
                     for (int b = 0; b < 4; b++)
                     {

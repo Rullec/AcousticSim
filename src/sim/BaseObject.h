@@ -35,6 +35,7 @@ struct tPerturb;
 SIM_DECLARE_PTR(tVertex);
 SIM_DECLARE_PTR(tEdge);
 SIM_DECLARE_PTR(tTriangle);
+SIM_DECLARE_STRUCT_AND_PTR(tPointTriangleCollisionInfo);
 class cBaseObject : public std::enable_shared_from_this<cBaseObject>
 {
 public:
@@ -48,9 +49,10 @@ public:
     static eObjectType BuildObjectType(std::string type);
     eObjectType GetObjectType() const;
     virtual void CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                        int &st) const = 0;
+                                        int &st) const;
     virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                     int &st) const = 0;
+    virtual void CalcPointDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const;
     virtual void Update(float dt) = 0;
     virtual void ApplyUserPerturbForceOnce(tPerturb *) = 0;
     virtual void SetGravity(const tVector3d &g);
@@ -68,7 +70,8 @@ public:
     std::vector<tVertexPtr> &GetVertexArrayRef();
     std::vector<tEdgePtr> &GetEdgeArrayRef();
     std::vector<tTrianglePtr> &GetTriangleArrayRef();
-
+    void SetPointTriangleCollisionInfo(
+        const std::vector<tPointTriangleCollisionInfoPtr> &info);
     void ChangeTriangleColor(int tri_id, const tVector3f &color);
     virtual void CalcAABB(tVector &min, tVector &max) const;
     double CalcTotalArea() const;
@@ -85,9 +88,11 @@ protected:
     // std::vector<tVertexPtr > mVertexArray;
     // std::vector<tEdge *> mEdgeArray;
     // std::vector<tTriangle *> mTriangleArray;
-    std::vector<tVertexPtr> mVertexArrayShared;
-    std::vector<tEdgePtr> mEdgeArrayShared;
-    std::vector<tTrianglePtr> mTriangleArrayShared;
+    std::vector<std::vector<int>> mVertexConnectedTriangles;
+    std::vector<tPointTriangleCollisionInfoPtr> mPointTriangleCollisionInfo;
+    std::vector<tVertexPtr> mVertexArray;
+    std::vector<tEdgePtr> mEdgeArray;
+    std::vector<tTrianglePtr> mTriangleArray;
     virtual void UpdateTriangleNormal();
     virtual void UpdateVertexNormalFromTriangleNormal();
 };

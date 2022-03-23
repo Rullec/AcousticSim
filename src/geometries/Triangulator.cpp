@@ -85,6 +85,10 @@ void cTriangulator::BuildGeometry(const Json::Value &config,
     {
         SIM_ERROR("unsupported geo type {}", geo_type);
     }
+    for(auto & tri : triangles_array)
+    {
+        tri->mColor = ColorBlue;
+    }
     ValidateGeometry(vertices_array, edges_array, triangles_array);
     for (auto &v : vertices_array)
     {
@@ -393,7 +397,7 @@ void cTriangulator::BuildRectVertices(double height, double width,
             // 1. first set the cartesian pos, in order to get the texture
             // coords
             v->mPos = tVector(i * unit_edge_w, j * unit_edge_h, 0, 1);
-            v->mColor = ColorBlue;
+            v->mColor = ColorAn;
             v->muv = tVector2f::Zero();
 
             // move the center
@@ -515,7 +519,7 @@ void cTriangulator::LoadGeometry(std::vector<tVertexPtr> &vertices_array,
     for (int i = 0; i < num_of_vertices; i++)
     {
         vertices_array.push_back(std::make_shared<tVertex>());
-        vertices_array[vertices_array.size() - 1]->mColor = ColorBlue;
+        vertices_array[vertices_array.size() - 1]->mColor = ColorAn;
     }
 
     const tVectorXd &edge_info = cJsonUtil::ReadVectorJson(

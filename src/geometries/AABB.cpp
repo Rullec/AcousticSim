@@ -94,3 +94,8 @@ void tAABB::Reset()
     mMax[3] = 0;
     mMin[3] = 0;
 }
+void tAABB::Increase(const tVector & dist)
+{
+    mMin -= dist;
+    mMax += dist;
+}

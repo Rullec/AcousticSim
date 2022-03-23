@@ -272,9 +272,9 @@ void cBaraffClothGpu::ApplyUserPerturbForceOnce(tPerturb *pert)
         mDragPt->mTargetPos =
             pert->GetGoalPos().segment(0, 3).segment(0, 3).cast<float>();
 
-        int ids[3] = {mTriangleArrayShared[pert->mAffectedTriId]->mId0,
-                      mTriangleArrayShared[pert->mAffectedTriId]->mId1,
-                      mTriangleArrayShared[pert->mAffectedTriId]->mId2};
+        int ids[3] = {mTriangleArray[pert->mAffectedTriId]->mId0,
+                      mTriangleArray[pert->mAffectedTriId]->mId1,
+                      mTriangleArray[pert->mAffectedTriId]->mId2};
 
         int max_id = cMathUtil::Argmax(pert->mBarycentricCoords);
         mDragPt->mVertexId = ids[max_id];
@@ -346,7 +346,7 @@ void cBaraffClothGpu::InitGeometry(const Json::Value &conf)
     std::vector<tCudaVector3i> tri_vertex_id_cpu(num_of_tri);
     for (int i = 0; i < num_of_tri; i++)
     {
-        auto tri = mTriangleArrayShared[i];
+        auto tri = mTriangleArray[i];
         tri_vertex_id_cpu[i][0] = tri->mId0;
         tri_vertex_id_cpu[i][1] = tri->mId1;
         tri_vertex_id_cpu[i][2] = tri->mId2;
@@ -365,7 +365,7 @@ void cBaraffClothGpu::InitMass(const Json::Value &conf)
     std::vector<float> vertices_mass(num_of_v);
     for (int i = 0; i < num_of_v; i++)
     {
-        vertices_mass[i] = mVertexArrayShared[i]->mMass;
+        vertices_mass[i] = mVertexArray[i]->mMass;
     }
     mVerticesMassCuda.Upload(vertices_mass);
 }
@@ -423,7 +423,7 @@ void cBaraffClothGpu::UpdateConstraintVertexPos()
         // 1. update cpu data
         mXcur.segment(3 * vid, 3) = x->mTargetPos.cast<double>();
         mXpre.segment(3 * vid, 3) = x->mTargetPos.cast<double>();
-        mVertexArrayShared[vid]->mPos.segment(0, 3) =
+        mVertexArray[vid]->mPos.segment(0, 3) =
             x->mTargetPos.cast<double>();
 
         // 2. update gpu data
@@ -447,7 +447,7 @@ void cBaraffClothGpu::InitELLMatrix()
 
     for (int e_id = 0; e_id < num_of_e; e_id++)
     {
-        if (mEdgeArrayShared[e_id]->mIsBoundary == true)
+        if (mEdgeArray[e_id]->mIsBoundary == true)
             continue;
         tVector4i cur_edge = mEdgeAffectVertexId[e_id];
         for (int i = 0; i < 4; i++)
@@ -460,7 +460,7 @@ void cBaraffClothGpu::InitELLMatrix()
 
     for (int i = 0; i < num_of_tri; i++)
     {
-        auto tri = mTriangleArrayShared[i];
+        auto tri = mTriangleArray[i];
         int v_id[3] = {tri->mId0, tri->mId1, tri->mId2};
         for (int j = 0; j < 3; j++)
         {
@@ -559,9 +559,9 @@ void cBaraffClothGpu::InitGravity()
     std::vector<tCudaVector3f> g(num_of_v);
     for (int i = 0; i < num_of_v; i++)
     {
-        g[i][1] = -9.8 * mVertexArrayShared[i]->mMass;
+        g[i][1] = -9.8 * mVertexArray[i]->mMass;
         // g[i][1] = 0 *
-        // mVertexArrayShared[i]->mMass;
+        // mVertexArray[i]->mMass;
     }
     mGravityForceCuda.Upload(g);
 }
@@ -582,8 +582,8 @@ void cBaraffClothGpu::InitBendingMatrix()
     for (int e_id = 0; e_id < num_of_e; e_id++)
     {
         auto cur_e = edge_array[e_id];
-        tVector2f edge_direction = (mVertexArrayShared[cur_e->mId1]->muv -
-                                    mVertexArrayShared[cur_e->mId0]->muv)
+        tVector2f edge_direction = (mVertexArray[cur_e->mId1]->muv -
+                                    mVertexArray[cur_e->mId0]->muv)
                                        .normalized();
         float theta = std::acos(edge_direction.dot(tVector2f(1, 0))); // 0 - pi
         if (theta > M_PI / 2.0f)
@@ -640,8 +640,8 @@ void cBaraffClothGpu::InitBendingMatrix()
     // 4. update bending matrix
     UpdateBendingMatrix();
     // cpu_bending = std::make_shared<cQBendingMaterial>();
-    // cpu_bending->Init(mVertexArrayShared, mEdgeArrayShared,
-    //                   mTriangleArrayShared, mBendingK[0] * tVector3d::Ones());
+    // cpu_bending->Init(mVertexArray, mEdgeArray,
+    //                   mTriangleArray, mBendingK[0] * tVector3d::Ones());
     // tMatrixXf cpu_hessian =
     //     cpu_bending->GetStiffnessMatrix().toDense().cast<float>();
     // tMatrixXf gpu_hessian = -FromELLMatrixToEigenMatrix(
@@ -668,7 +668,7 @@ void cBaraffClothGpu::UpdateBendingMatrix()
 
         mEdgeBendintgStiffness[i] = edge_K;
         // std::cout << "edge " << i << " K =  " << mEdgeBendintgStiffness[i]
-        //           << " raw length = " << mEdgeArrayShared[i]->mRawLength
+        //           << " raw length = " << mEdgeArray[i]->mRawLength
         //           << std::endl;
     }
     cCudaArray<float> mEdgeBendintgStiffnessCuda;

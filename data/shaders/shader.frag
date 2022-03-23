@@ -43,9 +43,14 @@ void main() {
         phong model:
         I = ka * Ia + kd * Id * (N dot L) + ks * Is * (N dot H)^n
         */
-        
-        
-        outColor = vec4(specular_weight * light_color + diffuse_weight * vec3(fragColor.x, fragColor.y, fragColor.z), 1.0);
+        // normal is nan, only pure color
+        if(isnan(fragNormal.x) == true )
+        {
+            outColor = fragColor;
+        }
+        else {
+            outColor = vec4(specular_weight * light_color + diffuse_weight * vec3(fragColor.x, fragColor.y, fragColor.z), 1.0);
+        }
 
         
     }

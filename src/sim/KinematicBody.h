@@ -37,9 +37,7 @@ public:
     static eKinematicBodyShape BuildKinematicBodyShape(std::string type_str);
     bool IsStatic() const;
     eKinematicBodyShape GetBodyShape() const;
-
-    virtual void CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                        int &st) const override final;
+    
     virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                     int &st) const override final;
     virtual void Update(float dt) override;

@@ -38,14 +38,15 @@ void cCollisionDetecter::PerformCD()
 
 void cCollisionDetecter::Clear()
 {
-    mContactPoints.clear();
+    // mContactPoints.clear();
 
-    mColCandiadatePairs.clear();
+    // mColCandiadatePairs.clear();
 }
 
-std::vector<tColPointPtr> cCollisionDetecter::GetContactPoints() const
+std::vector<tPointTriangleCollisionInfoPtr>
+cCollisionDetecter::GetAllPointTriangleCollisionInfo() const
 {
-    return mContactPoints;
+    return {};
 }
 
 /**
@@ -53,39 +54,39 @@ std::vector<tColPointPtr> cCollisionDetecter::GetContactPoints() const
  */
 void cCollisionDetecter::BroadphaseCD()
 {
-    SIM_ASSERT(this->mColCandiadatePairs.size() == 0);
-    // 1. calculate AABB
-    int num_of_obj = mColObjs.size();
-    tEigenArr<tVector> mAABBmin(num_of_obj), mAABBmax(num_of_obj);
+    // SIM_ASSERT(this->mColCandiadatePairs.size() == 0);
+    // // 1. calculate AABB
+    // int num_of_obj = mColObjs.size();
+    // tEigenArr<tVector> mAABBmin(num_of_obj), mAABBmax(num_of_obj);
 
-    for (int i = 0; i < num_of_obj; i++)
-    {
-        mColObjs[i]->CalcAABB(mAABBmin[i], mAABBmax[i]);
-    }
+    // for (int i = 0; i < num_of_obj; i++)
+    // {
+    //     mColObjs[i]->CalcAABB(mAABBmin[i], mAABBmax[i]);
+    // }
 
-    // 2. compare
-    for (int i = 0; i < num_of_obj; i++)
-    {
-        auto obj_type_i = mColObjs[i]->GetObjectType();
-        for (int j = i + 1; j < num_of_obj; j++)
-        {
-            if (true == cMathUtil::IntersectAABB(mAABBmin[i], mAABBmax[i],
-                                                 mAABBmin[j], mAABBmax[j]))
-            {
-                auto obj_type_j = mColObjs[j]->GetObjectType();
-                if (obj_type_i <= obj_type_j)
-                {
+    // // 2. compare
+    // for (int i = 0; i < num_of_obj; i++)
+    // {
+    //     auto obj_type_i = mColObjs[i]->GetObjectType();
+    //     for (int j = i + 1; j < num_of_obj; j++)
+    //     {
+    //         if (true == cMathUtil::IntersectAABB(mAABBmin[i], mAABBmax[i],
+    //                                              mAABBmin[j], mAABBmax[j]))
+    //         {
+    //             auto obj_type_j = mColObjs[j]->GetObjectType();
+    //             if (obj_type_i <= obj_type_j)
+    //             {
 
-                    mColCandiadatePairs.push_back(tVector2i(i, j));
-                }
-                else
-                {
-                    mColCandiadatePairs.push_back(tVector2i(j, i));
-                }
-                // printf("[debug] broadphse %d and %d collided\n", i, j);
-            }
-        }
-    }
+    //                 mColCandiadatePairs.push_back(tVector2i(i, j));
+    //             }
+    //             else
+    //             {
+    //                 mColCandiadatePairs.push_back(tVector2i(j, i));
+    //             }
+    //             // printf("[debug] broadphse %d and %d collided\n", i, j);
+    //         }
+    //     }
+    // }
 }
 
 /**
@@ -94,16 +95,22 @@ void cCollisionDetecter::BroadphaseCD()
 void cCollisionDetecter::NarrowphaseCD()
 {
     // ! if the broadphase is empty, return
-    if (mColCandiadatePairs.size() == 0)
-        return;
+    // if (mColCandiadatePairs.size() == 0)
+    //     return;
 
-    // ! begin to check eacy candidate collision obj pair
-    for (auto &pair : mColCandiadatePairs)
-    {
-        int obj0_id = pair[0], obj1_id = pair[1];
-        eObjectType type0 = mColObjs[obj0_id]->GetObjectType(),
-                    type1 = mColObjs[obj1_id]->GetObjectType();
-    }
+    // // ! begin to check eacy candidate collision obj pair
+    // for (auto &pair : mColCandiadatePairs)
+    // {
+    //     int obj0_id = pair[0], obj1_id = pair[1];
+    //     eObjectType type0 = mColObjs[obj0_id]->GetObjectType(),
+    //                 type1 = mColObjs[obj1_id]->GetObjectType();
+    // }
 }
 
 void cCollisionDetecter::Update() {}
+
+std::vector<tPointTriangleCollisionInfoPtr>
+cCollisionDetecter::GetObjPointTriangleCollisionInfo(int obj_id) const
+{
+    return {};
+}
