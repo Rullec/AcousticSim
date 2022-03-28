@@ -199,12 +199,14 @@ void cSimScene::PerformCollisionDetection()
         mColDetecter->PerformCD();
         // auto pts = mColDetecter->GetContactPoints();
         // std::cout << "[debug] num of contacts = " << pts.size() << std::endl;
-    }
-
-    for (auto &obs : this->mObjectList)
-    {
-        obs->SetPointTriangleCollisionInfo(
-            mColDetecter->GetObjPointTriangleCollisionInfo(obs->GetObjId()));
+        for (auto &obs : this->mObjectList)
+        {
+            obs->SetPointTriangleCollisionInfo(
+                mColDetecter->GetObjPointTriangleCollisionInfo(
+                    obs->GetObjId()));
+            obs->SetEdgeEdgeCollisionInfo(
+                mColDetecter->GetObjEdgeEdgeCollisionInfo(obs->GetObjId()));
+        }
     }
 }
 /**

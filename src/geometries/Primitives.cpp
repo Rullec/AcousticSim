@@ -16,16 +16,19 @@ tEdge::tEdge()
     mIsBoundary = false;
     mTriangleId0 = mTriangleId1 = -1;
     mK_spring = 0;
+    mColor.setZero();
 }
 
 tTriangle::tTriangle()
 {
     mId0 = mId1 = mId2 = -1;
+    mEId0 = mEId1 = mEId2 = -1;
     mNormal.setZero();
     mColor.setZero();
 }
 tTriangle::tTriangle(int a, int b, int c) : mId0(a), mId1(b), mId2(c)
 {
+    mEId0 = mEId1 = mEId2 = -1;
     mNormal.setZero();
 }
 

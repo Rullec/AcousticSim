@@ -141,11 +141,13 @@ void cBaseObject::UpdateVertexNormalFromTriangleNormal()
     for (auto &x : mVertexArray)
         x->mNormal.setZero();
     // 2. iter each edge
-    for (auto &x : mTriangleArray)
+    for (int t_id = 0; t_id < mTriangleArray.size(); t_id++)
     {
-        mVertexArray[x->mId0]->mNormal += x->mNormal;
-        mVertexArray[x->mId1]->mNormal += x->mNormal;
-        mVertexArray[x->mId2]->mNormal += x->mNormal;
+        auto x = mTriangleArray[t_id];
+        double tri_area = mTriangleInitArea[t_id];
+        mVertexArray[x->mId0]->mNormal += x->mNormal * tri_area;
+        mVertexArray[x->mId1]->mNormal += x->mNormal * tri_area;
+        mVertexArray[x->mId2]->mNormal += x->mNormal * tri_area;
     }
 
     // 3. averge each vertex
@@ -198,6 +200,11 @@ void cBaseObject::SetPointTriangleCollisionInfo(
 {
     mPointTriangleCollisionInfo = info;
 }
+void cBaseObject::SetEdgeEdgeCollisionInfo(
+    const std::vector<tEdgeEdgeCollisionInfoPtr> &info)
+{
+    this->mEdgeEdgeCollisionInfo = info;
+}
 #include "sim/collision/CollisionInfo.h"
 #include "utils/ColorUtil.h"
 #include <set>
@@ -212,28 +219,56 @@ void cBaseObject::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
             this->mVertexArray[tri->mId2], tri->mColor, res, st);
     }
     // 1. calculate affected vid
-    for (auto info : mPointTriangleCollisionInfo)
-    {
-        // handle triangle
-        if (info->mObj1->GetObjId() == mObjId)
-        {
-            // std::cout << "change triangle color " << info->mTriangleId1
-            //           << std::endl;
-            // change triangle color
-            res.segment(
-                old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1 +
-                    0 * RENDERING_SIZE_PER_VERTICE + 3,
-                4) = ColorShoJoHi.cast<float>();
-            res.segment(
-                old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1 +
-                    1 * RENDERING_SIZE_PER_VERTICE + 3,
-                4) = ColorShoJoHi.cast<float>();
-            res.segment(
-                old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1 +
-                    2 * RENDERING_SIZE_PER_VERTICE + 3,
-                4) = ColorShoJoHi.cast<float>();
-        }
-    }
+    // for (auto info : mPointTriangleCollisionInfo)
+    // {
+    //     // handle triangle
+    //     if (info->mObj1->GetObjId() == mObjId)
+    //     {
+    //         // std::cout << "change triangle color " << info->mTriangleId1
+    //         //           << std::endl;
+    //         // change triangle color
+    //         res.segment(
+    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
+    //             +
+    //                 0 * RENDERING_SIZE_PER_VERTICE + 3,
+    //             4) = ColorShoJoHi.cast<float>();
+    //         res.segment(
+    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
+    //             +
+    //                 1 * RENDERING_SIZE_PER_VERTICE + 3,
+    //             4) = ColorShoJoHi.cast<float>();
+    //         res.segment(
+    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
+    //             +
+    //                 2 * RENDERING_SIZE_PER_VERTICE + 3,
+    //             4) = ColorShoJoHi.cast<float>();
+    //     }
+    // }
+    // for (auto info : mPointTriangleCollisionInfo)
+    // {
+    //     // handle triangle
+    //     if (info->mObj1->GetObjId() == mObjId)
+    //     {
+    //         // std::cout << "change triangle color " << info->mTriangleId1
+    //         //           << std::endl;
+    //         // change triangle color
+    //         res.segment(
+    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
+    //             +
+    //                 0 * RENDERING_SIZE_PER_VERTICE + 3,
+    //             4) = ColorShoJoHi.cast<float>();
+    //         res.segment(
+    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
+    //             +
+    //                 1 * RENDERING_SIZE_PER_VERTICE + 3,
+    //             4) = ColorShoJoHi.cast<float>();
+    //         res.segment(
+    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
+    //             +
+    //                 2 * RENDERING_SIZE_PER_VERTICE + 3,
+    //             4) = ColorShoJoHi.cast<float>();
+    //     }
+    // }
 }
 
 void cBaseObject::CalcPointDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
@@ -254,8 +289,66 @@ void cBaseObject::CalcPointDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
             // std::cout << "change triangle color " << info->mTriangleId1
             //           << std::endl;
             // change triangle color
-            res.segment(
-                old_st + RENDERING_SIZE_PER_VERTICE * info->mVertexId0 + 3, 3).setZero();
+            res.segment(old_st + RENDERING_SIZE_PER_VERTICE * info->mVertexId0 +
+                            3,
+                        3)
+                .setZero();
         }
+    }
+}
+
+void cBaseObject::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
+{
+    std::set<int> affected_edge = {};
+    for (auto &info : this->mEdgeEdgeCollisionInfo)
+    {
+        if (info->mObj0->GetObjId() == mObjId)
+        {
+            affected_edge.insert(info->mEdgeId0);
+        }
+        else
+        {
+            affected_edge.insert(info->mEdgeId1);
+        }
+    }
+
+    tVector normal = tVector::Zero();
+
+    for (int e_id = 0; e_id < mEdgeArray.size(); e_id++)
+    {
+        auto e = mEdgeArray[e_id];
+        tVector color = e->mColor;
+        if (affected_edge.find(e_id) != affected_edge.end())
+        {
+            color = ColorPurple;
+        }
+        // 1. get the normal of this edge
+        normal =
+            (mVertexArray[e->mId0]->mNormal + mVertexArray[e->mId1]->mNormal) /
+            2;
+
+        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArray[e->mId0],
+                                              mVertexArray[e->mId1], normal,
+                                              res, st, color);
+    }
+}
+
+void cBaseObject::Reset()
+{
+    mPointTriangleCollisionInfo.clear();
+    mEdgeEdgeCollisionInfo.clear();
+}
+
+void cBaseObject::CalcTriangleInitArea()
+{
+    // create triangle area
+    mTriangleInitArea.resize(GetNumOfTriangles());
+    for (int i = 0; i < GetNumOfTriangles(); i++)
+    {
+        auto tri = mTriangleArray[i];
+
+        mTriangleInitArea[i] = cMathUtil::CalcTriangleArea(
+            mVertexArray[tri->mId0]->mPos, mVertexArray[tri->mId1]->mPos,
+            mVertexArray[tri->mId2]->mPos);
     }
 }

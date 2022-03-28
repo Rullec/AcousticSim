@@ -26,7 +26,6 @@ public:
     virtual void Init(const Json::Value &conf) override;
     virtual void Reset() override;
     virtual void SetCollisionDetecter(cCollisionDetecterPtr);
-    virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const override;
     static eClothType BuildClothType(std::string str);
     // virtual void Update(double dt);
     virtual void ClearForce();
@@ -45,24 +44,24 @@ public:
     virtual const tVectorXd &GetInitPos() const;
     virtual void MoveTranslation(const tVector3d &incremental_move);
     tVector CalcCOM() const;
-    
+
 protected:
     eClothType mClothType;
     cCollisionDetecterPtr mColDetecter;
     double mIdealDefaultTimestep; // default substep dt
     tVector2d mClothSizes;
-    float mClothDensity;          // SI kg/m^2
+    float mClothDensity; // SI kg/m^2
     std::string mGeometryType;
-    double mDamping;                             // damping coeff
-    tVectorXd mIntForce, mGravityForce, mUserForce, mCollisionForce, mDampingForce;
+    double mDamping; // damping coeff
+    tVectorXd mIntForce, mGravityForce, mUserForce, mCollisionForce,
+        mDampingForce;
     tEigenArr<tVector4i> mEdgeAffectVertexId;
-    
-    bool mEnableClothFromObj;                    // the cloth mesh comes from obj or not
-    std::string mClothObjPath;                   // if the cloth mesh comes from obj, the path
-    tVectorXd mXpre, mXcur;                      // previous node position & current node position
+
+    bool mEnableClothFromObj;  // the cloth mesh comes from obj or not
+    std::string mClothObjPath; // if the cloth mesh comes from obj, the path
+    tVectorXd mXpre, mXcur;    // previous node position & current node position
     std::vector<int> mConstraint_StaticPointIds; // fixed constraint point
     tVectorXd mClothInitPos;                     // init position of the cloth
-    std::vector<float> mTriangleInitArea;
 
     virtual void InitGeometry(
         const Json::Value &conf); // discretazation from square cloth to

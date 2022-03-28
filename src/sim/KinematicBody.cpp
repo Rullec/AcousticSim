@@ -103,9 +103,15 @@ void cKinematicBody::Init(const Json::Value &value)
     default:
         SIM_ERROR("Unsupported kinematic shape {}", type);
     }
+
+    // set edges color = black
+    for (auto &e : this->mEdgeArray)
+    {
+        e->mColor = ColorBlack;
+    }
     tVector min, max;
     CalcAABB(min, max);
-
+    CalcTriangleInitArea();
     UpdateTriangleNormal();
     UpdateVertexNormalFromTriangleNormal();
 
@@ -141,11 +147,10 @@ void cKinematicBody::BuildPlane()
     // 1. build legacy XOZ plane, then do a transformation
     // for (int i = 0; i < 4; i++)
     cObjUtil::BuildPlaneGeometryData(mPlaneScale, this->mPlaneEquation,
-                                     mVertexArray, mEdgeArray,
-                                     mTriangleArray);
+                                     mVertexArray, mEdgeArray, mTriangleArray);
     for (auto &x : mVertexArray)
         x->mColor = ColorAn;
-    for(auto & x : mTriangleArray)
+    for (auto &x : mTriangleArray)
         x->mColor = ColorMetalGray;
 }
 
@@ -160,13 +165,11 @@ void cKinematicBody::BuildCustomKinematicBody()
     // std::cout << "mesh path = " << mCustomMeshPath << std::endl;
     cObjUtil::tParams obj_params;
     obj_params.mPath = mCustomMeshPath;
-    cObjUtil::LoadObj(obj_params, mVertexArray, mEdgeArray,
-                      mTriangleArray);
+    cObjUtil::LoadObj(obj_params, mVertexArray, mEdgeArray, mTriangleArray);
 
     // tMatrix trans = GetWorldTransform();
     tVector scale_vec = GetScaleVec();
-    mScaledMeshVertices.noalias() =
-        tVectorXd::Zero(mVertexArray.size() * 3);
+    mScaledMeshVertices.noalias() = tVectorXd::Zero(mVertexArray.size() * 3);
     for (int i = 0; i < mVertexArray.size(); i++)
     {
         auto &x = mVertexArray[i];
@@ -174,13 +177,12 @@ void cKinematicBody::BuildCustomKinematicBody()
             (scale_vec.cwiseProduct(x->mPos)).segment(0, 3);
         x->mColor = ColorAn;
     }
-    for(auto & tri : mTriangleArray)
+    for (auto &tri : mTriangleArray)
     {
         tri->mColor = ColorMetalGray;
     }
     // exit(0);
-    cTriangulator::ValidateGeometry(mVertexArray, mEdgeArray,
-                                    mTriangleArray);
+    cTriangulator::ValidateGeometry(mVertexArray, mEdgeArray, mTriangleArray);
 }
 
 /**
@@ -204,28 +206,6 @@ void cKinematicBody::SetMeshPos()
 
 // int cKinematicBody::GetDrawNumOfEdges() const { return
 // mEdgeArray.size(); }
-
-void cKinematicBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                        int &st) const
-{
-
-    tVector normal = tVector::Zero();
-    tVector black_color = tVector(0, 0, 0, 1);
-    for (auto &e : mEdgeArray)
-    {
-        // 1. get the normal of this edge
-        normal = mTriangleArray[e->mTriangleId0]->mNormal;
-        if (e->mTriangleId1 != -1)
-        {
-            normal += mTriangleArray[e->mTriangleId1]->mNormal;
-            normal /= 2;
-        }
-
-        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArray[e->mId0],
-                                              mVertexArray[e->mId1],
-                                              normal, res, st, black_color);
-    }
-}
 
 /**
  * \brief           Get the world transform of this kinematic body
@@ -323,7 +303,11 @@ tMatrix cKinematicBody::GetCurWorldTransform() const
     return this->mCurWorldTransform;
 }
 
-void cKinematicBody::Reset() { this->mCurTime = 0; }
+void cKinematicBody::Reset()
+{
+    cBaseObject::Reset();
+    this->mCurTime = 0;
+}
 
 tVector cKinematicBody::CalcCOM() const
 {

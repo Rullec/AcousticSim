@@ -1,110 +1,111 @@
-    {
-        "scene_type": "sim",
-        "obj_list": [
-            {
-                "object_name": "a_cloth",
-                "object_type": "Cloth",
-                "cloth_type": "fem_gpu",
-                "geometry_type.bak": "delaunay",
-                "geometry_type": "regular_triangle",
-                "damping": 1e-5,
-                "default_timestep": 1e-2,
-                "cloth_size": [
-                    0.3,
-                    0.3
-                ],
-                "subdivision": [
-                    10,
-                    10
-                ],
-                "cloth_stretch_stiffness": [
-                    50,
-                    50,
-                    50
-                ],
-                "cloth_bending_stiffness": [
-                    1e-5,
-                    1e-5
-                ],
-                "rayleigh_damping_a": 0.05,
-                "rayleigh_damping_b": -0.05,
-                "enable_cloth_from_obj": false,
-                "cloth_density": 0.1,
-                "cloth_init_pos": [
-                    0,
-                    0.3,
-                    0
-                ],
-                "cloth_uv_rotation": 0,
-                "cloth_init_orientation": [
-                    -1.57,
-                    0,
-                    0,
-                    0
-                ],
-                "constraints": {
-                    "static_point": [
-                        [
-                            0.5,
-                            0.5
-                        ],
-                        [
-                            -0.5,
-                            0.5
-                        ]
+{
+    "scene_type": "sim",
+    "obj_list": [
+        {
+            "object_name": "a_cloth",
+            "object_type": "Cloth",
+            "cloth_type": "fem",
+            "geometry_type.bak": "delaunay",
+            "geometry_type": "regular_triangle",
+            "damping": 1e-5,
+            "default_timestep": 1e-2,
+            "cloth_size": [
+                0.3,
+                0.3
+            ],
+            "subdivision": [
+                20,
+                20
+            ],
+            "cloth_stretch_stiffness": [
+                50,
+                50,
+                50
+            ],
+            "cloth_bending_stiffness": [
+                1e-5,
+                1e-5
+            ],
+            "rayleigh_damping_a": 0.0,
+            "rayleigh_damping_b": 0.0,
+            "enable_cloth_from_obj": false,
+            "cloth_density": 0.1,
+            "cloth_init_pos": [
+                0,
+                0.22,
+                0
+            ],
+            "cloth_uv_rotation": 0,
+            "cloth_init_orientation": [
+                -1.57,
+                0,
+                0,
+                0
+            ],
+            "constraints": {
+                "static_point.bak": [
+                    [
+                        0.5,
+                        0.5
+                    ],
+                    [
+                        -0.5,
+                        0.5
                     ]
-                }
-            },
-            {
-                "object_type": "KinematicBody",
-                "object_name": "cube",
-                "type": "custom",
-                "mesh_path": "data/cube.obj",
-                "target_aabb": [
-                    0.2,
-                    0.2,
-                    0.2
-                ],
-                "scale": [
-                    0,
-                    0,
-                    0
-                ],
-                "translation": [
-                    0,
-                    0.0,
-                    0
-                ],
-                "orientation": [
-                    0,
-                    0,
-                    0
                 ]
             }
-        ],
-        "window_height": 800,
-        "window_width": 1000,
-        "enable_draw": true,
-        "enable_only_exporting_cutted_window": true,
-        "pause_at_first": true,
-        "ground_png_path": "data/grid0.png",
-        "enable_camera_auto_rot": false,
-        "camera": {
-            "camera_type": "arcball_cam",
-            "camera_pos": [
-                0.0,
-                0.2,
-                1.5
-            ],
-            "camera_focus": [
-                0.0,
-                0.2,
-                0.0
-            ],
-            "fov": 52.5,
-            "near": 1e-3,
-            "far": 100
         },
-        "enable_profiling": false,
-        "enable_collision_detection": true
-    }
+        {
+            "object_type": "KinematicBody",
+            "object_name": "sphere",
+            "type": "custom",
+            "mesh_path": "data/cube.obj",
+            "target_aabb": [
+                0.2,
+                0.2,
+                0.2
+            ],
+            "scale": [
+                0,
+                0,
+                0
+            ],
+            "translation": [
+                0,
+                0,
+                0
+            ],
+            "orientation": [
+                0,
+                0,
+                0
+            ]
+        }
+    ],
+    "window_height": 800,
+    "window_width": 1000,
+    "enable_draw": true,
+    "enable_only_exporting_cutted_window": true,
+    "pause_at_first": true,
+    "ground_png_path": "data/grid0.png",
+    "enable_camera_auto_rot": false,
+    "camera": {
+        "camera_type": "arcball_cam",
+        "camera_pos": [
+            0.0,
+            0.2,
+            1.5
+        ],
+        "camera_focus": [
+            0.0,
+            0.2,
+            0.0
+        ],
+        "fov": 52.5,
+        "near": 1e-3,
+        "far": 100
+    },
+    "enable_profiling": false,
+    "enable_draw_point": false,
+    "enable_collision_detection": true
+}

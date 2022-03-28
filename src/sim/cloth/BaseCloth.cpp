@@ -56,68 +56,11 @@ void cBaseCloth::Init(const Json::Value &conf)
 
 void cBaseCloth::Reset()
 {
+    cBaseObject::Reset();
     std::cout << "reset\n";
     SetPos(mClothInitPos);
     SetPrePos(mClothInitPos);
     ClearForce();
-}
-
-/**
- * \brief           calculate edge draw buffer
- */
-void cBaseCloth::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
-{
-    float alpha_channel = mVertexArray[0]->mColor[3];
-
-    tVector WARP_COLOR = ColorShoJoHi, WEFT_COLOR = ColorShiQing;
-    tVector BLACK_COLOR = ColorAn;
-    tVector normal = tVector::Zero();
-    tVector cur_color = tVector::Zero();
-    for (int idx = 0; idx < mEdgeArray.size(); idx++)
-    {
-        auto e = mEdgeArray[idx];
-        // 1. get the averge normal direction for this edge
-        normal = mTriangleArray[e->mTriangleId0]->mNormal;
-        if (e->mTriangleId1 != -1)
-        {
-            normal += mTriangleArray[e->mTriangleId1]->mNormal;
-            normal /= 2;
-        }
-        tVector2f uv_move =
-            mVertexArray[e->mId1]->muv - mVertexArray[e->mId0]->muv;
-        float thre = 1e-3;
-        if (std::abs(uv_move[1]) < thre)
-        {
-            cur_color = WEFT_COLOR;
-        }
-        else if (std::abs(uv_move[0]) < thre)
-        {
-            cur_color = WARP_COLOR;
-        }
-        else if (std::fabs(std::fabs(uv_move[0]) - std::fabs(uv_move[1])) <
-                 thre)
-        {
-            cur_color = BLACK_COLOR;
-        }
-        else
-        {
-            // std::cout << "v0 tex = " <<
-            // mVertexArray[e->mId0]->muv.transpose()
-            //           << std::endl;
-            // std::cout << "v1 tex = " <<
-            // mVertexArray[e->mId1]->muv.transpose()
-            //           << std::endl;
-            // std::cout << "uv move = " << uv_move.transpose() << std::endl;
-            // std::cout << "edge id = " << idx << std::endl;
-            // std::cout << "vertex 0 id = " << e->mId0 << std::endl;
-            // std::cout << "vertex 1 id = " << e->mId1 << std::endl;
-            // std::cout << "[warn] failed to determine the edge color\n";
-        }
-        // 2. calculate the edge draw position
-        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArray[e->mId0],
-                                              mVertexArray[e->mId1],
-                                              normal, res, st, cur_color);
-    }
 }
 
 void cBaseCloth::ClearForce()
@@ -135,12 +78,12 @@ void cBaseCloth::ApplyPerturb(tPerturb *pert)
     if (pert == nullptr)
         return;
     tVector force = pert->GetPerturbForce();
-    mUserForce.segment(mTriangleArray[pert->mAffectedTriId]->mId0 * 3,
-                       3) += force.segment(0, 3) / 3;
-    mUserForce.segment(mTriangleArray[pert->mAffectedTriId]->mId1 * 3,
-                       3) += force.segment(0, 3) / 3;
-    mUserForce.segment(mTriangleArray[pert->mAffectedTriId]->mId2 * 3,
-                       3) += force.segment(0, 3) / 3;
+    mUserForce.segment(mTriangleArray[pert->mAffectedTriId]->mId0 * 3, 3) +=
+        force.segment(0, 3) / 3;
+    mUserForce.segment(mTriangleArray[pert->mAffectedTriId]->mId1 * 3, 3) +=
+        force.segment(0, 3) / 3;
+    mUserForce.segment(mTriangleArray[pert->mAffectedTriId]->mId2 * 3, 3) +=
+        force.segment(0, 3) / 3;
 }
 /**
  * \brief           add damping forces
@@ -159,8 +102,7 @@ void cBaseCloth::SetPos(const tVectorXd &newpos)
 #endif
     for (int i = 0; i < mVertexArray.size(); i++)
     {
-        mVertexArray[i]->mPos.segment(0, 3).noalias() =
-            mXcur.segment(i * 3, 3);
+        mVertexArray[i]->mPos.segment(0, 3).noalias() = mXcur.segment(i * 3, 3);
     }
 }
 
@@ -268,8 +210,8 @@ void cBaseCloth::InitConstraint(const Json::Value &root)
 
         // 2. iterate over all vertices to find which point should be finally
         // constraint_static
-        mConstraint_StaticPointIds = FindVerticesIdFromUV(
-            constraint_static_tex_coords, mVertexArray);
+        mConstraint_StaticPointIds =
+            FindVerticesIdFromUV(constraint_static_tex_coords, mVertexArray);
         // output
         for (int i = 0; i < num_of_constraint_static_pts; i++)
         {
@@ -374,8 +316,7 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
         }
         cObjUtil::tParams params;
         params.mPath = mClothObjPath;
-        cObjUtil::LoadObj(params, mVertexArray, mEdgeArray,
-                          mTriangleArray);
+        cObjUtil::LoadObj(params, mVertexArray, mEdgeArray, mTriangleArray);
         for (auto &x : mVertexArray)
         {
             // x->mPos /= 1e3;
@@ -396,7 +337,7 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
             // std::cout << "cartesian dist = " << cartesian_dist.norm()
             //           << " uv_dist = " << uv_dist.norm() << std::endl;
         }
-        for(auto & x : mTriangleArray)
+        for (auto &x : mTriangleArray)
         {
             x->mColor = ColorBlue;
         }
@@ -410,8 +351,7 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
         mClothSizes = res.segment(0, 2);
         std::cout << "load obj done, num of ver = " << mVertexArray.size()
                   << " num of edge " << mEdgeArray.size()
-                  << " num of triangles " << mTriangleArray.size()
-                  << std::endl;
+                  << " num of triangles " << mTriangleArray.size() << std::endl;
         tVector aabbmin, aabbmax;
         this->CalcAABB(aabbmin, aabbmax);
         std::cout << "aabbmin = " << aabbmin.transpose()
@@ -440,18 +380,7 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
     }
 
     CalcNodePositionVector(mClothInitPos);
-
-    // create triangle area
-    mTriangleInitArea.resize(GetNumOfTriangles());
-    for (int i = 0; i < GetNumOfTriangles(); i++)
-    {
-        auto tri = mTriangleArray[i];
-
-        mTriangleInitArea[i] =
-            cMathUtil::CalcTriangleArea(mVertexArray[tri->mId0]->mPos,
-                                        mVertexArray[tri->mId1]->mPos,
-                                        mVertexArray[tri->mId2]->mPos);
-    }
+    CalcTriangleInitArea();
 
     // add edge affect vertex
     int num_of_e = GetNumOfEdges();
@@ -469,10 +398,10 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
             int v0 = cur_e->mId0;
             int v1 = cur_e->mId1;
 
-            int v2 = SelectAnotherVerteix(
-                mTriangleArray[cur_e->mTriangleId0], v0, v1);
-            int v3 = SelectAnotherVerteix(
-                mTriangleArray[cur_e->mTriangleId1], v0, v1);
+            int v2 = SelectAnotherVerteix(mTriangleArray[cur_e->mTriangleId0],
+                                          v0, v1);
+            int v3 = SelectAnotherVerteix(mTriangleArray[cur_e->mTriangleId1],
+                                          v0, v1);
             mEdgeAffectVertexId[i] = tVector4i(v0, v1, v2, v3);
         }
     }
@@ -682,6 +611,8 @@ void cBaseCloth::Update(float dt)
     //     }
     // }
     this->UpdatePos(dt);
+    UpdateTriangleNormal();
+    UpdateVertexNormalFromTriangleNormal();
     // int cur_idx = 0;
     // for (auto &info : mPointTriangleCollisionInfo)
     // {

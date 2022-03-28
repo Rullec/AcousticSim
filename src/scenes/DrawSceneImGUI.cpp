@@ -369,7 +369,7 @@ void cDrawSceneImGui::DrawFrame()
     UpdateVertexBufferSimObj(imageIndex);
     UpdateVertexBufferGround(imageIndex);
     UpdateLineBuffer(imageIndex);
-    UpdatePointBuffer(imageIndex);
+    // UpdatePointBuffer(imageIndex);
     // cTimeUtil::End("update_buffers");
 
     // draw the GUI

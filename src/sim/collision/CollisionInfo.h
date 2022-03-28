@@ -42,12 +42,26 @@
 
 // SIM_DECLARE_PTR(tColPoint);
 
-#include "utils/LogUtil.h"
 #include "utils/DefUtil.h"
+#include "utils/EigenUtil.h"
+#include "utils/LogUtil.h"
 SIM_DECLARE_CLASS_AND_PTR(cBaseObject);
-struct tPointTriangleCollisionInfo
+struct tClothHumanCollisionInfo
 {
     cBaseObjectPtr mObj0, mObj1;
+
+    tVector3d mOuterNormal;
+    bool obj0_is_cloth_obj1_is_rb;
+    float mDepth;   // penetrated depth; <0 means penetration
+};
+struct tPointTriangleCollisionInfo : public tClothHumanCollisionInfo
+{
     int mVertexId0, mTriangleId1;
+    tVector3d mBary;
+};
+struct tEdgeEdgeCollisionInfo : public tClothHumanCollisionInfo
+{
+    int mEdgeId0, mEdgeId1;
+    float mBary0, mBary1; // edge closest point's barycentric coords
 };
 SIM_DECLARE_PTR(tPointTriangleCollisionInfo);

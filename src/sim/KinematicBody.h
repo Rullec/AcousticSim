@@ -38,8 +38,6 @@ public:
     bool IsStatic() const;
     eKinematicBodyShape GetBodyShape() const;
     
-    virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                    int &st) const override final;
     virtual void Update(float dt) override;
     virtual void ApplyUserPerturbForceOnce(tPerturb *) override;
     // virtual void UpdatePos(double dt) override final;

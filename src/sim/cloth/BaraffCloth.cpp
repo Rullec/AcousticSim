@@ -8,7 +8,6 @@
 #include "utils/TimeUtil.hpp"
 #include <iostream>
 
-
 cBaraffCloth::cBaraffCloth(int id_) : cBaseCloth(eClothType::FEM_CLOTH, id_)
 {
     // mF.clear();
@@ -32,7 +31,8 @@ void cBaraffCloth::Init(const Json::Value &conf)
     // init material
     // mMaterial = std::make_shared<cBaraffMaterialUnstable>();
     mBendingMaterial = std::make_shared<cQBendingMaterial>();
-    mBendingK = tVector3f::Ones() * cJsonUtil::ReadVectorJson(
+    mBendingK = tVector3f::Ones() *
+                cJsonUtil::ReadVectorJson(
                     cJsonUtil::ParseAsValue("cloth_bending_stiffness", conf))
                     .cast<float>()[0];
     mBendingMaterial->Init(GetVertexArray(), GetEdgeArray(), GetTriangleArray(),
@@ -80,7 +80,6 @@ typedef std::pair<std::string, float> tTimeRecms;
 static std::vector<tTimeRecms> gProfRec;
 void cBaraffCloth::UpdatePos(double dt)
 {
-    
     gProfRec.clear();
     dt = mIdealDefaultTimestep;
     // CheckForce();
@@ -131,18 +130,26 @@ void cBaraffCloth::UpdatePos(double dt)
     // }
     // std::cout << "user force = " << mUserForce.transpose() << std::endl;
     cTimeUtil::Begin("solve");
-    SolveForNextPos(dt);
+    SolveForDx(dt);
+    // mDx_buf.setZero();
+    Repulsion(dt, this->mDx_buf);
     gProfRec.push_back(tTimeRecms("solve", cTimeUtil::End("solve", true)));
+
+    mXpre.noalias() = mXcur;
+    mXcur.noalias() = mXpre + mDx_buf;
+
     SetPos(mXcur);
     this->mUserForce.setZero();
     mDragVertexIdx = -1;
+    this->mPointTriangleCollisionInfo.clear();
+    this->mEdgeEdgeCollisionInfo.clear();
     // check
     // this->mMaterial->CheckForce();
     // this->mMaterial->CheckStiffnessMatrix();
     // if (frame > 5)
     //     exit(1);
 }
-
+static int frame = 0;
 void cBaraffCloth::ApplyUserPerturbForceOnce(tPerturb *pert)
 {
     this->mUserForce.setZero();
@@ -350,7 +357,8 @@ void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
                                        tSparseMatd &K_global) const
 {
 
-    K_global = mMaterial->CalcTotalStiffnessMatrix();
+    K_global = mMaterial->CalcTotalStiffnessMatrix() +
+               this->mBendingMaterial->GetStiffnessMatrix();
     // std::cout << "K = \n" << K_global << std::endl;
     // exit(1);
     // +
@@ -450,7 +458,7 @@ void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
  */
 #include <Eigen/SparseCholesky>
 #include <fstream>
-void cBaraffCloth::SolveForNextPos(double dt)
+void cBaraffCloth::SolveForDx(double dt)
 {
     int dof = GetNumOfFreedom();
     tSparseMatd M(dof, dof);
@@ -472,13 +480,17 @@ void cBaraffCloth::SolveForNextPos(double dt)
     // }
     tVectorXd b = dt * dt * (mGravityForce + mUserForce + mIntForce) +
                   dt * M * (mXcur - mXpre) / dt;
-    tVectorXd dx = mXcur - mXpre;
+    mDx_buf.noalias() = mXcur - mXpre;
     float threshold = 1e-12, residual = 0;
     int iters = 0;
     // std::cout << "cpu A = \n" << W.toDense() << std::endl;
     // std::cout << "cpu b = " << b.transpose() << std::endl;
     // exit(1);
-    Solve(W, b, dx, threshold, iters, residual, this->mDragVertexIdx);
+    std::vector<int> fix_array = GetConstraintStaticVertices();
+    if (mDragVertexIdx != -1)
+        fix_array.push_back(mDragVertexIdx);
+    W += PrepareCollisionHessian();
+    Solve(W, b, mDx_buf, threshold, iters, residual, fix_array);
     {
         // dx = W.toDense().inverse() * b;
         // Eigen::SparseLU<tSparseMatd> solver;
@@ -512,9 +524,6 @@ void cBaraffCloth::SolveForNextPos(double dt)
         //     fout << "dx = " << dx.transpose() << std::endl;
         // }
     }
-
-    mXpre = mXcur;
-    mXcur = mXcur + dx;
 }
 
 void cBaraffCloth::UpdateCollisionForce(tVectorXd &col_force)
@@ -644,8 +653,8 @@ double cBaraffCloth::CalcEnergy(const tVectorXd &xcur)
         GetTrianglePosMatAndUV(
             xcur.segment(3 * t->mId0, 3), xcur.segment(3 * t->mId1, 3),
             xcur.segment(3 * t->mId2, 3), mVertexArray[t->mId0]->muv,
-            mVertexArray[t->mId1]->muv, mVertexArray[t->mId2]->muv,
-            pos_mat, uv_mat);
+            mVertexArray[t->mId1]->muv, mVertexArray[t->mId2]->muv, pos_mat,
+            uv_mat);
         e_total += mMaterial->CalcTotalEnergy();
 
         // pos_mat.col(0) =->mPos.segment(0, 3);
@@ -664,26 +673,33 @@ void Filter(const std::vector<int> &constraint_pts, tVectorXd &vec)
 }
 
 tVectorXd ApplyMatmul(const tSparseMatd &A, const tVectorXd &b,
-                      int drag_pt = -1)
+                      const std::vector<int> &fix_vertex_array)
 {
-    auto should_remove = [](const int drag_pt_idx, int cur_idx)
+    auto should_remove =
+        [](const std::vector<int> &fix_vertex_array, int cur_idx)
     {
-        return (cur_idx == 3 * drag_pt_idx + 0) ||
-               (cur_idx == 3 * drag_pt_idx + 1) ||
-               (cur_idx == 3 * drag_pt_idx + 2);
+        for (auto &drag_pt_idx : fix_vertex_array)
+        {
+            bool is_return = (cur_idx == 3 * drag_pt_idx + 0) ||
+                             (cur_idx == 3 * drag_pt_idx + 1) ||
+                             (cur_idx == 3 * drag_pt_idx + 2);
+            if (is_return)
+                return true;
+        }
+        return false;
     };
     tVectorXd res = tVectorXd::Zero(b.size());
     OMP_PARALLEL_FOR
     for (int k = 0; k < A.outerSize(); ++k)
     {
-        if (should_remove(drag_pt, k))
+        if (should_remove(fix_vertex_array, k))
             continue;
         for (tSparseMatd::InnerIterator it(A, k); it; ++it)
         {
             // std::cout << it.row() << "\t";
             // std::cout << it.col() << "\t";
             // std::cout << it.value() << std::endl;
-            if (should_remove(drag_pt, it.col()))
+            if (should_remove(fix_vertex_array, it.col()))
             {
                 // std::cout << "drag pt " << drag_pt << " ignore " << it.col()
                 //           << std::endl;
@@ -696,21 +712,18 @@ tVectorXd ApplyMatmul(const tSparseMatd &A, const tVectorXd &b,
 }
 void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
                          float threshold, int &iters, float &residual,
-                         int fix_vertex /* = -1*/)
+                         const std::vector<int> &fix_vertex_array /* = -1*/)
 {
     // std::cout << "Eigen::nbThreads() = " << Eigen::nbThreads() << std::endl;
     int recalc_gap = 20;
     int max_iters = 50;
     // tVectorXd r = b - A * x;
-    tVectorXd r = b - ApplyMatmul(A, x, fix_vertex);
-    if (fix_vertex != -1)
+    tVectorXd r = b - ApplyMatmul(A, x, fix_vertex_array);
+    for (auto fix_vertex : fix_vertex_array)
     {
         r.segment(3 * fix_vertex, 3).setZero();
-        std::cout << "r[init] = " << r.segment(3 * fix_vertex, 3).transpose()
-                  << std::endl;
-    }
-    if (fix_vertex != -1)
-    {
+        // std::cout << "r[init] = " << r.segment(3 * fix_vertex, 3).transpose()
+        //           << std::endl;
         x.segment(3 * fix_vertex, 3).setZero();
     }
     // std::cout << "diff norm = " << (b - ApplyMatmul(A, x) - r).norm()
@@ -732,11 +745,11 @@ void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
     // Filter(this->mConstraint_StaticPointIds, r);
     tVectorXd d = PInv.cwiseProduct(r);
 
-    if (fix_vertex != -1)
-    {
-        std::cout << "d[init] = " << d.segment(3 * fix_vertex, 3).transpose()
-                  << std::endl;
-    }
+    // if (fix_vertex != -1)
+    // {
+    //     std::cout << "d[init] = " << d.segment(3 * fix_vertex, 3).transpose()
+    //               << std::endl;
+    // }
     // double delta_new = r.dot(c);
     iters = 1;
     // double residual0 = residual;
@@ -748,7 +761,7 @@ void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
     tVectorXd PInvr, PInvrnext;
     while (iters < max_iters)
     {
-        Adi.noalias() = ApplyMatmul(A, d, fix_vertex);
+        Adi.noalias() = ApplyMatmul(A, d, fix_vertex_array);
         // if (fix_vertex != -1)
         // {
         //     std::cout << "Adi[fixed] = "
@@ -772,24 +785,461 @@ void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
         d = PInvrnext + beta * d;
 
         r.noalias() = rnext;
-        if (iters % (max_iters / 10) == 0 || iters == 1)
-        {
-            std::cout << "iters " << iters << " residual = " << r.norm()
-                      << std::endl;
-            // if (fix_vertex != -1)
-            // {
-            //     std::cout << "r[fixed] = "
-            //               << r.segment(3 * fix_vertex, 3).transpose()
-            //               << std::endl;
-            //     std::cout << "x[fixed] = "
-            //               << x.segment(3 * fix_vertex, 3).transpose()
-            //               << std::endl;
-            //     std::cout << "d[fixed] = "
-            //               << d.segment(3 * fix_vertex, 3).transpose()
-            //               << std::endl;
-            // }
-        }
+        // if (iters % (max_iters / 10) == 0 || iters == 1)
+        // {
+        //     std::cout << "iters " << iters << " residual = " << r.norm()
+        //               << std::endl;
+        //     // if (fix_vertex != -1)
+        //     // {
+        //     //     std::cout << "r[fixed] = "
+        //     //               << r.segment(3 * fix_vertex, 3).transpose()
+        //     //               << std::endl;
+        //     //     std::cout << "x[fixed] = "
+        //     //               << x.segment(3 * fix_vertex, 3).transpose()
+        //     //               << std::endl;
+        //     //     std::cout << "d[fixed] = "
+        //     //               << d.segment(3 * fix_vertex, 3).transpose()
+        //     //               << std::endl;
+        //     // }
+        // }
         iters += 1;
     }
     std::cout << "iters " << iters << " residual = " << r.norm() << std::endl;
+}
+#include "sim/collision/CollisionInfo.h"
+/**
+ * \brief       Apply repulsion force by Bridson 2002
+ *
+ * inelastic collision: I = - normal * |Ic|
+ * non-penetration: I = - normal * |Ir|
+ *
+ * let v_thre = 0.5
+ * |Ic| = 0, vn > v_thre
+ *        m * |vn| / 2, vn < v_thre
+ *
+ * |Ir| = dt * k * d
+ */
+#include <set>
+void cBaraffCloth::Repulsion(double dt, tVectorXd &dx) const
+{
+    int iters = 1;
+    for (int i = 0; i < iters; i++)
+    {
+        double v_thre = 0.01;
+        double K = mStretchK.mean() * 1;
+        // double K = mMassMatrixDiag.sum() / 3 / (GetNumOfVertices() * dt *
+        // dt);
+        tVectorXd ddx = tVectorXd::Zero(dx.size());
+        tVectorXd ddx_times = tVectorXd::Zero(dx.size() / 3);
+        std::set<int> changed_v = {};
+        for (int _idx = 0; _idx < mEdgeEdgeCollisionInfo.size(); _idx++)
+        {
+            // printf("----------ee %d---------\n", _idx);
+            auto info = mEdgeEdgeCollisionInfo[_idx];
+            /*
+            1. calculate |Ic|
+                1.1 calculate vn
+                1.2 calculate Ic
+            */
+            tVector3d outer_normal = info->mOuterNormal;
+            tVector3d vrel = tVector3d::Zero();
+            double mass = 0;
+            int edge_id = -1;
+            if (info->obj0_is_cloth_obj1_is_rb == true)
+            {
+                // obj0 is cloth, get vertex vel
+                edge_id = info->mEdgeId0;
+                int v0 = mEdgeArray[edge_id]->mId0;
+                int v1 = mEdgeArray[edge_id]->mId1;
+                vrel = ((1 - info->mBary0) * dx.segment(3 * v0, 3) +
+                        info->mBary0 * dx.segment(3 * v1, 3)) /
+                       dt;
+                mass = mMassMatrixDiag[3 * v0] + mMassMatrixDiag[3 * v1];
+            }
+            else
+            {
+                // obj1 is cloth, get vertex vel
+                edge_id = info->mEdgeId1;
+                int v0 = mEdgeArray[edge_id]->mId0;
+                int v1 = mEdgeArray[edge_id]->mId1;
+                vrel = ((1 - info->mBary1) * dx.segment(3 * v0, 3) +
+                        info->mBary1 * dx.segment(3 * v1, 3)) /
+                       dt;
+                mass = mMassMatrixDiag[3 * v0] + mMassMatrixDiag[3 * v1];
+            }
+            // std::cout << "mass = " << mass << std::endl;
+            // std::cout << "vrel = " << vrel.transpose() << std::endl;
+            // std::cout << "normal = " << outer_normal.transpose() <<
+            // std::endl;
+            double vn = vrel.dot(outer_normal);
+            double Ic = vn > v_thre ? 0 : mass * std::fabs(vn) / 2;
+            // std::cout << "Ic = " << Ic << std::endl;
+            /*
+            2. calculate |Ir|
+            */
+            double d = (3e-3 - info->mDepth);
+
+            double Ir = 0;
+
+            // if vn is too big (vn < - 0.1 * d /dt)
+            float inhibition_coef = 0.1;
+            // if the normal velocity can resolve 10% overlap, we don't add more
+            // impulse. otherwise it must be bounce up
+            if (vn > inhibition_coef * d / dt)
+            {
+                // printf("vn %.3f is bigger (< %.3f), Ir = 0\n", vn,
+                //        -inhibition_coef * d / dt);
+                Ir = 0;
+            }
+            else
+            {
+                // printf("------vn %.3f is small or negative, we begin to add "
+                //        "spring "
+                //        "force------\n",
+                //        vn);
+                // if vn is not so big, we apply Ir
+                // Ir = SIM_MIN(dt * K * d, mass * (inhibition_coef * d / dt -
+                // vn));
+                double Ir0 = dt * K * d;
+                double Ir1 = mass * (inhibition_coef * d / dt -
+                                     vn); // if we apply this impulse, our next
+                                          // vel = inhibition_coef * d / dt
+                // printf("spring impulse %.5f, inhibition impulse %.5f, we take
+                // "
+                //        "%s\n",
+                //        Ir0, Ir1, Ir0 < Ir1 ? "spring" : "inhibition");
+                Ir = SIM_MIN(Ir0, Ir1);
+                // if(Ir0 < Ir1)
+                // {
+
+                // }
+                // std::cout << "[Ir] ir = " << Ir << " Ic = " << Ic <<
+                // std::endl; Ir = dt * K * d;
+            }
+            // std::cout << "Ir = " << Ir << std::endl;
+            // double Ir = 0;
+            // std::cout << "Ir = " << Ir << std::endl;
+            double I = Ic + Ir;
+            // std::cout << "I = " << I << std::endl;
+            double I_tilde = 2 * I /
+                             (1 + info->mBary0 * info->mBary0 +
+                              (1 - info->mBary0) * (1 - info->mBary0) +
+                              info->mBary1 * info->mBary1 +
+                              (1 - info->mBary1) * (1 - info->mBary1));
+
+            // Delta v0 = (1-a) * I_tilde / m * normal
+            // Delta v1 = a * I_tilde / m * normal
+            // Delta v2 = (1-b) * I_tilde / m * normal
+            // Delta v3 = b * I_tilde / m * normal
+            // \Delta (dx/dt) = \Delta V
+            // dx = dt * \Delta v
+            if (info->obj0_is_cloth_obj1_is_rb == true)
+            {
+                // obj0 is cloth
+                int v0 = mEdgeArray[info->mEdgeId0]->mId0;
+                int v1 = mEdgeArray[info->mEdgeId0]->mId1;
+                dx.segment(3 * v0, 3) += 0.25 * dt * (1 - info->mBary0) *
+                                         I_tilde / mass * outer_normal;
+                ddx_times[v0] += 1;
+                dx.segment(3 * v1, 3) +=
+                    0.25 * dt * info->mBary0 * I_tilde / mass * outer_normal;
+                // std::cout << "ddx for v" << v0 << " = "
+                //           << dt * (1 - info->mBary0) * I_tilde / mass *
+                //                  outer_normal.transpose()
+                //           << std::endl;
+                // std::cout << "ddx for v" << v1 << " = "
+                //           << dt * info->mBary0 * I_tilde / mass *
+                //                  outer_normal.transpose()
+                //           << std::endl;
+                ddx_times[v1] += 1;
+                changed_v.insert(v0);
+                changed_v.insert(v1);
+            }
+            else
+            {
+                // obj1 is cloth
+                int v0 = mEdgeArray[info->mEdgeId1]->mId0;
+                int v1 = mEdgeArray[info->mEdgeId1]->mId1;
+                dx.segment(3 * v0, 3) += 0.25 * dt * (1 - info->mBary1) *
+                                         I_tilde / mass * outer_normal;
+                ddx_times[v0] += 1;
+                dx.segment(3 * v1, 3) +=
+                    0.25 * dt * info->mBary1 * I_tilde / mass * outer_normal;
+
+                // std::cout << "ddx for v" << v0 << " = "
+                //           << dt * (1 - info->mBary1) * I_tilde / mass *
+                //                  outer_normal.transpose()
+                //           << std::endl;
+                // std::cout << "ddx for v" << v1 << " = "
+                //           << dt * info->mBary1 * I_tilde / mass *
+                //                  outer_normal.transpose()
+                //           << std::endl;
+
+                ddx_times[v1] += 1;
+                changed_v.insert(v0);
+                changed_v.insert(v1);
+            }
+        }
+        for (int _idx = 0; _idx < mPointTriangleCollisionInfo.size(); _idx++)
+        {
+            /*
+            1. calculate |Ic|
+                1.1 calculate vn
+                1.2 calculate Ic
+            */
+            // printf("----------pt %d---------\n", _idx);
+            auto info = mPointTriangleCollisionInfo[_idx];
+            tVector3d vrel =
+                tVector3d::Zero(); // vrel = vcloth - vbody = vcloth
+            double mass = 0;
+            if (info->obj0_is_cloth_obj1_is_rb == true)
+            {
+                // obj0 is cloth, get vertex vel
+                vrel = dx.segment(3 * info->mVertexId0, 3) / dt;
+                mass = this->mMassMatrixDiag[3 * info->mVertexId0];
+            }
+            else
+            {
+                auto tri = mTriangleArray[info->mTriangleId1];
+                // obj1 is cloth get triangle vel and weight
+                vrel = (dx.segment(3 * tri->mId0, 3) * info->mBary[0] +
+                        dx.segment(3 * tri->mId1, 3) * info->mBary[1] +
+                        dx.segment(3 * tri->mId2, 3) * info->mBary[2]) /
+                       dt;
+                mass = mMassMatrixDiag[3 * tri->mId0] +
+                       mMassMatrixDiag[3 * tri->mId1] +
+                       mMassMatrixDiag[3 * tri->mId2];
+            }
+            // std::cout << "vrel = " << vrel.transpose() << std::endl;
+            // std::cout << "p(mv) = " << mass * vrel.transpose() << std::endl;
+            double vn = vrel.dot(info->mOuterNormal);
+            // double Ic = vn > v_thre ? 0 : mass * std::fabs(vn) / 2;
+            double Ic = vn > v_thre ? 0 : mass * std::fabs(vn) / 2;
+
+            // std::cout << "normal = " << info->mOuterNormal.transpose() <<
+            // std::endl; std::cout << "mass = " << mass << std::endl; std::cout
+            // << "vel = " << vrel.transpose() << std::endl; std::cout << "Ic =
+            // " << Ic
+            // << std::endl;
+            /*
+            2. calculate |Ir|
+            */
+            double d = (3e-3 - info->mDepth);
+            SIM_ASSERT(d > 0);
+            double Ir = 0;
+            // if the velocity will bounce, we apply no
+            if (vn > 0.1 * d / dt)
+            {
+                // printf("vn %.3f is bigger (< %.3f), Ir = 0\n", vn,
+                //        -0.1 * d / dt);
+                Ir = 0;
+            }
+            else
+            {
+                // Ir = SIM_MIN(dt * K * d, mass * (0.1 * d / dt - vn));
+                // printf("------vn %.3f is small or negative, we begin to add "
+                //        "spring "
+                //        "force------\n",
+                //        vn);
+                // if vn is not so big, we apply Ir
+                // Ir = SIM_MIN(dt * K * d, mass * (inhibition_coef * d / dt -
+                // vn));
+                double Ir0 = dt * K * d;
+                double Ir1 = mass * (0.1 * d / dt -
+                                     vn); // if we apply this impulse, our next
+                                          // vel = inhibition_coef * d / dt
+                // printf("spring impulse %.5f, inhibition impulse %.5f, we take
+                // "
+                //        "%s\n",
+                //        Ir0, Ir1, Ir0 < Ir1 ? "spring" : "inhibition");
+                Ir = SIM_MIN(Ir0, Ir1);
+            }
+            SIM_ASSERT(Ir >= 0);
+            SIM_ASSERT(Ic >= 0);
+            // std::cout << "Ir = " << Ir << std::endl;
+            double I = Ic + Ir;
+            // // std::cout << "I = " << I << std::endl;
+            double I_tilde = 2 * I / (1 + info->mBary.squaredNorm());
+            // // std::cout << "Itilde = " << I_tilde << std::endl;
+            if (info->obj0_is_cloth_obj1_is_rb == true)
+            {
+                // obj0 is cloth, is vertex, apply this impulse to vertex
+                // dx = dt * dv = - dt * I_tilde / m * normal
+                tVector3d incre = dt * I_tilde / mass * info->mOuterNormal;
+                dx.segment(3 * info->mVertexId0, 3) += 0.25 * incre;
+                ddx_times[info->mVertexId0] += 1;
+                changed_v.insert(info->mVertexId0);
+                // std::cout << "ddx for v" << info->mVertexId0 << " = "
+                //           << incre.transpose() << ", after this impulse, dx =
+                //           "
+                //           << dx.segment(3 * info->mVertexId0, 3).transpose()
+                //           << std::endl;
+                // printf("[repulsion] add dx to v%d: %.3f %.3f %.3f\n",
+                //        info->mVertexId0, incre[0], incre[1], incre[2]);
+                // dx.segment(3 * info->mVertexId0, 3) += incre;
+            }
+            else
+            {
+                // obj1 is cloth, is triangle, apply this impulse to triangle
+                // dx = dt * dv = dt * wi * I / m * N
+                tVector3d incre0, incre1, incre2;
+                auto tri = mTriangleArray[info->mTriangleId1];
+                {
+                    incre0 = dt * info->mBary[0] * I_tilde / mass *
+                             info->mOuterNormal;
+                    incre1 = dt * info->mBary[1] * I_tilde / mass *
+                             info->mOuterNormal;
+                    incre2 = dt * info->mBary[2] * I_tilde / mass *
+                             info->mOuterNormal;
+                }
+
+                dx.segment(3 * tri->mId0, 3) += 0.25 * incre0;
+                dx.segment(3 * tri->mId1, 3) += 0.25 * incre1;
+                dx.segment(3 * tri->mId2, 3) += 0.25 * incre2;
+                // std::cout << "dvel for v" << tri->mId0 << " = "
+                //           << incre0.transpose() / dt
+                //           << " after this impulse, its cur v = "
+                //           << dx.segment(3 * tri->mId0, 3).transpose() / dt
+                //           << std::endl;
+
+                // std::cout << "dvel for v" << tri->mId1 << " = "
+                //           << incre1.transpose() / dt
+                //           << " after this impulse, its cur v = "
+                //           << dx.segment(3 * tri->mId1, 3).transpose() / dt
+                //           << std::endl;
+
+                // std::cout << "dvel for v" << tri->mId2 << " = "
+                //           << incre2.transpose() / dt
+                //           << " after this impulse, its cur v = "
+                //           << dx.segment(3 * tri->mId2, 3).transpose() / dt
+                //   << std::endl;
+
+                ddx_times[tri->mId0] += 1;
+                ddx_times[tri->mId1] += 1;
+                ddx_times[tri->mId2] += 1;
+                changed_v.insert(tri->mId0);
+                changed_v.insert(tri->mId1);
+                changed_v.insert(tri->mId2);
+                // printf("[repulsion] add dx to v%d: %.3f %.3f %.3f\n",
+                // tri->mId2,
+                //        incre2[0], incre2[1], incre2[2]);
+            }
+        }
+        // printf("-------------end-------------\n");
+        for (auto v : changed_v)
+        {
+            // printf("-----apply v%d-----\n", v);
+            // int times = 2;
+
+            // tVector3d incre = ddx.segment(3 * v, 3) / times;
+            // std::cout << "old dx = " << dx.segment(3 * v, 3).transpose()
+            //           << " times = " << times << " incre = " <<
+            //           incre.transpose()
+            //           << std::endl;
+            // std::cout << "v" << v
+            //           << " cur dx = " << dx.segment(3 * v, 3).transpose()
+            //           << std::endl;
+            // dx.segment(3 * v, 3) += incre;
+            // std::cout << "after = " << dx.segment(3 * v, 3).transpose()
+            //           << std::endl;
+        }
+    }
+}
+
+// /**
+//  * let p be the linear momentum, p = m * v
+//  * let I be the impulse, I = \Delta p = m * \Delta v
+//  * \Delta v = \Delta (dx / dt) = \Delta [dx] / dt
+//  * \Delta[dx] = dt * \Delta v = dt * I / m
+//  */
+// void cBaraffCloth::ApplyVertexImpulseToDx(double dt, tVectorXd &dx,
+//                                           const tVector3d &impulse, int v_id)
+// {
+//     // 1. get vertex mass
+//     double mass = mMassMatrixDiag[3 * v_id];
+//     dx[3 * v_id + 0] += impulse[0] / mass * dt;
+//     dx[3 * v_id + 1] += impulse[1] / mass * dt;
+//     dx[3 * v_id + 2] += impulse[2] / mass * dt;
+// }
+
+// /**
+//  * I_tilde = 2 * I / (1 + w1^2 + w2^2 + w3^2)
+//  *
+//  * \Delta vi =
+// */
+// void cBaraffCloth::ApplyTriangleImpulseToDx(double dt, tVectorXd &dx,
+//                                                const tVector3d &impulse,
+//                                                int tri_id,
+//                                                const tVector3d &bary)
+// {
+
+// }
+// void cBaraffCloth::ApplyEdgeImpulseToDx(double dt, tVectorXd &dx,
+//                                         const tVector3d &impulse, int e_id,
+//                                         double bary)
+// {
+// }
+
+tSparseMatd cBaraffCloth::PrepareCollisionHessian()
+{
+    // v-t
+    int num_of_dof = GetNumOfFreedom();
+    tSparseMatd Hessian(num_of_dof, num_of_dof);
+    std::vector<tTriplet> triplets = {};
+    for (int _idx = 0; _idx < mPointTriangleCollisionInfo.size(); _idx++)
+    {
+        /*
+        1. calculate |Ic|
+            1.1 calculate vn
+            1.2 calculate Ic
+        */
+        // printf("----------pt %d---------\n", _idx);
+        auto info = mPointTriangleCollisionInfo[_idx];
+        tVector3d vrel = tVector3d::Zero(); // vrel = vcloth - vbody = vcloth
+        double mass = 0;
+        tVectorXd dCdx = tVectorXd::Zero(12);
+        std::vector<int> local_id_2_global_id(4, -1);
+        if (info->obj0_is_cloth_obj1_is_rb == true)
+        {
+            // obj0 is cloth, get vertex vel
+            // C = N^T * (info->mVertexId0 - b)
+            // \nabla_x C = dCdx = N
+            dCdx.segment(0, 3) = info->mOuterNormal;
+            local_id_2_global_id[0] = info->mVertexId0;
+        }
+        else
+        {
+            auto tri = mTriangleArray[info->mTriangleId1];
+
+            dCdx.segment(3, 3) = -info->mBary[0] * info->mOuterNormal;
+            dCdx.segment(6, 3) = -info->mBary[1] * info->mOuterNormal;
+            dCdx.segment(9, 3) = -info->mBary[2] * info->mOuterNormal;
+            local_id_2_global_id[1] = tri->mId0;
+            local_id_2_global_id[2] = tri->mId1;
+            local_id_2_global_id[3] = tri->mId2;
+        }
+        tMatrixXd dCTdC = dCdx * dCdx.transpose();
+        for (int i = 0; i < 4; i++)
+        {
+            int global_i = local_id_2_global_id[i];
+            if (global_i == -1)
+                continue;
+            for (int j = 0; j < 4; j++)
+            {
+                int global_j = local_id_2_global_id[j];
+                if (global_j == -1)
+                    continue;
+
+                tMatrix3d block = 1e-2 * dCTdC.block(3 * i, 3 * j, 3, 3);
+                for (int a = 0; a < 3; a++)
+                    for (int b = 0; b < 3; b++)
+                    {
+                        triplets.push_back(tTriplet(
+                            3 * global_i + a, 3 * global_j + b, block(a, b)));
+                    }
+            }
+        }
+    }
+    Hessian.setFromTriplets(triplets.begin(), triplets.end());
+    return Hessian;
 }

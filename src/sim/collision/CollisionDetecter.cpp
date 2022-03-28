@@ -43,11 +43,6 @@ void cCollisionDetecter::Clear()
     // mColCandiadatePairs.clear();
 }
 
-std::vector<tPointTriangleCollisionInfoPtr>
-cCollisionDetecter::GetAllPointTriangleCollisionInfo() const
-{
-    return {};
-}
 
 /**
  * \brief           do broadphase collision (judge AABB intersection)
@@ -108,9 +103,25 @@ void cCollisionDetecter::NarrowphaseCD()
 }
 
 void cCollisionDetecter::Update() {}
-
 std::vector<tPointTriangleCollisionInfoPtr>
 cCollisionDetecter::GetObjPointTriangleCollisionInfo(int obj_id) const
 {
-    return {};
+    return mObjPointTriangleInfo[obj_id];
+}
+
+std::vector<tEdgeEdgeCollisionInfoPtr>
+cCollisionDetecter::GetObjEdgeEdgeCollisionInfo(int obj_id) const
+{
+    return mObjEdgeEdgeCollisionInfo[obj_id];
+}
+std::vector<tEdgeEdgeCollisionInfoPtr>
+cCollisionDetecter::GetAllEdgeEdgeCollisionInfo() const
+{
+    return mEdgeEdgeCollisionInfo;
+}
+
+std::vector<tPointTriangleCollisionInfoPtr>
+cCollisionDetecter::GetAllPointTriangleCollisionInfo() const
+{
+    return this->mPointTriangleCollisionInfo;
 }

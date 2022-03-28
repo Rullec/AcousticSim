@@ -140,8 +140,8 @@ tEigenArr<tMatrix3d> CalcHessian(double tri_area, double Ku, double Kv,
     // 1. calculate Du and Dv
     double Fu_norm = Fu.norm();
     double Fv_norm = Fu.norm();
-    SIM_ASSERT(Fu_norm > 1e-6);
-    SIM_ASSERT(Fv_norm > 1e-6);
+    // SIM_ASSERT(Fu_norm > 1e-6);
+    // SIM_ASSERT(Fv_norm > 1e-6);
 
     tVector3d Fu_normalized = Fu.normalized();
     tVector3d Fv_normalized = Fv.normalized();

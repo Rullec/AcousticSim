@@ -36,6 +36,7 @@ SIM_DECLARE_PTR(tVertex);
 SIM_DECLARE_PTR(tEdge);
 SIM_DECLARE_PTR(tTriangle);
 SIM_DECLARE_STRUCT_AND_PTR(tPointTriangleCollisionInfo);
+SIM_DECLARE_STRUCT_AND_PTR(tEdgeEdgeCollisionInfo);
 class cBaseObject : public std::enable_shared_from_this<cBaseObject>
 {
 public:
@@ -50,8 +51,7 @@ public:
     eObjectType GetObjectType() const;
     virtual void CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
                                         int &st) const;
-    virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                    int &st) const = 0;
+    virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const;
     virtual void CalcPointDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const;
     virtual void Update(float dt) = 0;
     virtual void ApplyUserPerturbForceOnce(tPerturb *) = 0;
@@ -72,11 +72,13 @@ public:
     std::vector<tTrianglePtr> &GetTriangleArrayRef();
     void SetPointTriangleCollisionInfo(
         const std::vector<tPointTriangleCollisionInfoPtr> &info);
+    void SetEdgeEdgeCollisionInfo(
+        const std::vector<tEdgeEdgeCollisionInfoPtr> &info);
     void ChangeTriangleColor(int tri_id, const tVector3f &color);
     virtual void CalcAABB(tVector &min, tVector &max) const;
     double CalcTotalArea() const;
     virtual void UpdateImGui();
-    virtual void Reset() = 0;
+    virtual void Reset();
 
 protected:
     float mColorAlpha = 1.0;
@@ -88,13 +90,17 @@ protected:
     // std::vector<tVertexPtr > mVertexArray;
     // std::vector<tEdge *> mEdgeArray;
     // std::vector<tTriangle *> mTriangleArray;
+
+    std::vector<float> mTriangleInitArea;
     std::vector<std::vector<int>> mVertexConnectedTriangles;
     std::vector<tPointTriangleCollisionInfoPtr> mPointTriangleCollisionInfo;
+    std::vector<tEdgeEdgeCollisionInfoPtr> mEdgeEdgeCollisionInfo;
     std::vector<tVertexPtr> mVertexArray;
     std::vector<tEdgePtr> mEdgeArray;
     std::vector<tTrianglePtr> mTriangleArray;
     virtual void UpdateTriangleNormal();
     virtual void UpdateVertexNormalFromTriangleNormal();
+    void CalcTriangleInitArea();
 };
 
 SIM_DECLARE_PTR(cBaseObject);

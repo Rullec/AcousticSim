@@ -20,18 +20,6 @@ public:
 
 protected:
     tMatrixXd mVertexMateralCoords; // cloth's material coordinates
-    // tEigenArr<tMatrix32d> mF;       // deformation gradient
-    // tEigenArr<tMatrix2d>
-    //     mDInv; // the inverse of [B-A, C-A] in each triangle. A, B, C are
-    //            // material coordinate for each vertices
-
-    // tVectorXd mJ; // \det(F), the determinant of deformation gradient
-    // tEigenArr<tMatrixXd>
-    //     mPK1; // first piola kirchhoff tensor, means the gradient of strain
-    //           // energy w.r.t the nodal position. the definition of PK1 is
-    //           // dependent on the energy definition (consitutional model)
-    // tEigenArr<tEigenArr<tMatrixXd>>
-    //     mdFdx; // the gradient of deformation gradient
     cBaraffMaterialPtr mMaterial;
     tSparseMatd mStiffnessMatrix;
     float mRayleightA, mRayleightB;
@@ -40,20 +28,21 @@ protected:
     float mRayleighA, mRayleighB; // rayleigh damping
     int mDragVertexIdx;
     tVectorXd mMassMatrixDiag;
-    // virtual void InitBuffer();
+    tVectorXd mDx_buf;
     virtual void InitMass(const Json::Value &conf) override;
     virtual void InitMaterialCoords();
     virtual int GetSingleElementFreedom() const;
     virtual void UpdateCollisionForce(tVectorXd &col_force);
     virtual void CalcIntForce(const tVectorXd &xcur,
                               tVectorXd &int_force) const override final;
-    // virtual void CalculateF(); // calculate deformation gradient
     virtual void CalcStiffnessMatrix(const tVectorXd &xcur,
                                      tSparseMatd &K) const;
-    virtual void SolveForNextPos(double dt);
+    virtual void SolveForDx(double dt);
     virtual void CheckForce();
     virtual double CalcEnergy(const tVectorXd &xcur);
     virtual void Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
-                       float threshold, int &iters, float &residual, int fix_vertex = -1);
-    // virtual void CheckStiffnessMatrix();
+                       float threshold, int &iters, float &residual,
+                       const std::vector<int> &fix_vertex_array);
+    void Repulsion(double dt, tVectorXd &dx) const;
+    tSparseMatd PrepareCollisionHessian();
 };

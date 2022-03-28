@@ -1,6 +1,6 @@
 #pragma once
-#include "utils/MathUtil.h"
 #include "utils/DefUtil.h"
+#include "utils/MathUtil.h"
 struct tVertex
 {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -24,6 +24,7 @@ struct tEdge
                       // belongs. If this edge is a boundary, the mTriangleId1
                       // is -1
     double mK_spring; // stiffness for springs
+    tVector mColor;
 };
 SIM_DECLARE_PTR(tEdge);
 // struct tEdge : public tEdge
@@ -37,7 +38,8 @@ struct tTriangle
 {
     explicit tTriangle();
     explicit tTriangle(int a, int b, int c);
-    int mId0, mId1, mId2;
+    int mId0, mId1, mId2;    // vertex id
+    int mEId0, mEId1, mEId2; // edge id
     tVector mNormal;
     tVector mColor;
 };

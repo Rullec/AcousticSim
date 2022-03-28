@@ -959,7 +959,8 @@ void cDrawScene::UpdatePointBuffer(int idx)
 
     // write the data
     const tVectorXf &sim_point_data = mSimScene->GetPointDrawBuffer();
-    // std::cout << "point data = " << sim_point_data.transpose() << " buffer size = " << buffer_size << std::endl;
+    // std::cout << "point data = " << sim_point_data.transpose() << " buffer
+    // size = " << buffer_size << std::endl;
     char *char_data = static_cast<char *>(data);
     memcpy(char_data, sim_point_data.data(), buffer_size);
 

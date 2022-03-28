@@ -139,8 +139,8 @@ void cObjUtil::LoadObj(const cObjUtil::tParams &param,
     cObjUtil::BuildEdge(v_array, e_array, t_array);
 }
 /**
-* \brief       Given vertex array and triangle array, build the edge list
-*/
+ * \brief       Given vertex array and triangle array, build the edge list
+ */
 #include <set>
 typedef std::pair<int, int> int_pair;
 void cObjUtil::BuildEdge(const std::vector<tVertexPtr> &v_array,
@@ -200,17 +200,19 @@ void cObjUtil::BuildEdge(const std::vector<tVertexPtr> &v_array,
                 triangle_pair.second = t_id;
                 // it->second = t_id;
 
-                // SIM_ASSERT(it->second.first != -1 && it->second.second == -1);
-                // it->second.second = t_id;
-                // it->second = t_id;
+                // SIM_ASSERT(it->second.first != -1 && it->second.second ==
+                // -1); it->second.second = t_id; it->second = t_id;
             }
         }
     }
 
     // set dataset for edges
-    for (auto t = edge_info.begin(); t != edge_info.end(); t++)
+    std::map<int_pair, int> edge_info_2_edge_id = {};
+    int t_id = 0;
+    for (auto t = edge_info.begin(); t != edge_info.end(); t++, t_id++)
     {
         int v0 = t->first.first, v1 = t->first.second;
+        SIM_ASSERT(v0 < v1);
         int tid0 = t->second.first, tid1 = t->second.second;
         tEdgePtr edge = std::make_shared<tEdge>();
         edge->mId0 = v0;
@@ -220,18 +222,30 @@ void cObjUtil::BuildEdge(const std::vector<tVertexPtr> &v_array,
         edge->mTriangleId1 = tid1;
         edge->mIsBoundary = (tid1 == -1);
         e_array.push_back(edge);
+        edge_info_2_edge_id[int_pair(v0, v1)] = t_id;
         // printf("[debug] edge %d, v0 %d, v1 %d, raw length %.3f, t0 %d, t1 %d,
         // is_boud %d\n",
 
         //    e_array.size() - 1, v0, v1, edge->mRawLength, tid0, tid1,
         //    edge->mIsBoundary);
     }
+
+    for (int t = 0; t < t_array.size(); t++)
+    {
+        int v_id[3] = {t_array[t]->mId0, t_array[t]->mId1, t_array[t]->mId2};
+        t_array[t]->mEId0 = edge_info_2_edge_id[int_pair(
+            SIM_MIN(v_id[0], v_id[1]), SIM_MAX(v_id[0], v_id[1]))];
+        t_array[t]->mEId1 = edge_info_2_edge_id[int_pair(
+            SIM_MIN(v_id[1], v_id[2]), SIM_MAX(v_id[1], v_id[2]))];
+        t_array[t]->mEId2 = edge_info_2_edge_id[int_pair(
+            SIM_MIN(v_id[2], v_id[0]), SIM_MAX(v_id[2], v_id[0]))];
+    }
     // std::cout << "[debug] build " << e_array.size() << " edges\n";
 }
 
 /**
-* \brief           Build plane geometry data
-*/
+ * \brief           Build plane geometry data
+ */
 void cObjUtil::BuildPlaneGeometryData(const double scale,
                                       const tVector &plane_equation,
                                       std::vector<tVertexPtr> &vertex_array,
@@ -260,7 +274,7 @@ void cObjUtil::BuildPlaneGeometryData(const double scale,
     // build triangles
     for (auto &x : triangle_idx_lst)
     {
-        tTrianglePtr tri = std::make_shared<tTriangle> ();
+        tTrianglePtr tri = std::make_shared<tTriangle>();
         tri->mId0 = x[0];
         tri->mId1 = x[1];
         tri->mId2 = x[2];

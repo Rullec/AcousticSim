@@ -6,6 +6,29 @@
 #include "utils/RotUtil.h"
 #include <iostream>
 #include <map>
+typedef std::pair<int, int> int_pair;
+#define BUILD_PAIR(a, b) SIM_MIN(a, b), SIM_MAX(a, b)
+void BuildTriangleEdgeId(const std::vector<tEdgePtr> &edges_array,
+                         std::vector<tTrianglePtr> &triangles_array)
+{
+    // 1. build map v to id
+    std::map<int_pair, int> edge_vpair_to_id = {};
+    for (int i = 0; i < edges_array.size(); i++)
+    {
+        edge_vpair_to_id[int_pair(
+            BUILD_PAIR(edges_array[i]->mId0, edges_array[i]->mId1))] = i;
+    }
+
+    for (auto &tri : triangles_array)
+    {
+        tri->mEId0 =
+            edge_vpair_to_id[int_pair(BUILD_PAIR(tri->mId0, tri->mId1))];
+        tri->mEId1 =
+            edge_vpair_to_id[int_pair(BUILD_PAIR(tri->mId1, tri->mId2))];
+        tri->mEId2 =
+            edge_vpair_to_id[int_pair(BUILD_PAIR(tri->mId2, tri->mId0))];
+    }
+}
 void cTriangulator::BuildGeometry(const Json::Value &config,
                                   std::vector<tVertexPtr> &vertices_array,
                                   std::vector<tEdgePtr> &edges_array,
@@ -85,10 +108,15 @@ void cTriangulator::BuildGeometry(const Json::Value &config,
     {
         SIM_ERROR("unsupported geo type {}", geo_type);
     }
-    for(auto & tri : triangles_array)
+    for (auto &tri : triangles_array)
     {
         tri->mColor = ColorBlue;
     }
+    for (auto &e : edges_array)
+    {
+        e->mColor = ColorBlack;
+    }
+    BuildTriangleEdgeId(edges_array, triangles_array);
     ValidateGeometry(vertices_array, edges_array, triangles_array);
     for (auto &v : vertices_array)
     {
@@ -464,6 +492,37 @@ void cTriangulator::ValidateGeometry(std::vector<tVertexPtr> &vertices_array,
                           << ", " << tri->mId1 << ", " << tri->mId2 << "\n";
                 exit(0);
             }
+        }
+    }
+
+    // verify the edges are valid
+    int num_of_e = edges_array.size();
+    for (int i = 0; i < num_of_e; i++)
+    {
+        auto e = edges_array[i];
+        int t0 = e->mTriangleId0, t1 = e->mTriangleId1;
+        SIM_ASSERT(i == triangles_array[t0]->mEId0 ||
+                   i == triangles_array[t0]->mEId1 ||
+                   i == triangles_array[t0]->mEId2);
+        if (t1 != -1)
+            SIM_ASSERT(i == triangles_array[t1]->mEId0 ||
+                       i == triangles_array[t1]->mEId1 ||
+                       i == triangles_array[t1]->mEId2);
+
+        SIM_ASSERT((e->mId0 == triangles_array[t0]->mId0 ||
+                    e->mId0 == triangles_array[t0]->mId1 ||
+                    e->mId0 == triangles_array[t0]->mId2) &&
+                   (e->mId1 == triangles_array[t0]->mId0 ||
+                    e->mId1 == triangles_array[t0]->mId1 ||
+                    e->mId1 == triangles_array[t0]->mId2));
+        if (t1 != -1)
+        {
+            SIM_ASSERT((e->mId0 == triangles_array[t1]->mId0 ||
+                        e->mId0 == triangles_array[t1]->mId1 ||
+                        e->mId0 == triangles_array[t1]->mId2) &&
+                       (e->mId1 == triangles_array[t1]->mId0 ||
+                        e->mId1 == triangles_array[t1]->mId1 ||
+                        e->mId1 == triangles_array[t1]->mId2));
         }
     }
 }
