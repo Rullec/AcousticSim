@@ -185,6 +185,7 @@ void SimDraw(const std::string &conf)
         // if (gPause == false)
         {
             // cTimeUtil::Begin("scene_update");
+            // std::cout << "update\n";
             draw_scene->Update(delta_time);
             // cTimeUtil::End("scene_update");
         }

@@ -14,8 +14,8 @@
                 0.3
             ],
             "subdivision": [
-                20,
-                20
+                10,
+                10
             ],
             "cloth_stretch_stiffness": [
                 50,
@@ -32,7 +32,7 @@
             "cloth_density": 0.1,
             "cloth_init_pos": [
                 0,
-                0.22,
+                0.4,
                 0
             ],
             "cloth_uv_rotation": 0,
@@ -43,7 +43,7 @@
                 0
             ],
             "constraints": {
-                "static_point.bak": [
+                "static_point": [
                     [
                         0.5,
                         0.5
@@ -54,32 +54,6 @@
                     ]
                 ]
             }
-        },
-        {
-            "object_type": "KinematicBody",
-            "object_name": "sphere",
-            "type": "custom",
-            "mesh_path": "data/cube.obj",
-            "target_aabb": [
-                0.2,
-                0.2,
-                0.2
-            ],
-            "scale": [
-                0,
-                0,
-                0
-            ],
-            "translation": [
-                0,
-                0,
-                0
-            ],
-            "orientation": [
-                0,
-                0,
-                0
-            ]
         }
     ],
     "window_height": 800,

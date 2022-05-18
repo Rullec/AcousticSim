@@ -19,6 +19,8 @@ set(CLOTH_SRC
     # cloth/BaraffMaterialUnstable.cpp
     cloth/BaraffMaterial.cpp
     cloth/QBendingMaterial.cpp
+    cloth/BaseMaterial.cpp
+    cloth/DihedralBending.cpp
     # cloth/ImplicitCloth.cpp   
     # cloth/PBDCloth.cpp
     # cloth/PDCloth.cpp

@@ -651,6 +651,7 @@ void cDrawScene::MouseButton(int button, int action, int mods)
 
 void cDrawScene::Key(int key, int scancode, int action, int mods)
 {
+    // std::cout << "[draw scene] key = " << key << std::endl;
     if (action == GLFW_PRESS)
     {
         switch (key)

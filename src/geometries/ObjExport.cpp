@@ -21,8 +21,8 @@ inline std::string format_string(const char *format, Args... args)
     return buffer;
 }
 bool cObjExporter::ExportObj(std::string export_path,
-                             const std::vector<tVertexPtr > &vertices_array,
-                             const std::vector<tTriangle *> &triangles_array,
+                             const std::vector<tVertexPtr> &vertices_array,
+                             const std::vector<tTrianglePtr> &triangles_array,
                              bool silent /* = false*/)
 {
     // 1. output the vertices info

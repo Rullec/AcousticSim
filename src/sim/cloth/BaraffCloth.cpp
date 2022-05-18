@@ -3,6 +3,7 @@
 #include "geometries/Primitives.h"
 #include "imgui.h"
 #include "sim/Perturb.h"
+#include "sim/cloth/DihedralBending.h"
 #include "sim/cloth/QBendingMaterial.h"
 #include "utils/JsonUtil.h"
 #include "utils/TimeUtil.hpp"
@@ -17,7 +18,7 @@ cBaraffCloth::cBaraffCloth(int id_) : cBaseCloth(eClothType::FEM_CLOTH, id_)
 }
 
 cBaraffCloth::~cBaraffCloth() {}
-
+cBaseMaterialPtr mDiMaterial = std::make_shared<cDihedralMaterial>();
 void cBaraffCloth::Init(const Json::Value &conf)
 {
     mRayleightA = cJsonUtil::ParseAsDouble("rayleigh_damping_a", conf);
@@ -30,13 +31,16 @@ void cBaraffCloth::Init(const Json::Value &conf)
 
     // init material
     // mMaterial = std::make_shared<cBaraffMaterialUnstable>();
-    mBendingMaterial = std::make_shared<cQBendingMaterial>();
+    // mBendingMaterial = std::make_shared<cQBendingMaterial>();
+    mBendingMaterial = std::make_shared<cDihedralMaterial>();
     mBendingK = tVector3f::Ones() *
                 cJsonUtil::ReadVectorJson(
                     cJsonUtil::ParseAsValue("cloth_bending_stiffness", conf))
                     .cast<float>()[0];
     mBendingMaterial->Init(GetVertexArray(), GetEdgeArray(), GetTriangleArray(),
                            mBendingK.cast<double>());
+    mDiMaterial->Init(GetVertexArray(), GetEdgeArray(), GetTriangleArray(),
+                      mBendingK.cast<double>());
     mStretchK = cJsonUtil::ReadVectorJson(
                     cJsonUtil::ParseAsValue("cloth_stretch_stiffness", conf))
                     .segment(0, 3)
@@ -89,6 +93,8 @@ void cBaraffCloth::UpdatePos(double dt)
         // mMaterial->Update(true, true, true);
         // cTimeUtil::Begin("update ")
         mMaterial->Update();
+        mBendingMaterial->Update();
+        mDiMaterial->Update();
         // cTimeUtil::End("update")
         // exit(1);
     }
@@ -251,8 +257,9 @@ int cBaraffCloth::GetSingleElementFreedom() const { return 9; }
 void cBaraffCloth::CalcIntForce(const tVectorXd &xcur,
                                 tVectorXd &int_force) const
 {
-    int_force =
-        mMaterial->CalcTotalForce() + mBendingMaterial->CalcForce(mXcur);
+    tVectorXd bending_force = mBendingMaterial->CalcForce(mXcur);
+    int_force = mMaterial->CalcTotalForce() + bending_force;
+    // std::cout << "bending force = " << bending_force.transpose() << std::endl;
     // std::cout << "fint cwiseabs max = " << int_force.cwiseAbs().maxCoeff() <<
     // std::endl; auto get_pos_mat = [](const tVectorXd &xcur,
     //                       int id0, int id1, int id2) -> tMatrix3d
@@ -356,9 +363,13 @@ void cBaraffCloth::InitMass(const Json::Value &conf)
 void cBaraffCloth::CalcStiffnessMatrix(const tVectorXd &xcur,
                                        tSparseMatd &K_global) const
 {
-
-    K_global = mMaterial->CalcTotalStiffnessMatrix() +
-               this->mBendingMaterial->GetStiffnessMatrix();
+    tSparseMatd bending_H = this->mBendingMaterial->GetStiffnessMatrix();
+    // tSparseMatd di_H = mDiMaterial->GetStiffnessMatrix();
+    K_global = mMaterial->CalcTotalStiffnessMatrix();
+    K_global += bending_H;
+    // std::cout << "bending_H = \n" << bending_H.toDense() << std::endl;
+    // std::cout << "qbendning H = \n" << qbending_h << std::endl;
+    // std::cout << "di H = \n" << di_H << std::endl;
     // std::cout << "K = \n" << K_global << std::endl;
     // exit(1);
     // +
@@ -823,6 +834,7 @@ void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
 void cBaraffCloth::Repulsion(double dt, tVectorXd &dx) const
 {
     int iters = 1;
+    float scale = 0.1;
     for (int i = 0; i < iters; i++)
     {
         double v_thre = 0.01;
@@ -938,11 +950,11 @@ void cBaraffCloth::Repulsion(double dt, tVectorXd &dx) const
                 // obj0 is cloth
                 int v0 = mEdgeArray[info->mEdgeId0]->mId0;
                 int v1 = mEdgeArray[info->mEdgeId0]->mId1;
-                dx.segment(3 * v0, 3) += 0.25 * dt * (1 - info->mBary0) *
+                dx.segment(3 * v0, 3) += scale * dt * (1 - info->mBary0) *
                                          I_tilde / mass * outer_normal;
                 ddx_times[v0] += 1;
                 dx.segment(3 * v1, 3) +=
-                    0.25 * dt * info->mBary0 * I_tilde / mass * outer_normal;
+                    scale * dt * info->mBary0 * I_tilde / mass * outer_normal;
                 // std::cout << "ddx for v" << v0 << " = "
                 //           << dt * (1 - info->mBary0) * I_tilde / mass *
                 //                  outer_normal.transpose()
@@ -960,11 +972,11 @@ void cBaraffCloth::Repulsion(double dt, tVectorXd &dx) const
                 // obj1 is cloth
                 int v0 = mEdgeArray[info->mEdgeId1]->mId0;
                 int v1 = mEdgeArray[info->mEdgeId1]->mId1;
-                dx.segment(3 * v0, 3) += 0.25 * dt * (1 - info->mBary1) *
+                dx.segment(3 * v0, 3) += scale * dt * (1 - info->mBary1) *
                                          I_tilde / mass * outer_normal;
                 ddx_times[v0] += 1;
                 dx.segment(3 * v1, 3) +=
-                    0.25 * dt * info->mBary1 * I_tilde / mass * outer_normal;
+                    scale * dt * info->mBary1 * I_tilde / mass * outer_normal;
 
                 // std::cout << "ddx for v" << v0 << " = "
                 //           << dt * (1 - info->mBary1) * I_tilde / mass *
@@ -1066,7 +1078,7 @@ void cBaraffCloth::Repulsion(double dt, tVectorXd &dx) const
                 // obj0 is cloth, is vertex, apply this impulse to vertex
                 // dx = dt * dv = - dt * I_tilde / m * normal
                 tVector3d incre = dt * I_tilde / mass * info->mOuterNormal;
-                dx.segment(3 * info->mVertexId0, 3) += 0.25 * incre;
+                dx.segment(3 * info->mVertexId0, 3) += scale * incre;
                 ddx_times[info->mVertexId0] += 1;
                 changed_v.insert(info->mVertexId0);
                 // std::cout << "ddx for v" << info->mVertexId0 << " = "
@@ -1093,9 +1105,9 @@ void cBaraffCloth::Repulsion(double dt, tVectorXd &dx) const
                              info->mOuterNormal;
                 }
 
-                dx.segment(3 * tri->mId0, 3) += 0.25 * incre0;
-                dx.segment(3 * tri->mId1, 3) += 0.25 * incre1;
-                dx.segment(3 * tri->mId2, 3) += 0.25 * incre2;
+                dx.segment(3 * tri->mId0, 3) += scale * incre0;
+                dx.segment(3 * tri->mId1, 3) += scale * incre1;
+                dx.segment(3 * tri->mId2, 3) += scale * incre2;
                 // std::cout << "dvel for v" << tri->mId0 << " = "
                 //           << incre0.transpose() / dt
                 //           << " after this impulse, its cur v = "

@@ -91,12 +91,12 @@ void cSimScene::BuildObjects(const Json::Value &obj_conf_)
 #include "geometries/ObjExport.h"
 void cSimScene::SaveCurrentScene()
 {
-    // for (auto &x : mObstacleList)
-    // {
-    //     cObjExporter::ExportObj(x->GetObjName() + ".obj",
-    //     x->GetVertexArray(),
-    //                             x->GetTriangleArray());
-    // }
+    for (auto &x : this->mObjectList)
+    {
+        cObjExporter::ExportObj(x->GetObjName() + ".obj",
+        x->GetVertexArray(),
+                                x->GetTriangleArray());
+    }
 }
 
 void cSimScene::InitDrawBuffer()
@@ -349,10 +349,12 @@ void cSimScene::MouseButton(int button, int action, int mods) {}
 #include "GLFW/glfw3.h"
 void cSimScene::Key(int key, int scancode, int action, int mods)
 {
+    std::cout << "[sim scene] key = " << key << std::endl;
     mSimStateMachine->Key(key, scancode, action, mods);
     switch (key)
     {
     case GLFW_KEY_S:
+        std::cout << "[draw scene] key S, save now\n";
         SaveCurrentScene();
         break;
     }

@@ -24,5 +24,5 @@ class cObjExporter
 public:
     static bool ExportObj(std::string export_path,
                           const std::vector<tVertexPtr > &vertices_array,
-                          const std::vector<tTriangle *> &triangles_array, bool silent = false);
+                          const std::vector<tTrianglePtr > &triangles_array, bool silent = false);
 };

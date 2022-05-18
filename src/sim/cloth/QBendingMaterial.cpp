@@ -44,26 +44,18 @@ tVector CalcCotangentCoeff(const tVector3d &x0, const tVector3d &x1,
 
 cQBendingMaterial::cQBendingMaterial() {}
 
-int SelectAnotherVertex(tTrianglePtr tri, int v0, int v1)
-{
-    SIM_ASSERT(tri != nullptr);
-    std::set<int> vid_set = {tri->mId0, tri->mId1, tri->mId2};
-    // printf("[debug] select another vertex in triangle 3 vertices (%d, %d, %d)
-    // besides %d %d\n", tri->mId0, tri->mId1, tri->mId2, v0, v1);
-    vid_set.erase(vid_set.find(v0));
-    vid_set.erase(vid_set.find(v1));
-    return *vid_set.begin();
-};
 void cQBendingMaterial::Init(const std::vector<tVertexPtr> &v_array,
                              const std::vector<tEdgePtr> &e_array,
                              const std::vector<tTrianglePtr> &t_array,
                              const tVector3d &bending_stiffness_warpweftbias)
 {
-    double K = bending_stiffness_warpweftbias.mean();
+    cBaseMaterial::Init(v_array, e_array, t_array,
+                        bending_stiffness_warpweftbias);
+
     int num_of_v = v_array.size();
     int num_of_dof = 3 * num_of_v;
     // create the stiffness matrix
-    mStiffnessMat.resize(num_of_dof, num_of_dof);
+    
     std::vector<tTriplet> triplet_lst = {};
     // 1. calculate triangle area
     std::vector<double> triangle_area_lst = {};
@@ -75,26 +67,30 @@ void cQBendingMaterial::Init(const std::vector<tVertexPtr> &v_array,
             v_array[t->mId2]->mPos.segment(0, 3)));
     }
     // 2. calculate coef
-    // mEleKLst.resize(e_array.size());
+    
     // tMatrix12f ele_K;
-    mEdgeConstraintVertexLst.clear();
+
     mEleKLst.clear();
-    for (auto &e : e_array)
+    for (int i = 0; i < e_array.size(); i++)
     {
+        auto e = e_array[i];
         if (e->mIsBoundary == true)
             continue;
-        int v0 = e->mId0, v1 = e->mId1;
-        int v2 = SelectAnotherVertex(t_array[e->mTriangleId0], v0, v1),
-            v3 = SelectAnotherVertex(t_array[e->mTriangleId1], v0, v1);
-        int v_lst[4] = {v0, v1, v2, v3};
-        mEdgeConstraintVertexLst.push_back(tVector4i(v0, v1, v2, v3));
+        // int v0 = e->mId0, v1 = e->mId1;
+        // int v2 = SelectAnotherVertex(t_array[e->mTriangleId0], v0, v1),
+        //     v3 = SelectAnotherVertex(t_array[e->mTriangleId1], v0, v1);
+        // int v_lst[4] = {v0, v1, v2, v3};
+        // mEdgeConstraintVertexLst.push_back(tVector4i(v0, v1, v2, v3));
+        tVector4i v_lst = mEdgeConstraintVertexLst[i];
 
         // calculate K
-        tVector coef = CalcCotangentCoeff(
-            v_array[v0]->mPos.segment(0, 3), v_array[v1]->mPos.segment(0, 3),
-            v_array[v2]->mPos.segment(0, 3), v_array[v3]->mPos.segment(0, 3));
+        tVector coef =
+            CalcCotangentCoeff(v_array[v_lst[0]]->mPos.segment(0, 3),
+                               v_array[v_lst[1]]->mPos.segment(0, 3),
+                               v_array[v_lst[2]]->mPos.segment(0, 3),
+                               v_array[v_lst[3]]->mPos.segment(0, 3));
 
-        double prefix_coef = K * 3.0 /
+        double prefix_coef = mEdgeK * 3.0 /
                              (triangle_area_lst[e->mTriangleId0] +
                               triangle_area_lst[e->mTriangleId1]);
         tMatrix12f eleK = tMatrix12f::Zero();
@@ -119,7 +115,6 @@ void cQBendingMaterial::Init(const std::vector<tVertexPtr> &v_array,
         // get result
     }
     mStiffnessMat.setFromTriplets(triplet_lst.begin(), triplet_lst.end());
-    // std::cout << "mStiffnessMat = \n" << mStiffnessMat << std::endl;
 }
 
 double cQBendingMaterial::CalcEnergy(const tVectorXd &xcur)
@@ -133,16 +128,18 @@ tVectorXd cQBendingMaterial::CalcForce(const tVectorXd &xcur)
     //           << total_force.cwiseAbs().maxCoeff() << std::endl;
     return total_force;
 }
-tSparseMatd cQBendingMaterial::GetStiffnessMatrix() const
-{
-    return -1 * mStiffnessMat;
-}
 
-std::vector<tMatrix12f> cQBendingMaterial::GetEleStiffnessMatrixLst() const
-{
-    return this->mEleKLst;
-}
-std::vector<tVector4i> cQBendingMaterial::GetEdgeConstraintVertex() const
-{
-    return mEdgeConstraintVertexLst;
-}
+// std::vector<tMatrix12f> cQBendingMaterial::GetEleStiffnessMatrixLst() const
+// {
+//     return this->mEleKLst;
+// }
+// std::vector<tVector4i> cQBendingMaterial::GetEdgeConstraintVertex() const
+// {
+//     return mEdgeConstraintVertexLst;
+// }
+
+void cQBendingMaterial::CheckForce() {}
+
+void cQBendingMaterial::CheckStiffnessMatrix() {}
+
+void cQBendingMaterial::Update() {}

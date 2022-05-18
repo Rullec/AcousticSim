@@ -1,14 +1,8 @@
 #pragma once
-#include "utils/DefUtil.h"
-#include "utils/EigenUtil.h"
-#include "utils/MathUtil.h"
-#include "utils/SparseUtil.h"
-SIM_DECLARE_STRUCT_AND_PTR(tVertex);
-SIM_DECLARE_STRUCT_AND_PTR(tEdge);
-SIM_DECLARE_STRUCT_AND_PTR(tTriangle);
+#include "BaseMaterial.h"
 using tMatrix12f = Eigen::Matrix<float, 12, 12>;
 
-class cQBendingMaterial : std::enable_shared_from_this<cQBendingMaterial>
+class cQBendingMaterial : public cBaseMaterial
 {
 public:
     explicit cQBendingMaterial();
@@ -17,18 +11,19 @@ public:
                       const std::vector<tTrianglePtr> &t_array,
                       const tVector3d &bending_stiffness_warpweftbias);
 
+    virtual void Update();
     double CalcEnergy(const tVectorXd &xcur);
     tVectorXd CalcForce(const tVectorXd &xcur);
-    tSparseMatd GetStiffnessMatrix() const;
-    std::vector<tMatrix12f> GetEleStiffnessMatrixLst() const;
-    std::vector<tVector4i> GetEdgeConstraintVertex() const;
-    // static void CheckForce();
-    // static void CheckStiffnessMatrix();
+    // std::vector<tMatrix12f> GetEleStiffnessMatrixLst() const;
+    // std::vector<tVector4i> GetEdgeConstraintVertex() const;
+    virtual void CheckForce() override;
+    virtual void CheckStiffnessMatrix() override;
 
 protected:
-    tSparseMatd mStiffnessMat;
-    std::vector<tMatrix12f> mEleKLst;
-    std::vector<tVector4i> mEdgeConstraintVertexLst;
+
+    // tSparseMatd mStiffnessMat;
+    // std::vector<tMatrix12f> mEleKLst;
+    // std::vector<tVector4i> mEdgeConstraintVertexLst;
     static tSparseMatd CalcKCoef(const tVector3d &v0, const tVector3d &v1,
                                  const tVector3d &v2, const tVector3d &v3);
 };

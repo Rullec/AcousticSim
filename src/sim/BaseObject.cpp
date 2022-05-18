@@ -299,18 +299,18 @@ void cBaseObject::CalcPointDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
 
 void cBaseObject::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
 {
-    std::set<int> affected_edge = {};
-    for (auto &info : this->mEdgeEdgeCollisionInfo)
-    {
-        if (info->mObj0->GetObjId() == mObjId)
-        {
-            affected_edge.insert(info->mEdgeId0);
-        }
-        else
-        {
-            affected_edge.insert(info->mEdgeId1);
-        }
-    }
+    // std::set<int> affected_edge = {};
+    // for (auto &info : this->mEdgeEdgeCollisionInfo)
+    // {
+    //     if (info->mObj0->GetObjId() == mObjId)
+    //     {
+    //         affected_edge.insert(info->mEdgeId0);
+    //     }
+    //     else
+    //     {
+    //         affected_edge.insert(info->mEdgeId1);
+    //     }
+    // }
 
     tVector normal = tVector::Zero();
 
@@ -318,10 +318,10 @@ void cBaseObject::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
     {
         auto e = mEdgeArray[e_id];
         tVector color = e->mColor;
-        if (affected_edge.find(e_id) != affected_edge.end())
-        {
-            color = ColorPurple;
-        }
+        // if (affected_edge.find(e_id) != affected_edge.end())
+        // {
+        //     color = ColorPurple;
+        // }
         // 1. get the normal of this edge
         normal =
             (mVertexArray[e->mId0]->mNormal + mVertexArray[e->mId1]->mNormal) /
