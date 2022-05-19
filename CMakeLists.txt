@@ -90,10 +90,10 @@ add_executable(main ./src/main.cpp)
 target_link_libraries(main ${libs} scenes_lib utils_lib geo_lib)
 
 if(WIN32)
-    install(TARGETS main
+    move_release_to_src(main)
+else()
+install(TARGETS main
             RUNTIME
             DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}
     )
-else()
-    move_release_to_src(main)
 endif()
