@@ -92,6 +92,20 @@ void cTriangulator::BuildGeometry(const Json::Value &config,
             triangles_array, false);
         // exit(1);
     }
+    else if (geo_type == "single_triangle")
+    {
+        cTriangulator::BuildGeometry_UniformTriangle(
+            cloth_shape, tVector2i(1, 1), vertices_array, edges_array,
+            triangles_array, false);
+        // remove a vertex
+        vertices_array.pop_back();
+        // remove the last two edge
+        edges_array.pop_back();
+        edges_array.pop_back();
+        edges_array[2]->mTriangleId1 = -1;
+        // remove a triangle
+        triangles_array.pop_back();
+    }
     else if (geo_type == "regular_triangle_perturb")
     {
         cTriangulator::BuildGeometry_UniformTriangle(

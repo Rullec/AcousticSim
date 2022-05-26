@@ -5,23 +5,24 @@
             "object_name": "a_cloth",
             "object_type": "Cloth",
             "cloth_type": "fem",
-            "geometry_type.bak": "delaunay",
+            "geometry_type.bak": "single_triangle",
             "geometry_type": "regular_triangle",
             "damping": 1e-5,
             "default_timestep": 1e-2,
             "cloth_size": [
-                0.3,
-                0.3
+                0.1,
+                0.1
             ],
             "subdivision": [
-                10,
-                10
+                1,
+                2
             ],
             "cloth_stretch_stiffness": [
                 50,
                 50,
                 50
             ],
+            "enable_gravity": true,
             "cloth_bending_stiffness": [
                 1e-5,
                 1e-5
@@ -29,7 +30,7 @@
             "rayleigh_damping_a": 0.0,
             "rayleigh_damping_b": 0.0,
             "enable_cloth_from_obj": false,
-            "cloth_density": 0.1,
+            "cloth_density": 10,
             "cloth_init_pos": [
                 0,
                 0.4,
@@ -37,7 +38,7 @@
             ],
             "cloth_uv_rotation": 0,
             "cloth_init_orientation": [
-                -1.57,
+                0,
                 0,
                 0,
                 0
@@ -46,6 +47,10 @@
                 "static_point": [
                     [
                         0.5,
+                        0.5
+                    ],
+                    [
+                        0,
                         0.5
                     ],
                     [

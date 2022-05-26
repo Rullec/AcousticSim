@@ -1,7 +1,8 @@
 #include "DihedralBending.h"
 #include "geometries/Primitives.h"
+#include <algorithm>
 #include <iostream>
-
+#define SIM_MAX(a, b) (a > b ? a : b)
 double CalcTriAreaFromEdgeLenght(double a, double b, double c)
 {
     double p = (a + b + c) / 2;
@@ -54,8 +55,9 @@ void cDihedralMaterial::Init(const std::vector<tVertexPtr> &v_array,
         double e2_length = mRawEdgeLengthArray[t_array[i]->mEId2];
         mRawTriangleAreaArray[i] =
             CalcTriAreaFromEdgeLenght(e0_length, e1_length, e2_length);
-        std::cout << "raw tri area " << i << " = " << mRawTriangleAreaArray[i]
-                  << std::endl;
+        // std::cout << "raw tri area " << i << " = " <<
+        // mRawTriangleAreaArray[i]
+        //           << std::endl;
     }
 
     // 3. raw height (for inner triangles)
@@ -75,8 +77,8 @@ void cDihedralMaterial::Init(const std::vector<tVertexPtr> &v_array,
             double e_length = mRawEdgeLengthArray[i];
             // 3.3 get height. S = 0.5 * e * h; h = 2 * S / e
             height = 2 * tVector2f(a0, a1) / e_length;
-            std::cout << "edge height " << i << " =  " << height.transpose()
-                      << std::endl;
+            // std::cout << "edge height " << i << " =  " << height.transpose()
+            //           << std::endl;
         }
         else
         {
@@ -136,6 +138,18 @@ void CalcNormalAndEdge(const tVector3d &v0, const tVector3d &v1,
     n0 = (v1 - v0).cross(v2 - v1);
     n1 = (v0 - v1).cross(v3 - v0);
     e = (v1 - v0);
+    if (n0.hasNaN() == true || n1.hasNaN() == true || e.hasNaN() == true)
+    {
+        std::cout << "n0, n1, e has Nan\n";
+        std::cout << "n0 = " << n0.transpose() << std::endl;
+        std::cout << "n1 = " << n1.transpose() << std::endl;
+        std::cout << "e = " << e.transpose() << std::endl;
+        std::cout << "v0 = " << v0.transpose() << std::endl;
+        std::cout << "v1 = " << v1.transpose() << std::endl;
+        std::cout << "v2 = " << v2.transpose() << std::endl;
+        std::cout << "v3 = " << v3.transpose() << std::endl;
+        exit(1);
+    }
 }
 
 double CalcBeta(const tVector3d &v0, const tVector3d &v1, const tVector3d &v2,
@@ -162,16 +176,50 @@ void CalcDBetaDnormal_and_De(const tVector3d &n0, const tVector3d &n1,
     double sign_cosb = std::cos(beta) > 0 ? 1.0 : -1.0;
     // 2. I'
     tMatrix3d Iprime0 = CalcIprime(n0), Iprime1 = CalcIprime(n1);
-    double deno = std::sqrt(1 - std::min(x * x, 1.0));
+    double deno = std::sqrt(SIM_MAX(1 - x * x, 0));
     if (deno < 1e-10)
     {
         deno = 1e-10;
     }
+    if (std::isnan(deno))
+    {
+        std::cout << "deno is nan, deno = " << deno << std::endl;
+        std::cout << "x = " << x << std::endl;
+        exit(1);
+    }
     double factor = -sign_sinb * 1.0 / deno;
+    if (std::isnan(factor))
+    {
+        std::cout << "factor is nan, factor = " << factor << std::endl;
+        exit(1);
+    }
     dbeta_dn0 = factor * Iprime0.transpose() * n1.normalized();
     dbeta_dn1 = factor * Iprime1.transpose() * n0.normalized();
     dbeta_de = sign_cosb / std::sqrt(1 - y * y) * CalcIprime(e).transpose() *
                (n0_bar.cross(n1_bar));
+    if (dbeta_dn0.hasNaN() == true)
+    {
+        std::cout << "Iprime0 = \n" << Iprime0 << std::endl;
+        std::cout << "dbeta_dn0 hasNan = " << dbeta_dn0.transpose()
+                  << std::endl;
+        std::cout << "factor = " << factor << std::endl;
+        std::cout << "Iprime0 = " << Iprime0 << std::endl;
+        std::cout << "n1 normalized = " << n1.normalized().transpose()
+                  << std::endl;
+        std::cout << "n1 " << n1.transpose() << std::endl;
+        exit(1);
+    }
+    if (dbeta_dn1.hasNaN() == true)
+    {
+        std::cout << "dbeta_dn1 hasNan = " << dbeta_dn1.transpose()
+                  << std::endl;
+        exit(1);
+    }
+    if (dbeta_de.hasNaN() == true)
+    {
+        std::cout << "dbeta_de hasNan = " << dbeta_de.transpose() << std::endl;
+        exit(1);
+    }
 }
 
 tVector12d CalcDBetaDx(const tVector3d &v0, const tVector3d &v1,
@@ -371,13 +419,17 @@ void cDihedralMaterial::Update()
         // 2. calcualte shape
         double e = mRawEdgeLengthArray[i];
         tVector2f height = mRawHeightArray[i];
-        double factor = -mEdgeK * e / (height[0] + height[1]);
+        double height_sum = std::max(1e-7f, height[0] + height[1]);
+
+        double factor = -mEdgeK * e / height_sum;
         tVectorXd force = factor * beta * dAdx / 2;
         tMatrix12d hessian = factor * dAdx * dAdx.transpose();
         if (hessian.hasNaN() == true)
         {
             std::cout << "edge " << i << " hessian nan = \n"
                       << hessian << std::endl;
+            std::cout << "factor = " << factor << std::endl;
+            std::cout << "dAdx = \n" << dAdx << std::endl;
             exit(1);
         }
         // std::cout << "force = " << force.transpose() << std::endl;

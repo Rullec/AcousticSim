@@ -23,6 +23,7 @@ void cBaraffCloth::Init(const Json::Value &conf)
 {
     mRayleightA = cJsonUtil::ParseAsDouble("rayleigh_damping_a", conf);
     mRayleightB = cJsonUtil::ParseAsDouble("rayleigh_damping_b", conf);
+    bool mEnableGravity = cJsonUtil::ParseAsDouble("enable_gravity", conf);
     cBaseCloth::Init(conf);
     mXcur.noalias() = mClothInitPos;
     mXpre.noalias() = mClothInitPos;
@@ -69,8 +70,10 @@ void cBaraffCloth::Init(const Json::Value &conf)
         this->mGravityForce.noalias() = tVectorXd::Zero(GetNumOfFreedom());
         for (int i = 0; i < GetNumOfVertices(); i++)
         {
-            mGravityForce[3 * i + 1] = -mVertexArray[i]->mMass * 9.8;
+            mGravityForce[3 * i + 1] =
+                -mVertexArray[i]->mMass * 9.8 * mEnableGravity;
         }
+        std::cout << "mEnableGravity = " << mEnableGravity << std::endl;
         // std::cout << mGravityForce.transpose();
         // exit(1);
         // mGravityForce[0] = 1;
@@ -259,9 +262,10 @@ void cBaraffCloth::CalcIntForce(const tVectorXd &xcur,
 {
     tVectorXd bending_force = mBendingMaterial->CalcForce(mXcur);
     int_force = mMaterial->CalcTotalForce() + bending_force;
-    // std::cout << "bending force = " << bending_force.transpose() << std::endl;
-    // std::cout << "fint cwiseabs max = " << int_force.cwiseAbs().maxCoeff() <<
-    // std::endl; auto get_pos_mat = [](const tVectorXd &xcur,
+    // std::cout << "bending force = " << bending_force.transpose() <<
+    // std::endl; std::cout << "fint cwiseabs max = " <<
+    // int_force.cwiseAbs().maxCoeff() << std::endl; auto get_pos_mat = [](const
+    // tVectorXd &xcur,
     //                       int id0, int id1, int id2) -> tMatrix3d
     // {
     //     tMatrix3d val = tMatrix3d::Zero();
@@ -501,7 +505,11 @@ void cBaraffCloth::SolveForDx(double dt)
     if (mDragVertexIdx != -1)
         fix_array.push_back(mDragVertexIdx);
     W += PrepareCollisionHessian();
+
+    // std::cout << "W = \n" << W.toDense() << std::endl;
+    // std::cout << "b = \n" << b.transpose() << std::endl;
     Solve(W, b, mDx_buf, threshold, iters, residual, fix_array);
+    // mDx_buf = W.toDense().inverse() * b;
     {
         // dx = W.toDense().inverse() * b;
         // Eigen::SparseLU<tSparseMatd> solver;
@@ -772,7 +780,13 @@ void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
     tVectorXd PInvr, PInvrnext;
     while (iters < max_iters)
     {
+        // printf("-----iter %d-----\n", iters);
         Adi.noalias() = ApplyMatmul(A, d, fix_vertex_array);
+        // if (Adi.hasNaN())
+        // {
+        //     std::cout << "Adi has Nan\n";
+        //     exit(1);
+        // }
         // if (fix_vertex != -1)
         // {
         //     std::cout << "Adi[fixed] = "
@@ -781,7 +795,20 @@ void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
         // }
         PInvr.noalias() = PInv.cwiseProduct(r);
         // Filter(mConstraint_StaticPointIds, q);
-        double alpha = r.dot(PInvr) / (d.dot(Adi));
+        double deno = d.dot(Adi);
+        if (deno == 0)
+        {
+            std::cout << "[warn] deno = 0, break\n";
+
+            break;
+        }
+        double alpha = r.dot(PInvr) / deno;
+        // if (std::isnan(alpha) || std::isinf(alpha))
+        // {
+        //     std::cout << "alpha is nan or inf " << alpha << std::endl;
+        //     std::cout << "deno = " << deno << std::endl;
+        //     exit(1);
+        // }
         x += alpha * d;
 
         // if (iters % recalc_gap == 0)
@@ -791,31 +818,48 @@ void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
         // }
         // else
         rnext.noalias() = r - alpha * Adi;
-        PInvrnext.noalias() = PInv.cwiseProduct(rnext);
-        double beta = rnext.dot(PInvrnext) / (r.dot(PInvr));
-        d = PInvrnext + beta * d;
-
-        r.noalias() = rnext;
-        // if (iters % (max_iters / 10) == 0 || iters == 1)
+        // if (rnext.hasNaN())
         // {
-        //     std::cout << "iters " << iters << " residual = " << r.norm()
-        //               << std::endl;
-        //     // if (fix_vertex != -1)
-        //     // {
-        //     //     std::cout << "r[fixed] = "
-        //     //               << r.segment(3 * fix_vertex, 3).transpose()
-        //     //               << std::endl;
-        //     //     std::cout << "x[fixed] = "
-        //     //               << x.segment(3 * fix_vertex, 3).transpose()
-        //     //               << std::endl;
-        //     //     std::cout << "d[fixed] = "
-        //     //               << d.segment(3 * fix_vertex, 3).transpose()
-        //     //               << std::endl;
-        //     // }
+
+        //     std::cout << "rnext has Nan\n";
+        //     std::cout << "r = " << r.transpose() << std::endl;
+        //     std::cout << "Adi = " << Adi.transpose() << std::endl;
+        //     std::cout << "alpha = " << alpha << std::endl;
+        //     exit(1);
+        // }
+        PInvrnext.noalias() = PInv.cwiseProduct(rnext);
+        // if (PInvrnext.hasNaN())
+        // {
+        //     std::cout << "PInvrnext has Nan\n";
+        //     exit(1);
+        // }
+        double beta = rnext.dot(PInvrnext) / (r.dot(PInvr));
+        if (beta == 0)
+        {
+            std::cout << "[warn] beta = 0, break\n";
+            break;
+            // break;
+        }
+        d = PInvrnext + beta * d;
+        // if (d.hasNaN())
+        // {
+        //     std::cout << "d has Nan\n";
+        //     exit(1);
+        // }
+        r.noalias() = rnext;
+        // if (r.hasNaN())
+        // {
+        //     std::cout << "r has Nan\n";
+        //     exit(1);
         // }
         iters += 1;
     }
     std::cout << "iters " << iters << " residual = " << r.norm() << std::endl;
+    if (x.hasNaN())
+    {
+        std::cout << "x has Nan\n";
+        exit(1);
+    }
 }
 #include "sim/collision/CollisionInfo.h"
 /**
