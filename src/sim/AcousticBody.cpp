@@ -91,12 +91,15 @@ tVectorXd SolveModeITimeSeries(double m, double c, double k, double fprev,
 
     return q_vec;
 }
+
 tDiscretedWavePtr cAcousticBody::SolveVibration(
-    const tVectorXd &MassDiag, const tSparseMatd &StiffMat,
-    const tVector2f &rayleigh_damping, const tVectorXd &xcur_vec,
-    const tVectorXd &qprev_vec, int sampling_freq, float duration)
+    const tEigenArr<tVector> &normal_array, const tVectorXd &MassDiag,
+    const tSparseMatd &StiffMat, const tVector2f &rayleigh_damping,
+    const tVectorXd &xcur_vec, const tVectorXd &qprev_vec, int sampling_freq,
+    float duration)
 {
     std::cout << "mass = " << MassDiag.transpose() << std::endl;
+
     tVectorXd eigenvalues;
     tMatrixXd eigenvecs;
     {
@@ -105,6 +108,8 @@ tDiscretedWavePtr cAcousticBody::SolveVibration(
         tMatrixXd dense_M = tMatrixXd::Zero(MassDiag.size(), MassDiag.size());
         dense_M.diagonal() = MassDiag;
         tMatrixXd dense_K = StiffMat.toDense();
+        std::cout << "stiffness diag = " << dense_K.diagonal().transpose()
+                  << std::endl;
 
         ges.compute(-dense_K, dense_M);
         eigenvalues = ges.eigenvalues().real();
@@ -137,14 +142,16 @@ tDiscretedWavePtr cAcousticBody::SolveVibration(
             damp_a * tVectorXd::Ones(num_of_modes) + damp_b * eigenvalues;
         tVectorXd k_vec = eigenvalues;
 
-        double force_amp = 1e3;
+        double force_amp = 100.0;
 
         // apply force on the x axis of the first vertex
         tVectorXd fprev_vec = tVectorXd::Zero(num_of_modes);
         fprev_vec[0] = force_amp;
 
         tVectorXd UTf0_vec = eigenvecs.transpose() * fprev_vec;
-        tVectorXd freq = (k_vec.cwiseProduct(m_vec.cwiseInverse())).cwiseSqrt();
+        std::cout << "modal k = " << k_vec.transpose() << std::endl;
+        tVectorXd freq =
+            (k_vec.cwiseProduct(m_vec.cwiseInverse())).cwiseSqrt() / (2 * M_PI);
         std::cout << "freq = " << freq.transpose() << std::endl;
         for (size_t i = 0; i < num_of_modes; i++)
         {
@@ -168,10 +175,36 @@ tDiscretedWavePtr cAcousticBody::SolveVibration(
     fout_v.close();
 
     // set data
-    tVectorXd vertex_data = vertex_displacement_time_series.colwise().sum();
+    // wave->SetData(vertex_displacement_time_series.row(0).cast<float>());
     float air_density = 1.225; // kg / m^3
-    tVectorXd wave_pressure = CalcAccel(vertex_data, dt) *
-                              air_density; // pressure = accel * airdensity
-    wave->SetData(wave_pressure.cast<float>());
+    int num_of_v = normal_array.size();
+    int num_of_dt = vertex_displacement_time_series.cols();
+    tEigenArr<tMatrixXd> sound_pressure_array = {};
+    for (int i = 0; i < num_of_v; i++)
+    {
+        // for vertex i
+        tMatrixXd vertex_disp =
+            vertex_displacement_time_series.block(3 * i, 0, 3, num_of_dt);
+        tVector3d normal = normal_array[i].segment(0, 3);
+        // std::cout << "v " << i << " normal = " << normal.transpose() <<
+        // std::endl;
+        tMatrixXd sound_pressure_alltime = tMatrixXd::Zero(3, num_of_dt - 2);
+        for (int t = 1; t < num_of_dt - 1; t++)
+        {
+            // its accel is
+            tVector3d accel = (2 * vertex_disp.col(t) - vertex_disp.col(t - 1) -
+                               vertex_disp.col(t + 1)) /
+                              (dt * dt);
+            tVector3d accel_along_normal = accel.dot(normal) * normal;
+            tVector3d sound_pressure = accel_along_normal * air_density;
+            // std::cout << "sound pressure = " << sound_pressure.transpose() <<
+            // std::endl;
+            sound_pressure_alltime.col(t - 1) = sound_pressure;
+        }
+        sound_pressure_array.push_back(sound_pressure_alltime);
+        break;
+    }
+    // std::cout << "wave = " << sound_pressure_array[0].row(0) << std::endl;
+    wave->SetData(sound_pressure_array[0].row(0).cast<float>());
     return wave;
 }

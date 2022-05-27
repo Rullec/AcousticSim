@@ -42,9 +42,7 @@ cNeoHookeanMaterial::cNeoHookeanMaterial() : cBaseMaterial(eMaterialType::NEO_HO
 
 void cNeoHookeanMaterial::Init(const Json::Value &conf)
 {
-    mMu = cJsonUtil::ParseAsDouble("youngs", conf);
-    mLambda = cJsonUtil::ParseAsDouble("poisson_ratio", conf);
-    SIM_INFO("parse mu {} lambda {}", mMu, mLambda);
+    cBaseMaterial::Init(conf);
 }
 
 tMatrix3d cNeoHookeanMaterial::CalcP(const tMatrix3d &F) const

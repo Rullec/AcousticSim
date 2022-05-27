@@ -10,6 +10,7 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     explicit cAcousticBody();
     tDiscretedWavePtr SolveVibration(
+        const tEigenArr<tVector> & normal_array,
         const tVectorXd &MassDiag,
         const tSparseMatd &StiffMat,
         const tVector2f &rayleigh_damping,

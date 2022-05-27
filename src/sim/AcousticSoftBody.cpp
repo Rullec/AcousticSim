@@ -1,7 +1,8 @@
 #include "sim/AcousticSoftBody.h"
+#include "geometries/Primitives.h"
 #include "sim/AudioOutput.h"
-#include "utils/JsonUtil.h"
 #include "utils/FileUtil.h"
+#include "utils/JsonUtil.h"
 #include <iostream>
 extern cAudioOutputPtr gAudioOutput;
 cAcousticSoftBody::cAcousticSoftBody(int id_) : cSoftBodyImplicit(id_) {}
@@ -23,25 +24,37 @@ void cAcousticSoftBody::Init(const Json::Value &conf)
     // dump
     std::string wave_name = GetWaveName();
     tDiscretedWavePtr wave = nullptr;
-    if (cFileUtil::ExistsFile(wave_name) == false)
+    // if (cFileUtil::ExistsFile(wave_name) == false)
+    // {
+    // for (int i = 0; i < this->GetNumOfTets(); i++)
+    // {
+    //     CheckElementStiffnessMat(i);
+    // }
+    // exit(1);
+    tEigenArr<tVector> normal_array = {};
+    for (auto &v : this->mVertexArray)
     {
-
-        auto wave = SolveVibration(mInvLumpedMassMatrixDiag.cwiseInverse(),
-                                   mGlobalStiffnessSparseMatrix,
-                                   GetRayleightDamping(), mXcur, mXprev,
-                                   mAcousticSamplingFreq, mAcousticDuration);
-
-        wave->DumpToFile(wave_name);
+        normal_array.push_back(v->mNormal);
     }
-    else
-    {
-        wave = std::make_shared<tDiscretedWave>(1e-3, 1);
-        wave->LoadFromFile(wave_name);
-    }
+
+    wave =
+        SolveVibration(
+            normal_array,
+            mInvLumpedMassMatrixDiag.cwiseInverse(),
+                       mGlobalStiffnessSparseMatrix, GetRayleightDamping(),
+                       mXcur, mXprev, mAcousticSamplingFreq, mAcousticDuration);
+
+    //     wave->DumpToFile(wave_name);
+    // }
+    // else
+    // {
+    //     wave = std::make_shared<tDiscretedWave>(1e-3, 1);
+    //     wave->LoadFromFile(wave_name);
+    // }
 
     gAudioOutput->SetWave(wave);
-    SolveForMonopole();
-    exit(1);
+    // SolveForMonopole();
+    // exit(1);
     // sum each vertex's displacement
 }
 
@@ -54,7 +67,7 @@ void cAcousticSoftBody::Update(float dt)
 
 void cAcousticSoftBody::SolveForMonopole()
 {
-    // 1. get outer surface vertex, normal and accel
+    // 1. get outer surface vertex, and accel
     // 2. set a monopole place, calculate the residual
     // 3. output
 }

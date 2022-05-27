@@ -1,6 +1,6 @@
 #include "BaseMaterial.h"
 #include "utils/LogUtil.h"
-
+#include "utils/JsonUtil.h"
 std::string gMaterialModelTypeStr[eMaterialType::NUM_OF_MATERIAL_MODEL] = {
     "LINEAR_ELASTICITY", "COROTATED", "FIX_COROTATED", "STVK", "NEO_HOOKEAN"};
 std::string BuildMaterialTypeStr(eMaterialType type)
@@ -32,3 +32,23 @@ eMaterialType cBaseMaterial::GetType() const { return mType; }
 
 double cBaseMaterial::GetPoissonRatio() const { return this->mLambda; }
 double cBaseMaterial::GetYoungsModulus() const { return this->mMu; }
+
+double cBaseMaterial::GetRho() const { return this->mRho; }
+
+void cBaseMaterial::Init(const Json::Value &conf)
+{
+
+    if (conf.isMember("material"))
+    {
+        std::string material_path = cJsonUtil::ParseAsString("material", conf);
+        Json::Value material_json;
+        SIM_ASSERT(cJsonUtil::LoadJson(material_path, material_json))
+        mMu = cJsonUtil::ParseAsDouble("youngs", material_json);
+        mLambda = cJsonUtil::ParseAsDouble("poisson_ratio", material_json);
+        mRho = cJsonUtil::ParseAsDouble("rho", material_json);
+    }
+    else
+    {
+        SIM_ERROR("no material key")
+    }
+}

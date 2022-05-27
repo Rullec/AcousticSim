@@ -21,6 +21,7 @@ set(CLOTH_SRC
     cloth/QBendingMaterial.cpp
     cloth/BaseMaterial.cpp
     cloth/DihedralBending.cpp
+    cloth/InnerForceCalculator.cpp
     # cloth/ImplicitCloth.cpp   
     # cloth/PBDCloth.cpp
     # cloth/PDCloth.cpp

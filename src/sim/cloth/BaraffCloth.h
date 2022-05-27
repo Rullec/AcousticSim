@@ -6,7 +6,7 @@
  */
 
 SIM_DECLARE_CLASS_AND_PTR(cBaraffMaterial);
-SIM_DECLARE_CLASS_AND_PTR(cBaseMaterial);
+SIM_DECLARE_CLASS_AND_PTR(cBaseBendingMaterial);
 typedef Eigen::Matrix<double, 3, 2> tMatrix32d;
 class cBaraffCloth : public cBaseCloth
 {
@@ -24,12 +24,13 @@ protected:
     tSparseMatd mStiffnessMatrix;
     float mRayleightA, mRayleightB;
     tVector3f mStretchK, mBendingK; // warp weft bias
-    cBaseMaterialPtr mBendingMaterial;
+    cBaseBendingMaterialPtr mBendingMaterial;
     float mRayleighA, mRayleighB; // rayleigh damping
     int mDragVertexIdx;
     tVectorXd mMassMatrixDiag;
     tVectorXd mDx_buf;
-    int mMaxCGIters ; 
+    int mMaxCGIters;
+
     virtual void InitMass(const Json::Value &conf) override;
     virtual void InitMaterialCoords();
     virtual int GetSingleElementFreedom() const;
@@ -46,4 +47,5 @@ protected:
                        const std::vector<int> &fix_vertex_array);
     void Repulsion(double dt, tVectorXd &dx) const;
     tSparseMatd PrepareCollisionHessian();
+
 };

@@ -4,8 +4,8 @@
         {
             "object_name": "soft_body",
             "object_type": "SoftBody",
-            "material_type.stvk": "STVK",
-            "material_type": "NEO_HOOKEAN",
+            "material_type": "STVK",
+            "material_type.stvk": "NEO_HOOKEAN",
             "init_translation": [
                 0,
                 0.2,
@@ -17,14 +17,12 @@
                 0
             ],
             "tet_path": "./data/tetmesh/cube/cube.1",
-            "rayleigh_damping_a": 10,
-            "rayleigh_damping_b": 0,
             "friction": 0,
-            "youngs": 5e8,
-            "poisson_ratio": 0.42,
             "collision_k": 1000,
-            "rho": 1250,
-            "acoustic_sampling_freq": 22400,
+            "rayleigh_damping_a": 50,
+            "rayleigh_damping_b": 0,
+            "material": "config/materials/plasticity.json",
+            "acoustic_sampling_freq": 89600,
             "acoustic_duration": 1
         }
     ],

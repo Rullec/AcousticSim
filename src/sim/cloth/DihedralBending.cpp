@@ -25,7 +25,7 @@ void cDihedralMaterial::Init(const std::vector<tVertexPtr> &v_array,
                              const std::vector<tTrianglePtr> &t_array,
                              const tVector3d &bending_stiffness_warpweftbias)
 {
-    cBaseMaterial::Init(v_array, e_array, t_array,
+    cBaseBendingMaterial::Init(v_array, e_array, t_array,
                         bending_stiffness_warpweftbias);
 
     int numOfVertices = v_array.size();
@@ -377,7 +377,7 @@ void VerifyDBetaDx()
 }
 void cDihedralMaterial::Update()
 {
-    printf("dihedral materia update now!\n");
+    // printf("dihedral materia update now!\n");
 
     int numOfEdges = this->mEdgeArray.size();
 

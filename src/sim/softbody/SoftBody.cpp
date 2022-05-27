@@ -44,11 +44,13 @@ void cSoftBody::Init(const Json::Value &conf)
     cBaseObject::Init(conf);
 
     mTetMeshPath = cJsonUtil::ParseAsString("tet_path", conf);
-    mRho = cJsonUtil::ParseAsFloat("rho", conf);
+
     cTetUtil::LoadTet(mTetMeshPath, mVertexArray, mEdgeArray, mTriangleArray,
                       mTetArrayShared);
     InitTetTransform(conf);
+
     mMaterial = BuildMaterial(conf);
+    mRho = mMaterial->GetRho();
     mRayleighDamplingA = cJsonUtil::ParseAsFloat("rayleigh_damping_a", conf);
     mRayleighDamplingB = cJsonUtil::ParseAsFloat("rayleigh_damping_b", conf);
     SIM_INFO("rayleight damping a {} b {}", mRayleighDamplingA,

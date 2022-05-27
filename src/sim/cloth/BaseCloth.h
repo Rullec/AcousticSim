@@ -56,13 +56,14 @@ protected:
     tVectorXd mIntForce, mGravityForce, mUserForce, mCollisionForce,
         mDampingForce;
     tEigenArr<tVector4i> mEdgeAffectVertexId;
+    tVector2d mClothUVmin, mClothUVmax;
 
     bool mEnableClothFromObj;  // the cloth mesh comes from obj or not
     std::string mClothObjPath; // if the cloth mesh comes from obj, the path
     tVectorXd mXpre, mXcur;    // previous node position & current node position
     std::vector<int> mConstraint_StaticPointIds; // fixed constraint point
     tVectorXd mClothInitPos;                     // init position of the cloth
-
+    float mYDragForce;
     virtual void InitGeometry(
         const Json::Value &conf); // discretazation from square cloth to
     virtual void InitMass(const Json::Value &conf);
@@ -74,4 +75,6 @@ protected:
                                   tVectorXd &damping) const;
     int GetNumOfFreedom() const;
     void CalcNodePositionVector(tVectorXd &pos) const;
+    void ApplyYDragForce(tVectorXd &user_force) const;
+    void DetermineClothUV(tVector2d &min, tVector2d &max) const;
 };

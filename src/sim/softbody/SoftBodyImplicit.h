@@ -22,7 +22,7 @@ protected:
     // virtual void CheckDPDF_part1();
     // virtual void CheckDPDF_part2();
     virtual void CheckDPDx();
-    virtual void CheckElementStiffnessMat();
+    virtual void CheckElementStiffnessMat(int tet_id);
     virtual void CheckGlobalStiffnessMat();
 
     virtual void SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_vertices_pos);

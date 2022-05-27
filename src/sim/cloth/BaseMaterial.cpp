@@ -3,24 +3,24 @@
 #include "utils/LogUtil.h"
 #include <set>
 
-cBaseMaterial::cBaseMaterial()
+cBaseBendingMaterial::cBaseBendingMaterial()
 {
     mStiffnessMat.resize(0, 0);
     mEleKLst.clear();
     mEdgeConstraintVertexLst.clear();
 }
 
-tSparseMatd cBaseMaterial::GetStiffnessMatrix() const
+tSparseMatd cBaseBendingMaterial::GetStiffnessMatrix() const
 {
     return -1 * this->mStiffnessMat;
 }
 
-std::vector<tMatrix12f> cBaseMaterial::GetEleStiffnessMatrixLst() const
+std::vector<tMatrix12f> cBaseBendingMaterial::GetEleStiffnessMatrixLst() const
 {
     return mEleKLst;
 }
 
-std::vector<tVector4i> cBaseMaterial::GetEdgeConstraintVertex() const
+std::vector<tVector4i> cBaseBendingMaterial::GetEdgeConstraintVertex() const
 {
     return mEdgeConstraintVertexLst;
 }
@@ -36,7 +36,7 @@ int SelectAnotherVertex(tTrianglePtr tri, int v0, int v1)
     return *vid_set.begin();
 };
 
-void cBaseMaterial::Init(const std::vector<tVertexPtr> &v_array,
+void cBaseBendingMaterial::Init(const std::vector<tVertexPtr> &v_array,
                          const std::vector<tEdgePtr> &e_array,
                          const std::vector<tTrianglePtr> &t_array,
                          const tVector3d &bending_stiffness_warpweftbias)

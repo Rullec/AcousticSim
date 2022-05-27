@@ -86,5 +86,5 @@ void tDiscretedWave::DumpToFile(std::string path)
     root["data"] = cJsonUtil::BuildVectorJson(data.cast<double>());
 
     cJsonUtil::WriteJson(path, root, true);
-    printf("[log] dump to file %s\n", path);
+    printf("[log] dump to file %s\n", path.c_str());
 }

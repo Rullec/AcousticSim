@@ -360,8 +360,8 @@ void cSoftBodyImplicit::InitDDsDxTensor()
             // for the last point
             mDDsDxTensor_const[i].row(i - 9).noalias() = tVector3d::Ones() * -1;
         }
-        printf("d(Ds)/dx[%d] = ", i);
-        std::cout << mDDsDxTensor_const[i] << std::endl;
+        // printf("d(Ds)/dx[%d] = ", i);
+        // std::cout << mDDsDxTensor_const[i] << std::endl;
     }
 }
 
@@ -433,10 +433,9 @@ cFourOrderTensor CalcDTrEIDF(const tMatrix3d &F)
     return DTrEIDF;
 }
 
-void cSoftBodyImplicit::CheckElementStiffnessMat()
+void cSoftBodyImplicit::CheckElementStiffnessMat(int tet_id)
 {
     UpdateDeformationGradient();
-    size_t tet_id = 0;
     tMatrixXd K_ana = CalcElementStiffnessMatrix(tet_id);
     // std::cout << "K_ana = \n"
     //           << K_ana << std::endl;
@@ -563,7 +562,8 @@ tMatrixXd cSoftBodyImplicit::CalcElementStiffnessMatrix(int tet_id)
         {
             K(i, j) = -mInitTetVolume[tet_id] * T_lst[i].cwiseProduct(dPdx(j)).sum();
         }
-
+    // std::cout << "ele volume " << tet_id << " = " << mInitTetVolume[tet_id] << std::endl;
+    // std::cout << "K_ele for tet " << tet_id << " = \n" << K << std::endl;
     return K;
 }
 

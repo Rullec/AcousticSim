@@ -49,7 +49,7 @@ void cQBendingMaterial::Init(const std::vector<tVertexPtr> &v_array,
                              const std::vector<tTrianglePtr> &t_array,
                              const tVector3d &bending_stiffness_warpweftbias)
 {
-    cBaseMaterial::Init(v_array, e_array, t_array,
+    cBaseBendingMaterial::Init(v_array, e_array, t_array,
                         bending_stiffness_warpweftbias);
 
     int num_of_v = v_array.size();

@@ -10,7 +10,7 @@ tMatrix3d CalcGreenStrain(const tMatrix3d &F)
 /**
  * \brief           calc dE/dF
  *      For more details, please check note "矩阵对矩阵求导" 中二次型的情况
-*/
+ */
 cFourOrderTensor CalcDEDF(const tMatrix3d &F)
 {
     tMatrix3d FT = F.transpose();
@@ -32,15 +32,8 @@ cFourOrderTensor CalcDEDF(const tMatrix3d &F)
     return deriv;
 }
 
-cStvkMaterial::cStvkMaterial() : cBaseMaterial(eMaterialType::STVK)
-{
-}
-void cStvkMaterial::Init(const Json::Value &conf)
-{
-    mMu = cJsonUtil::ParseAsDouble("youngs", conf);
-    mLambda = cJsonUtil::ParseAsDouble("poisson_ratio", conf);
-    // SIM_INFO("parse mu {} lambda {}", mMu, mLambda);
-}
+cStvkMaterial::cStvkMaterial() : cBaseMaterial(eMaterialType::STVK) {}
+void cStvkMaterial::Init(const Json::Value &conf) { cBaseMaterial::Init(conf); }
 tMatrix3d cStvkMaterial::CalcP(const tMatrix3d &F) const
 {
     return CalcP_part1(F) + CalcP_part2(F);
@@ -48,23 +41,23 @@ tMatrix3d cStvkMaterial::CalcP(const tMatrix3d &F) const
 
 /**
  * \brief               calculate dPdF part 1
- *      For more details, please check note "FEM Course 第三部分 离散化 刚度矩阵计算"
-*/
+ *      For more details, please check note "FEM Course 第三部分 离散化
+ * 刚度矩阵计算"
+ */
 cFourOrderTensor cStvkMaterial::CalcDPDF(const tMatrix3d &F) const
 {
     return CalcDPDF_part1(F) + CalcDPDF_part2(F);
 }
 
-void cStvkMaterial::CheckDPDF(const tMatrix3d &F) const
-{
-}
+void cStvkMaterial::CheckDPDF(const tMatrix3d &F) const {}
 extern cFourOrderTensor CalcDFDF(const tMatrix3d &F);
 extern cFourOrderTensor CalcDTrEIDF(const tMatrix3d &F);
 
 /**
  * \brief               calculate dPdF part 1
- *      For more details, please check note "FEM Course 第三部分 离散化 刚度矩阵计算"
-*/
+ *      For more details, please check note "FEM Course 第三部分 离散化
+ * 刚度矩阵计算"
+ */
 cFourOrderTensor cStvkMaterial::CalcDPDF_part1(const tMatrix3d &F) const
 {
     cFourOrderTensor DFDF = CalcDFDF(F);
@@ -84,13 +77,9 @@ cFourOrderTensor cStvkMaterial::CalcDPDF_part2(const tMatrix3d &F) const
     DTrEIDF.TensorMatrixProductWithoutCopy(0, 1, F);
     return (DTrEIDF + trE_DFDF) * mLambda;
 }
-void cStvkMaterial::CheckDPDF_part1(const tMatrix3d &F) const
-{
-}
+void cStvkMaterial::CheckDPDF_part1(const tMatrix3d &F) const {}
 
-void cStvkMaterial::CheckDPDF_part2(const tMatrix3d &F) const
-{
-}
+void cStvkMaterial::CheckDPDF_part2(const tMatrix3d &F) const {}
 tMatrix3d cStvkMaterial::CalcP_part1(const tMatrix3d &F) const
 {
 

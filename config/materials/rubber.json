@@ -1,0 +1,5 @@
+{
+    "youngs": 0.05e9,
+    "poisson_ratio": 0.5,
+    "rho": 1250
+}

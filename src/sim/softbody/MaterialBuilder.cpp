@@ -14,11 +14,13 @@ cBaseMaterialPtr BuildMaterial(const Json::Value &conf)
     case eMaterialType::STVK:
     {
         mat = std::make_shared<cStvkMaterial>();
+        printf("[log] build stvk material\n");
         break;
     }
     case eMaterialType::NEO_HOOKEAN:
     {
         mat = std::make_shared<cNeoHookeanMaterial>();
+        printf("[log] build neo-hookean material\n");
         break;
     }
     default:

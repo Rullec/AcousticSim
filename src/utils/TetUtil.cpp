@@ -144,7 +144,7 @@ void cTetUtil::LoadTet(const std::string &path,
             cur_v->mColor = ColorAn;
             // cur_v->mMass = 1.0;
             istr >> v_id >> cur_v->mPos[0] >> cur_v->mPos[1] >> cur_v->mPos[2];
-            std::cout << "v " << v_id << " = " << cur_v->mPos.transpose() << std::endl;
+            // std::cout << "v " << v_id << " = " << cur_v->mPos.transpose() << std::endl;
             vertex_vec.push_back(cur_v);
         }
     }
@@ -163,14 +163,14 @@ void cTetUtil::LoadTet(const std::string &path,
         {
             istr >> num_of_edges;
             SIM_ASSERT(edge_lines.size() - 1 == num_of_edges);
-            std::cout << "num of edges = " << num_of_edges << std::endl;
+            // std::cout << "num of edges = " << num_of_edges << std::endl;
         }
         else
         {
             int e_id;
             auto cur_e = std::make_shared<tEdge>();
             istr >> e_id >> cur_e->mId0 >> cur_e->mId1;
-            printf("edge %d from %d to %d\n", e_id, cur_e->mId0, cur_e->mId1);
+            // printf("edge %d from %d to %d\n", e_id, cur_e->mId0, cur_e->mId1);
             edge_vec.push_back(cur_e);
         }
     }
@@ -189,7 +189,7 @@ void cTetUtil::LoadTet(const std::string &path,
         {
             istr >> num_of_triangles;
             SIM_ASSERT(tri_lines.size() - 1 == num_of_triangles);
-            std::cout << "num of triangles = " << num_of_triangles << std::endl;
+            // std::cout << "num of triangles = " << num_of_triangles << std::endl;
         }
         else
         {

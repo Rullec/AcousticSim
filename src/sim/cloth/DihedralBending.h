@@ -5,7 +5,7 @@
 using tMatrix12d = Eigen::Matrix<double, 12, 12>;
 using tVector12d = Eigen::Matrix<double, 12, 1>;
 
-class cDihedralMaterial : public cBaseMaterial
+class cDihedralMaterial : public cBaseBendingMaterial
 {
 public:
     explicit cDihedralMaterial();

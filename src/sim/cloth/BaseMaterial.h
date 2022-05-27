@@ -8,10 +8,10 @@ SIM_DECLARE_STRUCT_AND_PTR(tEdge);
 SIM_DECLARE_STRUCT_AND_PTR(tTriangle);
 using tMatrix12f = Eigen::Matrix<float, 12, 12>;
 
-class cBaseMaterial : std::enable_shared_from_this<cBaseMaterial>
+class cBaseBendingMaterial : std::enable_shared_from_this<cBaseBendingMaterial>
 {
 public:
-    cBaseMaterial();
+    cBaseBendingMaterial();
     virtual void Init(const std::vector<tVertexPtr> &v_array,
                       const std::vector<tEdgePtr> &e_array,
                       const std::vector<tTrianglePtr> &t_array,

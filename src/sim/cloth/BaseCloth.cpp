@@ -411,6 +411,10 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
     UpdateVertexNormalFromTriangleNormal();
     mXcur.noalias() = mClothInitPos;
     mXpre.noalias() = mClothInitPos;
+
+    DetermineClothUV(mClothUVmin, mClothUVmax);
+    std::cout << "[log] uv min = " << mClothUVmin.transpose()
+              << " max = " << mClothUVmax.transpose() << std::endl;
 }
 
 void cBaseCloth::InitMass(const Json::Value &conf)
@@ -582,56 +586,55 @@ void cBaseCloth::ApplyUserPerturbForceOnce(tPerturb *) {}
 #include "utils/ColorUtil.h"
 void cBaseCloth::Update(float dt)
 {
-    // std::vector<tVector> old_color(0);
-    // for (auto &info : mPointTriangleCollisionInfo)
-    // {
-    //     if (info->mObj0->GetObjId() == this->mObjId)
-    //     {
-    //         // check connected triangle
-    //         old_color.push_back(mVertexArray[info->mVertexId0]->mColor);
-    //         mVertexArray[info->mVertexId0]->mColor = ColorShoJoHi;
-    //     }
-    //     else
-    //     {
-    //         old_color.push_back(
-    //             mVertexArray[mTriangleArray[info->mTriangleId1]
-    //                                    ->mId0]
-    //                 ->mColor);
-    //         old_color.push_back(
-    //             mVertexArray[mTriangleArray[info->mTriangleId1]
-    //                                    ->mId1]
-    //                 ->mColor);
-    //         old_color.push_back(
-    //             mVertexArray[mTriangleArray[info->mTriangleId1]
-    //                                    ->mId2]
-    //                 ->mColor);
-
-    //         ChangeTriangleColor(info->mTriangleId1,
-    //                             ColorShoJoHi.segment(0, 3).cast<float>());
-    //     }
-    // }
     this->UpdatePos(dt);
     UpdateTriangleNormal();
     UpdateVertexNormalFromTriangleNormal();
-    // int cur_idx = 0;
-    // for (auto &info : mPointTriangleCollisionInfo)
-    // {
-    //     if (info->mObj0->GetObjId() == this->mObjId)
-    //     {
-    //         // check connected triangle
-    //         mVertexArray[info->mVertexId0]->mColor = old_color[cur_idx++];
-    //     }
-    //     else
-    //     {
+}
 
-    //         mVertexArray[mTriangleArray[info->mTriangleId1]->mId0]
-    //             ->mColor = old_color[cur_idx++];
+void cBaseCloth::ApplyYDragForce(tVectorXd &user_force) const
+{
+    std::vector<int> upper_v_lst, lower_v_lst;
 
-    //         mVertexArray[mTriangleArray[info->mTriangleId1]->mId1]
-    //             ->mColor = old_color[cur_idx++];
+    double v_max = mClothUVmax[1], v_min = mClothUVmin[1];
 
-    //         mVertexArray[mTriangleArray[info->mTriangleId1]->mId2]
-    //             ->mColor = old_color[cur_idx++];
-    //     }
-    // }
+    // 1. get upper edge v
+    for (int i = 0; i < GetNumOfVertices(); i++)
+    {
+        float cur_v = mVertexArray[i]->muv[1];
+        if (std::fabs(v_max - cur_v) < 1e-5)
+        {
+            upper_v_lst.push_back(i);
+        }
+        if (std::fabs(v_min - cur_v) < 1e-5)
+        {
+            lower_v_lst.push_back(i);
+        }
+    }
+    // 2. get lower edge v
+    std::cout << "num upper v = " << upper_v_lst.size() << std::endl;
+    std::cout << "num lower v = " << upper_v_lst.size() << std::endl;
+    // 3. apply vertex
+    for (auto &v : upper_v_lst)
+    {
+        user_force[3 * v + 1] += mYDragForce / upper_v_lst.size();
+    }
+    for (auto &v : lower_v_lst)
+    {
+        user_force[3 * v + 1] += -mYDragForce / lower_v_lst.size();
+    }
+}
+
+void cBaseCloth::DetermineClothUV(tVector2d &min, tVector2d &max) const
+{
+    min = tVector2d::Ones() * 1e5;
+    max = tVector2d::Ones() * -1e5;
+    for (auto &v : mVertexArray)
+    {
+        auto cur_uv = v->muv;
+        max[0] = SIM_MAX(max[0], cur_uv[0]);
+        max[1] = SIM_MAX(max[1], cur_uv[1]);
+
+        min[0] = SIM_MIN(min[0], cur_uv[0]);
+        min[1] = SIM_MIN(min[1], cur_uv[1]);
+    }
 }
