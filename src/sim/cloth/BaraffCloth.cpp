@@ -24,6 +24,7 @@ void cBaraffCloth::Init(const Json::Value &conf)
     mRayleightA = cJsonUtil::ParseAsDouble("rayleigh_damping_a", conf);
     mRayleightB = cJsonUtil::ParseAsDouble("rayleigh_damping_b", conf);
     bool mEnableGravity = cJsonUtil::ParseAsDouble("enable_gravity", conf);
+    mMaxCGIters = cJsonUtil::ParseAsInt("max_iters", conf);
     cBaseCloth::Init(conf);
     mXcur.noalias() = mClothInitPos;
     mXpre.noalias() = mClothInitPos;
@@ -735,7 +736,7 @@ void cBaraffCloth::Solve(const tSparseMatd &A, const tVectorXd &b, tVectorXd &x,
 {
     // std::cout << "Eigen::nbThreads() = " << Eigen::nbThreads() << std::endl;
     int recalc_gap = 20;
-    int max_iters = 50;
+    int max_iters = mMaxCGIters;
     // tVectorXd r = b - A * x;
     tVectorXd r = b - ApplyMatmul(A, x, fix_vertex_array);
     for (auto fix_vertex : fix_vertex_array)

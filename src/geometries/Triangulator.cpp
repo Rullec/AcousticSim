@@ -94,17 +94,8 @@ void cTriangulator::BuildGeometry(const Json::Value &config,
     }
     else if (geo_type == "single_triangle")
     {
-        cTriangulator::BuildGeometry_UniformTriangle(
-            cloth_shape, tVector2i(1, 1), vertices_array, edges_array,
-            triangles_array, false);
-        // remove a vertex
-        vertices_array.pop_back();
-        // remove the last two edge
-        edges_array.pop_back();
-        edges_array.pop_back();
-        edges_array[2]->mTriangleId1 = -1;
-        // remove a triangle
-        triangles_array.pop_back();
+        cTriangulator::BuildGeometry_SingleTriangle(
+            cloth_shape, vertices_array, edges_array, triangles_array);
     }
     else if (geo_type == "regular_triangle_perturb")
     {
@@ -800,4 +791,96 @@ void cTriangulator::RotateMaterialCoords(
     }
     // std::cout << "---------------------\n";
     // exit(1);
+}
+
+void cTriangulator::BuildGeometry_SingleTriangle(
+    const tVector2d &mesh_shape, std::vector<tVertexPtr> &vertices_array,
+    std::vector<tEdgePtr> &edges_array,
+    std::vector<tTrianglePtr> &triangles_array)
+{
+
+    // 1. clear all
+    vertices_array.clear();
+    edges_array.clear();
+    triangles_array.clear();
+
+    double height = mesh_shape.x();
+    double width = mesh_shape.y();
+    int num_of_height_div = 1;
+    int num_of_width_div = 1;
+    double unit_edge_h = height / num_of_height_div;
+    double unit_edge_w = width / num_of_width_div;
+    double unit_edge_skew =
+        std::sqrt(unit_edge_h * unit_edge_h + unit_edge_w * unit_edge_w);
+    /*
+    (0, 0), HEIGHT dimension, col
+    --------------------------- y+ world frame y axis, texture y axis
+    |                           cartesian pos (num_of_height_div, 0)
+    |
+    |
+    |
+    |
+    |
+    |
+    |
+    | WIDTH, world frame x axis, texture x axis, row
+    x+
+    cartesian pos (0, num_of_width_div)
+    */
+
+    /*
+    v0 - v1
+    |
+    v2
+    */
+
+    // 2. create vertices
+    BuildRectVertices(height, width, num_of_height_div, num_of_width_div,
+                      vertices_array, false);
+    vertices_array.pop_back();
+
+    // 3. create triangles
+    auto cur_tri = std::make_shared<tTriangle>();
+    cur_tri->mId0 = 0;
+    cur_tri->mId1 = 2;
+    cur_tri->mId2 = 1;
+    cur_tri->mEId0 = 0;
+    cur_tri->mEId1 = 0;
+    cur_tri->mEId2 = 0;
+
+    triangles_array.push_back(cur_tri);
+
+    // 4. create edges
+    auto e0 = std::make_shared<tEdge>();
+    auto e1 = std::make_shared<tEdge>();
+    auto e2 = std::make_shared<tEdge>();
+    {
+        e0->mIsBoundary = true;
+        e0->mId0 = 0;
+        e0->mId1 = 1;
+        e0->mRawLength = unit_edge_w;
+        e0->mTriangleId0 = 0;
+        e0->mTriangleId1 = -1;
+    }
+    {
+        e1->mIsBoundary = true;
+        e1->mId0 = 0;
+        e1->mId1 = 2;
+        e1->mRawLength = unit_edge_h;
+        e1->mTriangleId0 = 0;
+        e1->mTriangleId1 = -1;
+    }
+    {
+        e2->mIsBoundary = true;
+        e2->mId0 = 0;
+        e2->mId1 = 1;
+        e2->mRawLength =
+            std::sqrt(unit_edge_h * unit_edge_h + unit_edge_w * unit_edge_w);
+        e2->mTriangleId0 = 0;
+        e2->mTriangleId1 = -1;
+    }
+
+    edges_array.push_back(e0);
+    edges_array.push_back(e1);
+    edges_array.push_back(e2);
 }

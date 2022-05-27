@@ -29,6 +29,7 @@ protected:
     int mDragVertexIdx;
     tVectorXd mMassMatrixDiag;
     tVectorXd mDx_buf;
+    int mMaxCGIters ; 
     virtual void InitMass(const Json::Value &conf) override;
     virtual void InitMaterialCoords();
     virtual int GetSingleElementFreedom() const;

@@ -42,8 +42,8 @@ void cDihedralMaterial::Init(const std::vector<tVertexPtr> &v_array,
         int v0 = edge->mId0;
         int v1 = edge->mId1;
         mRawEdgeLengthArray[i] = (v_array[v0]->mPos - v_array[v1]->mPos).norm();
-        std::cout << "raw edge length " << i << " = " << mRawEdgeLengthArray[i]
-                  << std::endl;
+        // std::cout << "raw edge length " << i << " = " << mRawEdgeLengthArray[i]
+        //           << std::endl;
     }
 
     // 2. raw triangle area

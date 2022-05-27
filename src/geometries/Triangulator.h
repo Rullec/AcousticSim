@@ -61,6 +61,11 @@ protected:
         std::vector<tEdgePtr> &edges_array,
         std::vector<tTrianglePtr> &triangles_array, bool add_vertices_perturb);
 
+    static void
+    BuildGeometry_SingleTriangle(const tVector2d &mesh_shape,
+                                 std::vector<tVertexPtr> &vertices_array,
+                                 std::vector<tEdgePtr> &edges_array,
+                                 std::vector<tTrianglePtr> &triangles_array);
     static void BuildRectVertices(double height, double width, int height_div,
                                   int width_div,
                                   std::vector<tVertexPtr> &edges_array,
