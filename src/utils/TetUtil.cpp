@@ -256,12 +256,12 @@ void cTetUtil::LoadTet(const std::string &path,
             int t_id;
             auto cur_t = std::make_shared<tTet>();
             istr >> t_id >> cur_t->mVertexId[0] >> cur_t->mVertexId[1] >> cur_t->mVertexId[2] >> cur_t->mVertexId[3];
-            printf("tet %d contains node %d %d %d %d\n",
-                   t_id,
-                   cur_t->mVertexId[0],
-                   cur_t->mVertexId[1],
-                   cur_t->mVertexId[2],
-                   cur_t->mVertexId[3]);
+            // printf("tet %d contains node %d %d %d %d\n",
+            //        t_id,
+            //        cur_t->mVertexId[0],
+            //        cur_t->mVertexId[1],
+            //        cur_t->mVertexId[2],
+            //        cur_t->mVertexId[3]);
             // triangle0 : v0, v1, v2
             cur_t->mTriangleId[0] =
                 FindTriangle(

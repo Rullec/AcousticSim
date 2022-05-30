@@ -1,21 +1,14 @@
 #include "BaseMaterial.h"
 #include "utils/LogUtil.h"
 
-std::string gMaterialModelTypeStr[eMaterialType::NUM_OF_MATERIAL_MODEL] =
-    {
-        "LINEAR_ELASTICITY",
-        "COROTATED",
-        "FIX_COROTATED",
-        "STVK",
-        "NEO_HOOKEAN"};
+std::string gMaterialModelTypeStr[eMaterialType::NUM_OF_MATERIAL_MODEL] = {
+    "LINEAR_ELASTICITY", "COROTATED", "FIX_COROTATED", "STVK", "NEO_HOOKEAN"};
 std::string BuildMaterialTypeStr(eMaterialType type)
 {
     return gMaterialModelTypeStr[type];
 };
 
-cBaseMaterial::cBaseMaterial(eMaterialType type) : mType(type)
-{
-}
+cBaseMaterial::cBaseMaterial(eMaterialType type) : mType(type) {}
 
 void cBaseMaterial::CheckDPDF(const tMatrix3d &F) const
 {
@@ -35,7 +28,7 @@ eMaterialType BuildMaterialTypeFromStr(std::string name)
     return eMaterialType::NUM_OF_MATERIAL_MODEL;
 }
 
-eMaterialType cBaseMaterial::GetType() const
-{
-    return mType;
-}
+eMaterialType cBaseMaterial::GetType() const { return mType; }
+
+double cBaseMaterial::GetPoissonRatio() const { return this->mLambda; }
+double cBaseMaterial::GetYoungsModulus() const { return this->mMu; }

@@ -46,16 +46,18 @@ endif()
 
 # add_executable(cuda_main cloth/BaraffClothGpu.cu)
 set(SOFTBODY_SRC
-    # softbody/SoftBodyImplicit.cpp
-    # softbody/SoftBody.cpp
-    # softbody/FourOrderTensor.cpp
-    # softbody/ThreeOrderTensor.cpp
-    # softbody/NeoHookeanMaterial.cpp
-    # softbody/StvkMaterial.cpp
-    # softbody/MaterialBuilder.cpp
-    # softbody/BaseMaterial.cpp
-    # AcousticBody.cpp
-    # AcousticSoftBody.cpp
+    softbody/SoftBodyImplicit.cpp
+    softbody/SoftBody.cpp
+    softbody/FourOrderTensor.cpp
+    softbody/ThreeOrderTensor.cpp
+    softbody/NeoHookeanMaterial.cpp
+    softbody/StvkMaterial.cpp
+    softbody/MaterialBuilder.cpp
+    softbody/BaseMaterial.cpp
+    AcousticBody.cpp
+    AcousticSoftBody.cpp
+    AudioOutput.cpp
+    AudioWave.cpp
 )
 set(
     SIM_SRC
@@ -65,7 +67,6 @@ set(
     KinematicBody.cpp
     KinematicBodyBuilder.cpp
     Perturb.cpp
-    # AudioOutput.cpp
     SimObjectBuilder.cpp
     collision/CollisionDetecter.cpp
     collision/BVHCollisionDetecter.cpp

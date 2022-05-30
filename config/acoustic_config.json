@@ -20,10 +20,12 @@
             "rayleigh_damping_a": 10,
             "rayleigh_damping_b": 0,
             "friction": 0,
-            "youngs": 1e7,
-            "poisson_ratio": 0.7,
+            "youngs": 5e8,
+            "poisson_ratio": 0.42,
             "collision_k": 1000,
-            "rho": 1000
+            "rho": 1250,
+            "acoustic_sampling_freq": 22400,
+            "acoustic_duration": 1
         }
     ],
     "window_height": 800,

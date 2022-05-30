@@ -20,7 +20,7 @@ TimeUtil.cpp
 RotUtil.cpp
 # SysUtil.cpp
 ObjUtil.cpp
-# TetUtil.cpp
+TetUtil.cpp
 # DepthImageSaver.cpp
 MPIUtil.cpp
 StringUtil.cpp

@@ -1,21 +1,19 @@
 #include "SoftBody.h"
-#include "utils/JsonUtil.h"
-#include "utils/TetUtil.h"
-#include "utils/RenderUtil.h"
-#include "geometries/Tetrahedron.h"
 #include "geometries/Primitives.h"
+#include "geometries/Tetrahedron.h"
 #include "sim/softbody/BaseMaterial.h"
 #include "sim/softbody/MaterialBuilder.h"
+#include "utils/JsonUtil.h"
+#include "utils/RenderUtil.h"
+#include "utils/RotUtil.h"
+#include "utils/TetUtil.h"
 #include <iostream>
+#include <set>
 // extern const tVector gGravity;
 
-cSoftBody::cSoftBody(int id) : cBaseObject(eObjectType::SOFTBODY_TYPE, id)
-{
-}
+cSoftBody::cSoftBody(int id) : cBaseObject(eObjectType::SOFTBODY_TYPE, id) {}
 
-cSoftBody::~cSoftBody()
-{
-}
+cSoftBody::~cSoftBody() {}
 
 void cSoftBody::InitTetTransform(const Json::Value &conf)
 {
@@ -25,10 +23,13 @@ void cSoftBody::InitTetTransform(const Json::Value &conf)
     mInitRotation = cJsonUtil::ReadVectorJson(
                         cJsonUtil::ParseAsValue("init_rotation", conf))
                         .segment(0, 3);
-    tMatrix transform = cRotUtil::AxisAngleToRotmat(cMathUtil::Expand(mInitRotation, 0));
+    tMatrix transform =
+        cRotUtil::AxisAngleToRotmat(cMathUtil::Expand(mInitRotation, 0));
     transform.block(0, 3, 3, 1) = mInitTranslation.segment(0, 3);
-    std::cout << "[debug] apply init rotation(AA) = " << mInitRotation.transpose() << std::endl;
-    std::cout << "[debug] apply init translation = " << mInitTranslation.transpose() << std::endl;
+    std::cout << "[debug] apply init rotation(AA) = "
+              << mInitRotation.transpose() << std::endl;
+    std::cout << "[debug] apply init translation = "
+              << mInitTranslation.transpose() << std::endl;
     for (auto &v : mVertexArray)
     {
         v->mPos[3] = 1;
@@ -37,29 +38,28 @@ void cSoftBody::InitTetTransform(const Json::Value &conf)
 }
 /**
  * \brief           create and allocate the softbody data
-*/
+ */
 void cSoftBody::Init(const Json::Value &conf)
 {
     cBaseObject::Init(conf);
 
     mTetMeshPath = cJsonUtil::ParseAsString("tet_path", conf);
     mRho = cJsonUtil::ParseAsFloat("rho", conf);
-    cTetUtil::LoadTet(mTetMeshPath,
-                      mVertexArray,
-                      mEdgeArray,
-                      mTriangleArray,
+    cTetUtil::LoadTet(mTetMeshPath, mVertexArray, mEdgeArray, mTriangleArray,
                       mTetArrayShared);
     InitTetTransform(conf);
     mMaterial = BuildMaterial(conf);
     mRayleighDamplingA = cJsonUtil::ParseAsFloat("rayleigh_damping_a", conf);
     mRayleighDamplingB = cJsonUtil::ParseAsFloat("rayleigh_damping_b", conf);
-    SIM_INFO("rayleight damping a {} b {}", mRayleighDamplingA, mRayleighDamplingB);
+    SIM_INFO("rayleight damping a {} b {}", mRayleighDamplingA,
+             mRayleighDamplingB);
     mFrictionCoef = cJsonUtil::ParseAsFloat("friction", conf);
     mCollisionK = cJsonUtil::ParseAsFloat("collision_k", conf);
 
     std::cout << "load from path " << mTetMeshPath << " done\n";
     UpdateTriangleNormal();
     UpdateVertexNormalFromTriangleNormal();
+    InitSurface();
 
     InitInvDm();
     InitPos();
@@ -80,7 +80,8 @@ void cSoftBody::InitForceVector()
     mGravityForce.noalias() = tVectorXd::Zero(3 * num_of_v);
     for (int i = 0; i < num_of_v; i++)
     {
-        // mGravityForce.segment(3 * i, 3) = gGravity.segment(0, 3).cast<double>() / mInvLumpedMassMatrixDiag[3 * i];
+        // mGravityForce.segment(3 * i, 3) = gGravity.segment(0,
+        // 3).cast<double>() / mInvLumpedMassMatrixDiag[3 * i];
     }
 }
 void cSoftBody::InitPos()
@@ -89,7 +90,8 @@ void cSoftBody::InitPos()
     mXcur.resize(3 * num_of_v);
     for (int i = 0; i < num_of_v; i++)
     {
-        mXcur.segment(3 * i, 3) = mVertexArray[i]->mPos.segment(0, 3).cast<double>();
+        mXcur.segment(3 * i, 3) =
+            mVertexArray[i]->mPos.segment(0, 3).cast<double>();
     }
     mXprev.noalias() = mXcur;
 }
@@ -113,8 +115,7 @@ void cSoftBody::SyncPosToVectorArray()
     }
 }
 
-void cSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                   int &st) const
+void cSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
 {
     tVector normal = tVector::Zero();
     tVector black_color = tVector(0, 0, 0, 1);
@@ -128,22 +129,25 @@ void cSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
             normal /= 2;
         }
 
-        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArray[e->mId0], mVertexArray[e->mId1],
-                                 normal, res, st, black_color);
+        cRenderUtil::CalcEdgeDrawBufferSingle(mVertexArray[e->mId0],
+                                              mVertexArray[e->mId1], normal,
+                                              res, st, black_color);
     }
 }
 
 /**
  * \brief           Calcualte per triangle normal direction
-*/
+ */
 void cSoftBody::UpdateTriangleNormal()
 {
     for (int i = 0; i < this->mTriangleArray.size(); i++)
     {
         auto cur_t = mTriangleArray[i];
-        tVector e01 = mVertexArray[cur_t->mId1]->mPos - mVertexArray[cur_t->mId0]->mPos;
+        tVector e01 =
+            mVertexArray[cur_t->mId1]->mPos - mVertexArray[cur_t->mId0]->mPos;
 
-        tVector e12 = mVertexArray[cur_t->mId2]->mPos - mVertexArray[cur_t->mId1]->mPos;
+        tVector e12 =
+            mVertexArray[cur_t->mId2]->mPos - mVertexArray[cur_t->mId1]->mPos;
         cur_t->mNormal = e01.cross3(e12).normalized();
     }
 }
@@ -169,22 +173,13 @@ void cSoftBody::UpdateVertexNormalFromTriangleNormal()
     }
     // cTimeUtil::End("update_v_normal");
 }
-int cSoftBody::GetNumOfTriangles() const
-{
-    return this->mTriangleArray.size();
-}
-int cSoftBody::GetNumOfEdges() const
-{
-    return this->mEdgeArray.size();
-}
-int cSoftBody::GetNumOfVertices() const
-{
-    return this->mVertexArray.size();
-}
+int cSoftBody::GetNumOfTriangles() const { return this->mTriangleArray.size(); }
+int cSoftBody::GetNumOfEdges() const { return this->mEdgeArray.size(); }
+int cSoftBody::GetNumOfVertices() const { return this->mVertexArray.size(); }
 
 /**
  * \brief            update the result
-*/
+ */
 void cSoftBody::Update(float dt)
 {
     UpdateDeformationGradient();
@@ -211,15 +206,18 @@ void cSoftBody::UpdateExtForce()
             mVertexArray[i]->mPos[1] = 0;
             float normal_force_amp = -dist * k;
 
-            tVector3d friction_dir = -1 * (mXcur.segment(3 * i, 3) - mXprev.segment(3 * i, 3));
+            tVector3d friction_dir =
+                -1 * (mXcur.segment(3 * i, 3) - mXprev.segment(3 * i, 3));
             friction_dir[1] = 0;
             friction_dir.normalize();
-            float friction_force_amp = KinectFrictionCoef * std::fabs(normal_force_amp);
+            float friction_force_amp =
+                KinectFrictionCoef * std::fabs(normal_force_amp);
             tVector3d force = tVector3d::Zero();
             force[1] = normal_force_amp;
             force[0] = friction_dir[0] * friction_force_amp;
             force[2] = friction_dir[2] * friction_force_amp;
-            // std::cout << "[col] force " << force.transpose() << " on v" << i << std::endl;
+            // std::cout << "[col] force " << force.transpose() << " on v" << i
+            // << std::endl;
             mExtForce.segment(3 * i, 3) = force;
         }
     }
@@ -234,8 +232,11 @@ void cSoftBody::UpdateExtForce()
 void cSoftBody::SolveForNextPos(float dt)
 {
     // AX = b; A(system matrix), b(residual)
-    // std::cout << "mGravityForce = " << mGravityForce.transpose() << std::endl;
-    tVectorXd accel = mInvLumpedMassMatrixDiag.cwiseProduct(mIntForce + mExtForce + mGravityForce + mUserForce) * dt * dt;
+    // std::cout << "mGravityForce = " << mGravityForce.transpose() <<
+    // std::endl;
+    tVectorXd accel = mInvLumpedMassMatrixDiag.cwiseProduct(
+                          mIntForce + mExtForce + mGravityForce + mUserForce) *
+                      dt * dt;
     tVectorXd Xnew = accel + 2 * this->mXcur - mXprev;
     tVectorXd Xnew_new = accel + mXcur;
 
@@ -246,7 +247,7 @@ void cSoftBody::SolveForNextPos(float dt)
 
 /**
  * \brief           create Dminv
-*/
+ */
 void cSoftBody::InitInvDm()
 {
     int num_of_tet = this->mTetArrayShared.size();
@@ -254,10 +255,18 @@ void cSoftBody::InitInvDm()
     for (int i = 0; i < num_of_tet; i++)
     {
         auto cur_tet = mTetArrayShared[i];
-        tVector3d X1 = this->mVertexArray[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<double>();
-        tVector3d X2 = this->mVertexArray[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<double>();
-        tVector3d X3 = this->mVertexArray[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<double>();
-        tVector3d X4 = this->mVertexArray[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<double>();
+        tVector3d X1 = this->mVertexArray[cur_tet->mVertexId[0]]
+                           ->mPos.segment(0, 3)
+                           .cast<double>();
+        tVector3d X2 = this->mVertexArray[cur_tet->mVertexId[1]]
+                           ->mPos.segment(0, 3)
+                           .cast<double>();
+        tVector3d X3 = this->mVertexArray[cur_tet->mVertexId[2]]
+                           ->mPos.segment(0, 3)
+                           .cast<double>();
+        tVector3d X4 = this->mVertexArray[cur_tet->mVertexId[3]]
+                           ->mPos.segment(0, 3)
+                           .cast<double>();
         tMatrix3d cur_dm;
         cur_dm.col(0) = X1 - X4;
         cur_dm.col(1) = X2 - X4;
@@ -278,7 +287,8 @@ void cSoftBody::UpdateDeformationGradient()
 
     for (int i = 0; i < num_of_tet; i++)
     {
-        // 1. calculate Ds (please check the siggraph 2012 note for more details)
+        // 1. calculate Ds (please check the siggraph 2012 note for more
+        // details)
         UpdateDeformationGradientForTet(i);
         // std::cout << "calc tet " << i << " F = \n " << mF[i] << std::endl;
     }
@@ -287,10 +297,18 @@ void cSoftBody::UpdateDeformationGradient()
 void cSoftBody::UpdateDeformationGradientForTet(int i)
 {
     auto cur_tet = mTetArrayShared[i];
-    tVector3d x1 = this->mVertexArray[cur_tet->mVertexId[0]]->mPos.segment(0, 3).cast<double>();
-    tVector3d x2 = this->mVertexArray[cur_tet->mVertexId[1]]->mPos.segment(0, 3).cast<double>();
-    tVector3d x3 = this->mVertexArray[cur_tet->mVertexId[2]]->mPos.segment(0, 3).cast<double>();
-    tVector3d x4 = this->mVertexArray[cur_tet->mVertexId[3]]->mPos.segment(0, 3).cast<double>();
+    tVector3d x1 = this->mVertexArray[cur_tet->mVertexId[0]]
+                       ->mPos.segment(0, 3)
+                       .cast<double>();
+    tVector3d x2 = this->mVertexArray[cur_tet->mVertexId[1]]
+                       ->mPos.segment(0, 3)
+                       .cast<double>();
+    tVector3d x3 = this->mVertexArray[cur_tet->mVertexId[2]]
+                       ->mPos.segment(0, 3)
+                       .cast<double>();
+    tVector3d x4 = this->mVertexArray[cur_tet->mVertexId[3]]
+                       ->mPos.segment(0, 3)
+                       .cast<double>();
     tMatrix3d Ds = tMatrix3d::Zero();
     Ds.col(0) = x1 - x4;
     Ds.col(1) = x2 - x4;
@@ -304,35 +322,38 @@ void cSoftBody::InitTetVolume()
     for (int i = 0; i < mTetArrayShared.size(); i++)
     {
         auto tet = mTetArrayShared[i];
-        mInitTetVolume[i] = cTetUtil::CalculateTetVolume(
-            mVertexArray[tet->mVertexId[0]]->mPos,
-            mVertexArray[tet->mVertexId[1]]->mPos,
-            mVertexArray[tet->mVertexId[2]]->mPos,
-            mVertexArray[tet->mVertexId[3]]->mPos);
+        mInitTetVolume[i] =
+            cTetUtil::CalculateTetVolume(mVertexArray[tet->mVertexId[0]]->mPos,
+                                         mVertexArray[tet->mVertexId[1]]->mPos,
+                                         mVertexArray[tet->mVertexId[2]]->mPos,
+                                         mVertexArray[tet->mVertexId[3]]->mPos);
     }
 }
 
-double cSoftBody::CalcEnergy()
-{
-    return 0;
-}
+double cSoftBody::CalcEnergy() { return 0; }
 
 /**
- * \brief           the "consistent" mass matrix, as defined in FEM, is a real symmetric matrix shaped as 3Nx3N. Its derivation is mostly based on the principle of virtual work. For more details please check "The Finite Element Process" P165 by Klaus-Jurgen Bathe. (and my own note) 
- * 
- *      In practice (for a better convergence and simplicity), we use "lumped" mass matrix. The most used lumped scheme is the so-called "row-diagnozation-sum" lump, which reduce all weight in consistent mass matrix to its diagnoal.
- * 
+ * \brief           the "consistent" mass matrix, as defined in FEM, is a real
+ * symmetric matrix shaped as 3Nx3N. Its derivation is mostly based on the
+ * principle of virtual work. For more details please check "The Finite Element
+ * Process" P165 by Klaus-Jurgen Bathe. (and my own note)
+ *
+ *      In practice (for a better convergence and simplicity), we use "lumped"
+ * mass matrix. The most used lumped scheme is the so-called
+ * "row-diagnozation-sum" lump, which reduce all weight in consistent mass
+ * matrix to its diagnoal.
+ *
  *      Diagonalization Lumped Mass Matrix(DLMM)
- * 
- * 
+ *
+ *
  *  M_{total} = rho / 20 * [ \sum_e
- *       V_e * S_e^T * 
+ *       V_e * S_e^T *
  *          (2 1 1 1)
  *          (1 2 1 1)
  *          (1 1 2 1)
- *          (1 1 1 2) * S_e 
+ *          (1 1 1 2) * S_e
  * ]
-*/
+ */
 void cSoftBody::InitDiagLumpedMassMatrix()
 {
     int dof = GetNumOfFreedoms();
@@ -349,7 +370,8 @@ void cSoftBody::InitDiagLumpedMassMatrix()
         // 1. shape the volume
         double tet_volume = mInitTetVolume[i];
         // 2. shape the selection matrix
-        double lump_value_row_sum = ele_mass_template.row(0).sum(); // lump_value_row_sum = 5
+        double lump_value_row_sum =
+            ele_mass_template.row(0).sum(); // lump_value_row_sum = 5
         double lump_value = lump_value_row_sum * tet_volume;
         // 3. add the component
         for (int j = 0; j < 4; j++)
@@ -369,24 +391,19 @@ void cSoftBody::InitDiagLumpedMassMatrix()
         mInvLumpedMassMatrixDiag[3 * i + 1] = val;
         mInvLumpedMassMatrixDiag[3 * i + 2] = val;
     }
-    // std::cout << "mInvLumpedMassMatrixDiag = " << mInvLumpedMassMatrixDiag.transpose();
+    // std::cout << "mInvLumpedMassMatrixDiag = " <<
+    // mInvLumpedMassMatrixDiag.transpose();
     SIM_ASSERT(mInvLumpedMassMatrixDiag.hasNaN() == false);
     // exit(1);
 }
 
-int cSoftBody::GetNumOfTets() const
-{
-    return this->mTetArrayShared.size();
-}
+int cSoftBody::GetNumOfTets() const { return this->mTetArrayShared.size(); }
 
-int cSoftBody::GetNumOfFreedoms() const
-{
-    return 3 * GetNumOfVertices();
-}
+int cSoftBody::GetNumOfFreedoms() const { return 3 * GetNumOfVertices(); }
 #include "sim/Perturb.h"
 /**
  * \brief           apply perturb force for once
-*/
+ */
 void cSoftBody::ApplyUserPerturbForceOnce(tPerturb *pert)
 {
     mUserForce.setZero();
@@ -399,16 +416,14 @@ void cSoftBody::ApplyUserPerturbForceOnce(tPerturb *pert)
     mUserForce.segment(3 * v0, 3) += force * bary[0];
     mUserForce.segment(3 * v1, 3) += force * bary[1];
     mUserForce.segment(3 * v2, 3) += force * bary[2];
-    std::cout << "[user] apply user force on soft body " << force.transpose() << std::endl;
+    std::cout << "[user] apply user force on soft body " << force.transpose()
+              << std::endl;
 }
 
 /**
  * \brief           return material type
-*/
-cBaseMaterialPtr cSoftBody::GetMaterial() const
-{
-    return this->mMaterial;
-}
+ */
+cBaseMaterialPtr cSoftBody::GetMaterial() const { return this->mMaterial; }
 
 eMaterialType cSoftBody::GetMaterialType() const
 {
@@ -416,7 +431,7 @@ eMaterialType cSoftBody::GetMaterialType() const
 }
 /**
  * \brief           update imgui
-*/
+ */
 #include "imgui.h"
 void cSoftBody::UpdateImGui()
 {
@@ -443,7 +458,8 @@ void cSoftBody::UpdateImGui()
     if (old_idx != item_cur_idx)
     {
         // rebuild the material
-        mMaterial = BuildDefaultMaterial(static_cast<eMaterialType>(item_cur_idx));
+        mMaterial =
+            BuildDefaultMaterial(static_cast<eMaterialType>(item_cur_idx));
     }
 }
 
@@ -511,8 +527,9 @@ tVectorXd cSoftBody::CalcTetIntForce(size_t tet_id)
 
 /**
  * \brief           two constant selection matrices used in stiffness matrix
- *  For more details please check the note "FEM course 第三部分 离散化(刚度矩阵计算)"
-*/
+ *  For more details please check the note "FEM course 第三部分
+ * 离散化(刚度矩阵计算)"
+ */
 void GetSelectionMatrix(tMatrixXd &Sd, tMatrixXd &Sb)
 {
     {
@@ -520,8 +537,7 @@ void GetSelectionMatrix(tMatrixXd &Sd, tMatrixXd &Sb)
         Sb << 1, 1, 1;
     }
     {
-        tMatrixXd Sa = tMatrixXd::Zero(9, 3),
-                  Sc = tMatrixXd::Zero(12, 9);
+        tMatrixXd Sa = tMatrixXd::Zero(9, 3), Sc = tMatrixXd::Zero(12, 9);
         Sa.block(0, 0, 3, 1).setOnes();
         Sa.block(3, 1, 3, 1).setOnes();
         Sa.block(6, 2, 3, 1).setOnes();
@@ -556,7 +572,7 @@ tVectorXd cSoftBody::CalcTetIntForceBySelectionMatrix(size_t tet_id)
 
 /**
  * \brief       Given deformation gradient F, calculate P(F)
-*/
+ */
 // tMatrix3d CalcPK1(const tMatrix3d &F)
 // {
 // tMatrix3d P = tMatrix3d::Zero();
@@ -574,8 +590,8 @@ tVectorXd cSoftBody::CalcTetIntForceBySelectionMatrix(size_t tet_id)
 //     /*
 //         P(F) = \mu * (FT + F -2I) + \lambda * tr(F - I) I
 //     */
-//     P.noalias() = gMu * (F.transpose() + F - 2 * I) + gLambda * (F - I).trace() * I;
-//     break;
+//     P.noalias() = gMu * (F.transpose() + F - 2 * I) + gLambda * (F -
+//     I).trace() * I; break;
 // }
 // // case eMaterialModelType::FIX_COROTATED:
 // // {
@@ -600,8 +616,8 @@ tVectorXd cSoftBody::CalcTetIntForceBySelectionMatrix(size_t tet_id)
 // }
 // default:
 // {
-//     SIM_ERROR("do not support material model {}", BuildMaterialTypeStr(mMaterial));
-//     exit(1);
+//     SIM_ERROR("do not support material model {}",
+//     BuildMaterialTypeStr(mMaterial)); exit(1);
 // }
 // break;
 // }
@@ -641,12 +657,43 @@ tVectorXd cSoftBody::GetTetForce(size_t tet_id, const tVectorXd &total_force)
     tVectorXd tet_force = tVectorXd::Zero(12);
     for (size_t i = 0; i < 4; i++)
     {
-        tet_force.segment(3 * i, 3) = total_force.segment(3 * mTetArrayShared[tet_id]->mVertexId[i], 3);
+        tet_force.segment(3 * i, 3) =
+            total_force.segment(3 * mTetArrayShared[tet_id]->mVertexId[i], 3);
     }
     return tet_force;
 }
 
-tVectorXd cSoftBody::GetTetVerticesPos(size_t tet_id, const tVectorXd &total_pos)
+tVectorXd cSoftBody::GetTetVerticesPos(size_t tet_id,
+                                       const tVectorXd &total_pos)
 {
     return GetTetForce(tet_id, total_pos);
+}
+
+void cSoftBody::InitSurface()
+{
+    mSurfaceTriangleIdArray.clear();
+    mSurfaceVertexIdArray.clear();
+    std::vector<int> tri_involved_times(this->mTriangleArray.size(), 0);
+    for (auto &t : this->mTetArrayShared)
+    {
+        for (int j = 0; j < 4; j++)
+            tri_involved_times[t->mTriangleId[j]] += 1;
+    }
+
+    std::set<int> involved_vertices = {};
+    for (auto &tri_id : tri_involved_times)
+    {
+        if (tri_involved_times[tri_id] == 1)
+        {
+            mSurfaceTriangleIdArray.push_back(tri_id);
+            involved_vertices.insert(mTriangleArray[tri_id]->mId0);
+            involved_vertices.insert(mTriangleArray[tri_id]->mId1);
+            involved_vertices.insert(mTriangleArray[tri_id]->mId2);
+        }
+    }
+    mSurfaceVertexIdArray.resize(involved_vertices.size());
+    std::copy(involved_vertices.begin(), involved_vertices.end(),
+              mSurfaceVertexIdArray.begin());
+    printf("[log] surface triangle %d, vertices %d\n",
+           mSurfaceTriangleIdArray.size(), mSurfaceVertexIdArray.size());
 }

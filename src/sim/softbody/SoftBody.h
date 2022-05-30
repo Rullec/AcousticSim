@@ -54,10 +54,13 @@ protected:
     float mRayleighDamplingA, mRayleighDamplingB; // rayleigh damping for mass mat and stiffness mat
     float mFrictionCoef, mCollisionK;
     tVector3d mInitRotation, mInitTranslation;
+    std::vector<int> mSurfaceTriangleIdArray;
+    std::vector<int> mSurfaceVertexIdArray;
     virtual void InitInvDm();
     virtual void InitPos();
     virtual void InitDiagLumpedMassMatrix();
     virtual void InitTetVolume();
+    virtual void InitSurface();
     virtual void InitForceVector();
     virtual void InitTetTransform(const Json::Value & root);
     virtual void UpdateIntForce();

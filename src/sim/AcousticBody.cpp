@@ -1,18 +1,102 @@
 #include "AcousticBody.h"
+#include "sim/AudioWave.h"
 #include <iostream>
 
-cAcousticBody::cAcousticBody()
-{
-}
+cAcousticBody::cAcousticBody() {}
 #include <fstream>
-tVectorXd sum_wave;
-void cAcousticBody::SolveVibration(
-    const tVectorXd &MassDiag,
-    const tSparseMatd &StiffMat,
-    const tVector2f &rayleigh_damping,
-    const tVectorXd &xcur_vec,
-    const tVectorXd &xprev_vec)
+tVectorXd CalcAccel(const tVectorXd &x, float dt)
 {
+    tVectorXd accel(x.size() - 2);
+    for (int i = 1; i < x.size() - 1; i++)
+    {
+        accel[i - 1] = (x[i + 1] + x[i - 1] - 2 * x[i]) / (dt * dt);
+    }
+    return accel;
+}
+tVectorXd SolveModeITimeSeries(double m, double c, double k, double fprev,
+                               double dt, double steps)
+{
+
+    if (k < 1e-6)
+        return tVectorXd::Zero(steps);
+
+    /*
+            w = sqrt(k / m)
+            xi = c / (2 * m * w)
+            wd = w * sqrt(1 - xi^2)
+            eps = e^{- xi * w * h}
+            theta = w_d * h
+            gamma = arcsin(xi)
+        */
+    double w = std::sqrt(k / m);
+    double xi = c / (2 * m * w);
+    double wd = w * std::sqrt(1 - xi * xi);
+    // std::cout << "mode freq = " << w << std::endl;
+    // std::cout << "wd = " << wd << std::endl;
+
+    double qprev = 0;
+
+    tVectorXd q_vec = tVectorXd::Zero(steps);
+    if (std::isnan(wd) == false)
+    {
+
+        double eps = std::exp(-xi * w * dt);
+        double theta = wd * dt;
+        double gamma = std::asin(xi);
+        double qpprev = 0;
+
+        for (size_t t = 0; t < steps - 1; t++)
+        {
+            /*
+            xcur = 2 * eps * cos(theta) * qprev
+                    - eps^2 * qpprev
+                    + 2 * fprev *
+                        (
+                            eps * cos(theta + gamma)
+                            - eps^2 * cos(2 * theta + gamma)
+                        )
+                        /
+                        (3 * m * w * wd)
+            */
+            double qcur = 2 * eps * std::cos(theta) * qprev -
+                          eps * eps * qpprev +
+                          2 * fprev *
+                              (eps * std::cos(theta + gamma) -
+                               eps * eps * std::cos(2 * theta + gamma)) /
+                              (3 * m * w * wd);
+
+            // update qprev and qcur, fprev
+            qpprev = qprev;
+            qprev = qcur;
+
+            // the force is applied at first
+            fprev = 0;
+
+            q_vec[t + 1] = qcur;
+            if (std::isnan(qcur))
+            {
+                std::cout << "m " << m << std::endl;
+                std::cout << "w " << w << std::endl;
+                std::cout << "wd " << wd << std::endl;
+                std::cout << "xi " << xi << std::endl;
+                std::cout << "c " << c << std::endl;
+                exit(1);
+            }
+        }
+    }
+    else
+    {
+        printf("[warn] w %.1f wd %.1f nan, return\n", w, wd);
+    }
+
+    return q_vec;
+}
+tDiscretedWavePtr cAcousticBody::SolveVibration(
+    const tVectorXd &MassDiag, const tSparseMatd &StiffMat,
+    const tVector2f &rayleigh_damping, const tVectorXd &xcur_vec,
+    const tVectorXd &qprev_vec, int sampling_freq, float duration)
+{
+    std::cout << "mass = " << MassDiag.transpose() << std::endl;
     tVectorXd eigenvalues;
     tMatrixXd eigenvecs;
     {
@@ -25,100 +109,69 @@ void cAcousticBody::SolveVibration(
         ges.compute(-dense_K, dense_M);
         eigenvalues = ges.eigenvalues().real();
         eigenvecs = ges.eigenvectors().real().transpose();
-        std::cout << "eigenvalues = " << eigenvalues.transpose() << std::endl;
+        // std::cout << "eigenvalues = " << eigenvalues.transpose() <<
+        // std::endl;
     }
 
     // solve decoupled linear system
-    // auto output = "vib.txt";
-    // std::ofstream fout(output);
-    double dt = 2e-3;
-    size_t steps = 1 / dt;
-    sum_wave = tVectorXd::Zero(steps);
-    int num_of_dof = MassDiag.size();
+    auto mode_output = "mode_vib.txt";
+    auto v_output = "v_vib.txt";
+    std::ofstream fout_mode(mode_output);
+    std::ofstream fout_v(v_output);
+
+    float dt = 1.0 / (sampling_freq * 1.0);
+    tDiscretedWavePtr wave = std::make_shared<tDiscretedWave>(dt, duration);
+
+    size_t steps = wave->GetNumOfData();
+    int num_of_vertices = MassDiag.size() / 3;
+    int num_of_modes = MassDiag.size();
+    tMatrixXd vertex_displacement_time_series(num_of_vertices * 3, steps);
+    tMatrixXd mode_displacement_time_series(num_of_modes, steps);
+
     {
         double damp_a = rayleigh_damping[0];
         double damp_b = rayleigh_damping[1];
-        tVectorXd m_vec = tVectorXd::Ones(num_of_dof);
+        tVectorXd m_vec = tVectorXd::Ones(num_of_modes);
 
-        tVectorXd c_vec = damp_a * tVectorXd::Ones(num_of_dof) + damp_b * eigenvalues;
+        tVectorXd c_vec =
+            damp_a * tVectorXd::Ones(num_of_modes) + damp_b * eigenvalues;
         tVectorXd k_vec = eigenvalues;
 
-        double force_amp = 100;
-        tVectorXd fprev_vec = tVectorXd::Ones(num_of_dof) * force_amp;
+        double force_amp = 1e3;
+
+        // apply force on the x axis of the first vertex
+        tVectorXd fprev_vec = tVectorXd::Zero(num_of_modes);
+        fprev_vec[0] = force_amp;
+
         tVectorXd UTf0_vec = eigenvecs.transpose() * fprev_vec;
-        for (size_t i = 0; i < num_of_dof; i++)
+        tVectorXd freq = (k_vec.cwiseProduct(m_vec.cwiseInverse())).cwiseSqrt();
+        std::cout << "freq = " << freq.transpose() << std::endl;
+        for (size_t i = 0; i < num_of_modes; i++)
         {
-            double m = m_vec[i],
-                   c = c_vec[i],
-                   k = k_vec[i],
+            double m = m_vec[i], c = c_vec[i], k = k_vec[i],
                    fprev = UTf0_vec[i];
-            if (k < 1e-6)
-                continue;
-
-            /*  
-                    w = sqrt(k / m)
-                    xi = c / (2 * m * w)
-                    wd = w * sqrt(1 - xi^2)
-                    eps = e^{- xi * w * h}
-                    theta = w_d * h
-                    gamma = arcsin(xi)
-                */
-            double w = std::sqrt(k / m);
-            double xi = c / (2 * m * w);
-            double wd = w * std::sqrt(1 - xi * xi);
-            std::cout << "w = " << w << std::endl;
-            std::cout << "wd = " << wd << std::endl;
-            double eps = std::exp(-xi * w * dt);
-            double theta = wd * dt;
-            double gamma = std::asin(xi);
-            double xpprev = 0;
-            double xprev = 0;
-            std::vector<double> x_lst = {xprev};
-            for (size_t t = 0; t < steps - 1; t++)
-            {
-                /*
-                xcur = 2 * eps * cos(theta) * xprev
-                        - eps^2 * xpprev
-                        + 2 * fprev * 
-                            (
-                                eps * cos(theta + gamma) 
-                                - eps^2 * cos(2 * theta + gamma)
-                            )
-                            /
-                            (3 * m * w * wd)
-                */
-                double xcur = 2 * eps * std::cos(theta) * xprev - eps * eps * xpprev + 2 * fprev * (eps * std::cos(theta + gamma) - eps * eps * std::cos(2 * theta + gamma)) / (3 * m * w * wd);
-
-                // update xprev and xcur, fprev
-                xpprev = xprev;
-                xprev = xcur;
-                // if (t == steps / 2)
-                // {
-                //     fprev = UTf0_vec[i];
-                // }
-                // else
-                // {
-                fprev = 0;
-                // }
-                x_lst.push_back(xcur);
-                if (std::isnan(xcur))
-                {
-                    std::cout << "m " << m << std::endl;
-                    std::cout << "w " << w << std::endl;
-                    std::cout << "wd " << wd << std::endl;
-                    std::cout << "xi " << xi << std::endl;
-                    std::cout << "c " << c << std::endl;
-                    exit(1);
-                }
-            }
-            tVectorXd x_vec = tVectorXd(x_lst.size());
-            for (size_t j = 0; j < x_vec.size(); j++)
-                x_vec[j] = x_lst[j];
-            // fout << "dof " << i << " x vec = " << x_vec.transpose() << std::endl;
-            sum_wave += x_vec;
+            tVectorXd mode_i_time_series =
+                SolveModeITimeSeries(m, c, k, fprev, dt, steps);
+            mode_displacement_time_series.row(i) = mode_i_time_series;
         }
     }
-    // fout << "sum wave now is = " << sum_wave.transpose() << std::endl;
-    // fout.close();
-    // std::cout << "write vibrations to " << output << std::endl;
+
+    // convert mode vibration to vertex vibration (displacement)
+    vertex_displacement_time_series = eigenvecs * mode_displacement_time_series;
+
+    fout_mode << sampling_freq << " Hz\n";
+    fout_mode << mode_displacement_time_series << std::endl;
+    fout_v << sampling_freq << " Hz\n";
+    fout_v << vertex_displacement_time_series << std::endl;
+
+    fout_mode.close();
+    fout_v.close();
+
+    // set data
+    tVectorXd vertex_data = vertex_displacement_time_series.colwise().sum();
+    float air_density = 1.225; // kg / m^3
+    tVectorXd wave_pressure = CalcAccel(vertex_data, dt) *
+                              air_density; // pressure = accel * airdensity
+    wave->SetData(wave_pressure.cast<float>());
+    return wave;
 }

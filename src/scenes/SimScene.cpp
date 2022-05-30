@@ -58,7 +58,8 @@ void cSimScene::Init(const std::string &conf_path)
 
     mEnableCollisionDetection =
         cJsonUtil::ParseAsBool(cSimScene::ENABLE_COLLISION_DETECTION_KEY, root);
-    // gAudioOutput->Init();
+    gAudioOutput = std::make_shared<cAudioOutput>();
+    gAudioOutput->Init();
     BuildObjects(cJsonUtil::ParseAsValue(cSimScene::OBJECT_LIST_KEY, root));
 
     CreateCollisionDetecter();
@@ -93,8 +94,7 @@ void cSimScene::SaveCurrentScene()
 {
     for (auto &x : this->mObjectList)
     {
-        cObjExporter::ExportObj(x->GetObjName() + ".obj",
-        x->GetVertexArray(),
+        cObjExporter::ExportObj(x->GetObjName() + ".obj", x->GetVertexArray(),
                                 x->GetTriangleArray());
     }
 }
@@ -150,7 +150,7 @@ void cSimScene::Update(double delta_time)
 
     if (mSimStateMachine->IsRunning() == true)
     {
-        std::cout << "--------------frame " << frame++ << "-----------\n";
+        // std::cout << "--------------frame " << frame++ << "-----------\n";
         // double default_dt = mIdealDefaultTimestep;
         // if (delta_time < default_dt)
         //     default_dt = delta_time;

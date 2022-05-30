@@ -10,8 +10,6 @@ public:
     virtual void CheckDPDF(const tMatrix3d &F) const override;
 
 protected:
-    double mMu;     // young's modulus
-    double mLambda; // Poisson's ratio
     virtual cFourOrderTensor CalcDPDF_part1(const tMatrix3d &F) const;
     virtual cFourOrderTensor CalcDPDF_part2(const tMatrix3d &F) const;
     virtual void CheckDPDF_part1(const tMatrix3d &F) const;
