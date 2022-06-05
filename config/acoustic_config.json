@@ -22,7 +22,7 @@
             "rayleigh_damping_a": 50,
             "rayleigh_damping_b": 0,
             "material": "config/materials/plasticity.json",
-            "acoustic_sampling_freq": 89600,
+            "acoustic_sampling_freq": 22400,
             "acoustic_duration": 1
         }
     ],

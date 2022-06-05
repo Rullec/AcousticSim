@@ -249,3 +249,14 @@ bool cJsonUtil::HasValue(const std::string &name, const Json::Value &root)
 {
     return JSONUTIL_ASSERT_NULL(root, name);
 }
+
+Json::Value cJsonUtil::BuildMatrixJson(const Eigen::MatrixXd &mat)
+{
+    Json::Value root = Json::arrayValue;
+    for (int i = 0; i < mat.rows(); i++)
+    {
+        Json::Value val = cJsonUtil::BuildVectorJson(mat.row(i));
+        root.append(val);
+    }
+    return root;
+}

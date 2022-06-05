@@ -15,6 +15,9 @@ public:
     // static Json::Value BuildVectorJson(const tVector &vec);
     static tVectorXd ReadVectorJson(const Json::Value &root);
     static Json::Value BuildVectorJson(const Eigen::VectorXd &vec);
+    static Json::Value BuildMatrixJson(const Eigen::MatrixXd &mat);
+    // static bool ReadMatrixJson(const Json::Value &root,
+    //                            Eigen::MatrixXd &out_vec);
     static std::string BuildVectorString(const Eigen::VectorXd &vec);
     static bool ReadVectorJson(const Json::Value &root,
                                Eigen::VectorXd &out_vec);
@@ -36,5 +39,5 @@ public:
                             const Json::Value &root);
     static Json::Value ParseAsValue(const std::string &data_field_name,
                                     const Json::Value &root);
-    static bool HasValue(const std::string & name, const Json::Value & root);
+    static bool HasValue(const std::string &name, const Json::Value &root);
 };

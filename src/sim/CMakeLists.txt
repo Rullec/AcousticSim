@@ -55,7 +55,6 @@ set(SOFTBODY_SRC
     softbody/StvkMaterial.cpp
     softbody/MaterialBuilder.cpp
     softbody/BaseMaterial.cpp
-    AcousticBody.cpp
     AcousticSoftBody.cpp
     AudioOutput.cpp
     AudioWave.cpp

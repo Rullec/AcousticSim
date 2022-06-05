@@ -1,8 +1,7 @@
 #pragma once
-#include "sim/AcousticBody.h"
 #include "sim/softbody/SoftBodyImplicit.h"
 
-class cAcousticSoftBody : public cAcousticBody, public cSoftBodyImplicit
+class cAcousticSoftBody : public cSoftBodyImplicit
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -15,4 +14,8 @@ protected:
     float mAcousticDuration;
     void SolveForMonopole();
     std::string GetWaveName() const;
+    tEigenArr<tMatrixXd> SolveVibration(
+                   const tVectorXd &MassDiag, const tSparseMatd &StiffMat,
+                   const tVector2f &rayleigh_damping, const tVectorXd &xcur,
+                   const tVectorXd &xprev, int sampling_freq, float duration);
 };
