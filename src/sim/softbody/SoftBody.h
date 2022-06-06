@@ -3,7 +3,7 @@
 #include "sim/softbody/BaseMaterial.h"
 /**
  * \brief           softbody object (mostly based on 3D FEM)
-*/
+ */
 
 struct tTriangle;
 struct tEdge;
@@ -27,6 +27,8 @@ public:
     virtual void Init(const Json::Value &conf) override;
     virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
                                     int &st) const override;
+    virtual void CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                        int &st) const override;
     virtual int GetNumOfTriangles() const override;
     virtual int GetNumOfEdges() const override;
     virtual int GetNumOfVertices() const override;
@@ -43,18 +45,20 @@ protected:
     // std::vector<tEdgePtr> mEdgeArray = {};
     // std::vector<tTrianglePtr> mTriangleArray = {};
     std::vector<tTetPtr> mTetArrayShared = {};
-    tEigenArr<tMatrix3d> mF;                                   // deformation gradient, F
-    tEigenArr<tMatrix3d> mInvDm;                               // DmInv, used to calculate F, please read the SIGGRAPH 2012 course for more details
-    tVectorXd mGravityForce, mExtForce, mIntForce, mUserForce; // internal & external force vector on each node, \in R^{3n}
-    tVectorXd mXcur, mXprev, mXInit;                           // timestep previous and current
-    tVectorXd mInvLumpedMassMatrixDiag;                        // row-diagnozation-lumped mass matrix
+    tEigenArr<tMatrix3d> mF;     // deformation gradient, F
+    tEigenArr<tMatrix3d> mInvDm; // DmInv, used to calculate F, please read the
+                                 // SIGGRAPH 2012 course for more details
+    tVectorXd mGravityForce, mExtForce, mIntForce,
+        mUserForce; // internal & external force vector on each node, \in R^{3n}
+    tVectorXd mXcur, mXprev, mXInit;    // timestep previous and current
+    tVectorXd mInvLumpedMassMatrixDiag; // row-diagnozation-lumped mass matrix
     tVectorXd mInitTetVolume;
     double mRho; // the volume density [SI] kg/m^3
     cBaseMaterialPtr mMaterial;
-    float mRayleighDamplingA, mRayleighDamplingB; // rayleigh damping for mass mat and stiffness mat
     float mFrictionCoef, mCollisionK;
     tVector3d mInitRotation, mInitTranslation;
     std::vector<int> mSurfaceTriangleIdArray;
+    std::vector<int> mSurfaceEdgeIdArray;
     std::vector<int> mSurfaceVertexIdArray;
     virtual void InitInvDm();
     virtual void InitPos();
@@ -62,12 +66,13 @@ protected:
     virtual void InitTetVolume();
     virtual void InitSurface();
     virtual void InitForceVector();
-    virtual void InitTetTransform(const Json::Value & root);
+    virtual void InitTetTransform(const Json::Value &root);
     virtual void UpdateIntForce();
     virtual tVectorXd CalcTetIntForce(size_t tet_id);
     virtual tVectorXd CalcTetIntForceBySelectionMatrix(size_t tet_id);
     virtual tVectorXd GetTetForce(size_t tet_id, const tVectorXd &total_force);
-    virtual tVectorXd GetTetVerticesPos(size_t tet_id, const tVectorXd &total_pos);
+    virtual tVectorXd GetTetVerticesPos(size_t tet_id,
+                                        const tVectorXd &total_pos);
     virtual void UpdateExtForce();
     double CalcEnergy();
     virtual void UpdateTriangleNormal() override;

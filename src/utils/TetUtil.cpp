@@ -195,7 +195,9 @@ void cTetUtil::LoadTet(const std::string &path,
         {
             int f_id;
             auto cur_t = std::make_shared<tTriangle>();
-            istr >> f_id >> cur_t->mId2 >> cur_t->mId1 >> cur_t->mId0;
+            int boundary_marker = 0;    // 0: internal, -1: boundary
+            istr >> f_id >> cur_t->mId0 >> cur_t->mId1 >> cur_t->mId2 >> boundary_marker;
+            
             {
                 int edge_id = FindEdge(edge_vec, cur_t->mId0, cur_t->mId1);
                 if (edge_vec[edge_id]->mTriangleId0 == -1)
@@ -231,6 +233,7 @@ void cTetUtil::LoadTet(const std::string &path,
             //        cur_t->mId0,
             //        cur_t->mId1,
             //        cur_t->mId2);
+            cur_t->mColor = ColorBlue;
             tri_vec.push_back(cur_t);
         }
     }

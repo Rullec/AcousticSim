@@ -65,8 +65,13 @@ void cAudioOutput::SetContent(unsigned int frame_count, float *tar_buf)
              cur_frame++, gCurFrame++)
         {
             real_output[cur_frame] =
-                mCurWave->data[gCurFrame % num_of_data] * 1e-3;
+                mCurWave->data[gCurFrame % num_of_data];
             // sine wave
+            if(gCurFrame > num_of_data)
+            {
+                gCurFrame %= num_of_data;
+                printf("after a cycle\n");
+            }
             // float cur_value = std::sin(gCurFrame / 10) * 0.1;
             // real_output[cur_frame * 1 + 0] = cur_value;
         }
@@ -80,11 +85,11 @@ cAudioOutput::~cAudioOutput() { ma_device_uninit(&device); }
 void cAudioOutput::SetWave(const tDiscretedWavePtr &wave)
 {
     mCurWave = wave;
-    mCurWave->ChangeFrequency(DEVICE_SAMPLE_RATE);
+    // mCurWave->ChangeFrequency(DEVICE_SAMPLE_RATE);
 
     printf("[set wave] cur new freq = %d\n", mCurWave->GetFrequency());
-    std::ofstream fout("wave_play.txt");
-    fout << mCurWave->GetFrequency() << " HZ\n";
-    fout << mCurWave->data.transpose() << std::endl;
-    std::cout << "output to wave_play.txt\n";
+    // std::ofstream fout("log/wave_play.txt");
+    // fout << mCurWave->GetFrequency() << " HZ\n";
+    // fout << mCurWave->data.transpose() << std::endl;
+    // std::cout << "output to wave_play.txt\n";
 }

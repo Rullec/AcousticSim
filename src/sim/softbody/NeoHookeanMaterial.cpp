@@ -55,13 +55,13 @@ tMatrix3d cNeoHookeanMaterial::CalcP(const tMatrix3d &F) const
 tMatrix3d cNeoHookeanMaterial::CalcP_part1(const tMatrix3d &F) const
 {
     tMatrix3d FinvT = F.transpose().inverse();
-    return mMu * (F - FinvT);
+    return GetLameSecondCoefMu() * (F - FinvT);
 }
 tMatrix3d cNeoHookeanMaterial::CalcP_part2(const tMatrix3d &F) const
 {
     tMatrix3d FinvT = F.transpose().inverse();
     double J = CalcJ(F);
-    return mLambda * std::log(J) * FinvT;
+    return GetLameFirstCoefLambda() * std::log(J) * FinvT;
 }
 cFourOrderTensor cNeoHookeanMaterial::CalcDPDF(const tMatrix3d &F) const
 {
@@ -73,14 +73,14 @@ cFourOrderTensor cNeoHookeanMaterial::CalcDPDF_part1(const tMatrix3d &F) const
     // mu * (Q - R)
     cFourOrderTensor DFDF_Q = CalcDFDF(F);
     cFourOrderTensor DFinvTDF_R = CalcDFinvTDF(F);
-    return (DFDF_Q - DFinvTDF_R) * mMu;
+    return (DFDF_Q - DFinvTDF_R) * GetLameSecondCoefMu();
 }
 cFourOrderTensor cNeoHookeanMaterial::CalcDPDF_part2(const tMatrix3d &F) const
 {
     float J = CalcJ(F);
     cFourOrderTensor DJIDF = CalcDJDF(F);
     DJIDF.TensorMatrixProductWithoutCopy(0, 1, F.inverse().transpose());
-    DJIDF = (DJIDF * (1.0 / J) + CalcDFinvTDF(F) * std::log(J)) * mLambda;
+    DJIDF = (DJIDF * (1.0 / J) + CalcDFinvTDF(F) * std::log(J)) * GetLameFirstCoefLambda();
     return DJIDF;
 }
 

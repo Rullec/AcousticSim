@@ -65,7 +65,7 @@ cFourOrderTensor cStvkMaterial::CalcDPDF_part1(const tMatrix3d &F) const
     cFourOrderTensor DEDF = CalcDEDF(F);
     DFDF.TensorMatrixProductWithoutCopy(0, 1, E);
     DEDF.MatrixTensorProductWithoutCopy(0, 1, F);
-    cFourOrderTensor deriv = (DFDF + DEDF) * 2 * mMu;
+    cFourOrderTensor deriv = (DFDF + DEDF) * 2 * GetLameSecondCoefMu();
     return deriv;
 }
 
@@ -75,7 +75,7 @@ cFourOrderTensor cStvkMaterial::CalcDPDF_part2(const tMatrix3d &F) const
     cFourOrderTensor DTrEIDF = CalcDTrEIDF(F),
                      trE_DFDF = CalcDFDF(F) * E.trace();
     DTrEIDF.TensorMatrixProductWithoutCopy(0, 1, F);
-    return (DTrEIDF + trE_DFDF) * mLambda;
+    return (DTrEIDF + trE_DFDF) * GetLameFirstCoefLambda();
 }
 void cStvkMaterial::CheckDPDF_part1(const tMatrix3d &F) const {}
 
@@ -84,11 +84,11 @@ tMatrix3d cStvkMaterial::CalcP_part1(const tMatrix3d &F) const
 {
 
     tMatrix3d E = CalcGreenStrain(F);
-    return 2 * mMu * F * E;
+    return 2 * GetLameSecondCoefMu() * F * E;
 }
 tMatrix3d cStvkMaterial::CalcP_part2(const tMatrix3d &F) const
 {
 
     tMatrix3d E = CalcGreenStrain(F);
-    return mLambda * E.trace() * F;
+    return GetLameFirstCoefLambda() * E.trace() * F;
 }

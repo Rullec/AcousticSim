@@ -36,3 +36,6 @@ main
 # ide
 .vscode/
 *.DS_Store
+
+data/
+log/

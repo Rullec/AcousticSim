@@ -18,7 +18,7 @@ enum eMaterialType
     NUM_OF_MATERIAL_MODEL
 };
 
-class cBaseMaterial : std::enable_shared_from_this<cBaseMaterial>
+struct cBaseMaterial : std::enable_shared_from_this<cBaseMaterial>
 {
 public:
     explicit cBaseMaterial(eMaterialType type);
@@ -27,14 +27,17 @@ public:
     virtual tMatrix3d CalcP(const tMatrix3d &F) const = 0; // PK1
     virtual cFourOrderTensor CalcDPDF(const tMatrix3d &F) const = 0;
     virtual void CheckDPDF(const tMatrix3d &F) const;
-    virtual double GetPoissonRatio() const;
-    virtual double GetYoungsModulus() const;
+    virtual double GetLameFirstCoefLambda() const;
+    virtual double GetLameSecondCoefMu() const;
     virtual double GetRho() const;
+    virtual std::string GetMaterialPath() const;
 
-protected:
-    double mMu;     // young's modulus
-    double mLambda; // Poisson's ratio
+    double mYoungsModulusNew;     // young's modulus
+    double mPoissonRatioNew; // Poisson's ratio
     double mRho;    // density kg.m-3
+    float mRayleighDamplingA,
+        mRayleighDamplingB; // rayleigh damping for mass mat and stiffness mat
+    std::string mMatPath;   // material path
     eMaterialType mType;
 };
 

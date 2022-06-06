@@ -51,10 +51,7 @@ void cSoftBody::Init(const Json::Value &conf)
 
     mMaterial = BuildMaterial(conf);
     mRho = mMaterial->GetRho();
-    mRayleighDamplingA = cJsonUtil::ParseAsFloat("rayleigh_damping_a", conf);
-    mRayleighDamplingB = cJsonUtil::ParseAsFloat("rayleigh_damping_b", conf);
-    SIM_INFO("rayleight damping a {} b {}", mRayleighDamplingA,
-             mRayleighDamplingB);
+
     mFrictionCoef = cJsonUtil::ParseAsFloat("friction", conf);
     mCollisionK = cJsonUtil::ParseAsFloat("collision_k", conf);
 
@@ -175,7 +172,27 @@ void cSoftBody::UpdateVertexNormalFromTriangleNormal()
     }
     // cTimeUtil::End("update_v_normal");
 }
-int cSoftBody::GetNumOfTriangles() const { return this->mTriangleArray.size(); }
+
+// only get the number of surface triangles
+int cSoftBody::GetNumOfTriangles() const
+{
+    return mSurfaceTriangleIdArray.size();
+}
+
+void cSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                       int &st) const
+{
+    int old_st = st;
+    int num_of_surface_tris = mSurfaceTriangleIdArray.size();
+    for (int idx = 0; idx < num_of_surface_tris; idx++)
+    {
+        int tri_id = mSurfaceTriangleIdArray[idx];
+        auto tri = mTriangleArray[tri_id];
+        cRenderUtil::CalcTriangleDrawBufferSingle(
+            mVertexArray[tri->mId0], mVertexArray[tri->mId1],
+            mVertexArray[tri->mId2], tri->mColor, res, st);
+    }
+}
 int cSoftBody::GetNumOfEdges() const { return this->mEdgeArray.size(); }
 int cSoftBody::GetNumOfVertices() const { return this->mVertexArray.size(); }
 
@@ -450,10 +467,9 @@ void cSoftBody::UpdateImGui()
         // items_sto.push_back(res);
         items.push_back(gMaterialModelTypeStr[i].c_str());
     }
-
     ImGui::Combo("Material", &item_cur_idx, items.data(), items.size());
-    ImGui::SliderFloat("dampingA", &mRayleighDamplingA, 0, 10);
-    ImGui::SliderFloat("dampingB", &mRayleighDamplingB, 0, 1);
+    ImGui::SliderFloat("dampingA", &mMaterial->mRayleighDamplingA, 0, 10);
+    ImGui::SliderFloat("dampingB", &mMaterial->mRayleighDamplingB, 0, 1);
     ImGui::SliderFloat("friction", &mFrictionCoef, 0, 1);
     ImGui::SliderFloat("collisionK", &mCollisionK, 0, 2e3);
     // ImGui::SliderFloat("Mu", &gMu, 0.0, 1e5);
@@ -675,7 +691,9 @@ void cSoftBody::InitSurface()
 {
     mSurfaceTriangleIdArray.clear();
     mSurfaceVertexIdArray.clear();
-    std::vector<int> tri_involved_times(this->mTriangleArray.size(), 0);
+    mSurfaceEdgeIdArray.clear();
+    int num_of_tris_total = this->mTriangleArray.size();
+    std::vector<int> tri_involved_times(num_of_tris_total, 0);
     for (auto &t : this->mTetArrayShared)
     {
         for (int j = 0; j < 4; j++)
@@ -683,19 +701,30 @@ void cSoftBody::InitSurface()
     }
 
     std::set<int> involved_vertices = {};
-    for (auto &tri_id : tri_involved_times)
+    std::set<int> involved_edges = {};
+    for (int id = 0; id < num_of_tris_total; id++)
     {
-        if (tri_involved_times[tri_id] == 1)
+        if (tri_involved_times[id] == 1)
         {
-            mSurfaceTriangleIdArray.push_back(tri_id);
-            involved_vertices.insert(mTriangleArray[tri_id]->mId0);
-            involved_vertices.insert(mTriangleArray[tri_id]->mId1);
-            involved_vertices.insert(mTriangleArray[tri_id]->mId2);
+            auto tri = mTriangleArray[id];
+            mSurfaceTriangleIdArray.push_back(id);
+            involved_vertices.insert(tri->mId0);
+            involved_vertices.insert(tri->mId1);
+            involved_vertices.insert(tri->mId2);
+
+            involved_edges.insert(tri->mEId0);
+            involved_edges.insert(tri->mEId1);
+            involved_edges.insert(tri->mEId2);
         }
     }
     mSurfaceVertexIdArray.resize(involved_vertices.size());
     std::copy(involved_vertices.begin(), involved_vertices.end(),
               mSurfaceVertexIdArray.begin());
-    printf("[log] surface triangle %d, vertices %d\n",
-           mSurfaceTriangleIdArray.size(), mSurfaceVertexIdArray.size());
+
+    mSurfaceEdgeIdArray.resize(involved_edges.size());
+    std::copy(involved_edges.begin(), involved_edges.end(),
+              mSurfaceEdgeIdArray.begin());
+    printf("[log] surface triangle %d, vertices %d edges %d\n",
+           mSurfaceTriangleIdArray.size(), mSurfaceVertexIdArray.size(),
+           mSurfaceEdgeIdArray.size());
 }

@@ -661,7 +661,8 @@ std::vector<std::string> cFileUtil::ListDir(std::string dir)
     return paths;
 }
 
-std::vector<std::string> cFileUtil::ReadFileAllLines(const std::string &filename)
+std::vector<std::string>
+cFileUtil::ReadFileAllLines(const std::string &filename)
 {
     if (false == cFileUtil::ExistsFile(filename))
     {

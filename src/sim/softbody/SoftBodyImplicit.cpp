@@ -1,10 +1,10 @@
 #include "SoftBodyImplicit.h"
+#include "geometries/Tetrahedron.h"
+#include "sim/softbody/FourOrderTensor.h"
+#include "sim/softbody/ThreeOrderTensor.h"
+#include "utils/LogUtil.h"
 #include "utils/TimeUtil.hpp"
 #include <iostream>
-#include "utils/LogUtil.h"
-#include "geometries/Tetrahedron.h"
-#include "sim/softbody/ThreeOrderTensor.h"
-#include "sim/softbody/FourOrderTensor.h"
 cFourOrderTensor CalcDEDF(const tMatrix3d &F);
 // cFourOrderTensor CalcDPDF(const tMatrix3d &F);
 cFourOrderTensor CalcDPDF_part1(const tMatrix3d &F);
@@ -13,15 +13,13 @@ cFourOrderTensor CalcDTrEIDF(const tMatrix3d &F);
 cFourOrderTensor CalcDFDF(const tMatrix3d &F);
 
 typedef std::function<tMatrixXd(const tMatrixXd &)> tForwardCalcFunc;
-extern cFourOrderTensor CalcNumericalDerivaitve_MatrixWRTMatrix(tForwardCalcFunc func, const tMatrixXd &X_raw, const tVector2i output_dims, float eps = 1e-5);
+extern cFourOrderTensor CalcNumericalDerivaitve_MatrixWRTMatrix(
+    tForwardCalcFunc func, const tMatrixXd &X_raw, const tVector2i output_dims,
+    float eps = 1e-5);
 
-cSoftBodyImplicit::cSoftBodyImplicit(int id_) : cSoftBody(id_)
-{
-}
+cSoftBodyImplicit::cSoftBodyImplicit(int id_) : cSoftBody(id_) {}
 
-cSoftBodyImplicit::~cSoftBodyImplicit()
-{
-}
+cSoftBodyImplicit::~cSoftBodyImplicit() {}
 
 typedef std::pair<std::string, float> tTimeRecms;
 static std::vector<tTimeRecms> gProfRec;
@@ -31,7 +29,8 @@ void cSoftBodyImplicit::Update(float dt)
     dt = 5e-3;
     cTimeUtil::Begin("update_F");
     UpdateDeformationGradient();
-    gProfRec.push_back(tTimeRecms("update_F", cTimeUtil::End("update_F", true)));
+    gProfRec.push_back(
+        tTimeRecms("update_F", cTimeUtil::End("update_F", true)));
 
     UpdateExtForce();
 
@@ -41,12 +40,15 @@ void cSoftBodyImplicit::Update(float dt)
 
     cTimeUtil::Begin("update_K_sparse");
     mGlobalStiffnessSparseMatrix = CalcGlobalStiffnessSparseMatrix();
-    // std::cout << "K diff = " << (mGlobalStiffnessMatrix - sparse_mat).norm() << std::endl;
-    gProfRec.push_back(tTimeRecms("update_K_sparse", cTimeUtil::End("update_K_sparse", true)));
+    // std::cout << "K diff = " << (mGlobalStiffnessMatrix - sparse_mat).norm()
+    // << std::endl;
+    gProfRec.push_back(
+        tTimeRecms("update_K_sparse", cTimeUtil::End("update_K_sparse", true)));
 
     cTimeUtil::Begin("update_fint");
     UpdateIntForce();
-    gProfRec.push_back(tTimeRecms("update_fint", cTimeUtil::End("update_fint", true)));
+    gProfRec.push_back(
+        tTimeRecms("update_fint", cTimeUtil::End("update_fint", true)));
 
     // cTimeUtil::Begin("solve_pos_dense");
     // SolveForNextPos(dt);
@@ -54,7 +56,8 @@ void cSoftBodyImplicit::Update(float dt)
 
     cTimeUtil::Begin("solve_pos_sparse");
     SolveForNextPosSparse(dt);
-    gProfRec.push_back(tTimeRecms("solve_pos_sparse", cTimeUtil::End("solve_pos_sparse", true)));
+    gProfRec.push_back(tTimeRecms("solve_pos_sparse",
+                                  cTimeUtil::End("solve_pos_sparse", true)));
 
     SyncPosToVectorArray();
     mUserForce.setZero();
@@ -95,7 +98,8 @@ tEigenArr<tMatrix3d> cSoftBodyImplicit::CalcDFDx(int ele_id)
 
 void cSoftBodyImplicit::UpdateIntForce()
 {
-    // SIM_ERROR("for implicit scheme, we do not calculate int force explicitly.");
+    // SIM_ERROR("for implicit scheme, we do not calculate int force
+    // explicitly.");
     cSoftBody::UpdateIntForce();
     // exit(1);
     // CalculateStiffnessMatrix();
@@ -105,14 +109,14 @@ void cSoftBodyImplicit::SolveForNextPos(float dt)
 {
     // tVectorXd MassDiag = mInvLumpedMassMatrixDiag.cwiseInverse();
 
-    // tMatrixXd A = dt * (mRayleighDamplingB - dt) * this->mGlobalStiffnessMatrix;
-    // A.diagonal() += (1 + mRayleighDamplingA * dt) * MassDiag;
+    // tMatrixXd A = dt * (mRayleighDamplingB - dt) *
+    // this->mGlobalStiffnessMatrix; A.diagonal() += (1 + mRayleighDamplingA *
+    // dt) * MassDiag;
 
-    // tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) + dt * (mExtForce + mIntForce + mGravityForce + mUserForce);
-    // tVectorXd vel = A.inverse() * b;
-    // mXprev = mXcur;
-    // mXcur = dt * vel + mXcur;
-    // if (mXcur.hasNaN())
+    // tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) + dt *
+    // (mExtForce + mIntForce + mGravityForce + mUserForce); tVectorXd vel =
+    // A.inverse() * b; mXprev = mXcur; mXcur = dt * vel + mXcur; if
+    // (mXcur.hasNaN())
     // {
     //     SIM_ERROR("Xcur hasNan, exit");
     //     exit(1);
@@ -123,12 +127,15 @@ void cSoftBodyImplicit::SolveForNextPosSparse(float dt)
 {
     tVectorXd MassDiag = mInvLumpedMassMatrixDiag.cwiseInverse();
 
-    tSparseMatd A = dt * (mRayleighDamplingB - dt) * this->mGlobalStiffnessSparseMatrix;
+    tSparseMatd A =
+        dt * (this->mMaterial->mRayleighDamplingB - dt) * this->mGlobalStiffnessSparseMatrix;
     // std::cout << "A.diagonal() = " << A.diagonal().size() << std::endl;
     // std::cout << "MassDiag = " << MassDiag.size() << std::endl;
-    A.diagonal() += (1 + mRayleighDamplingA * dt) * MassDiag;
 
-    tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) + dt * (mExtForce + mIntForce + mGravityForce + mUserForce);
+    A.diagonal() += (1 + mMaterial->mRayleighDamplingA * dt) * MassDiag;
+
+    tVectorXd b = MassDiag.cwiseProduct((mXcur - mXprev) / dt) +
+                  dt * (mExtForce + mIntForce + mGravityForce + mUserForce);
     // tVectorXd vel = A.inverse() * b;
 
     Eigen::ConjugateGradient<tSparseMatd, Eigen::Upper> solver;
@@ -147,7 +154,7 @@ void cSoftBodyImplicit::SolveForNextPosSparse(float dt)
 /**
  * \brief           calculate dPdx:
  *  {dPdx}_{ijm} = {dP/dF}_{ijkl} * {dF/dx}_{klm}
-*/
+ */
 cThreeOrderTensor CalcDPDx(const cFourOrderTensor &dPdF,
                            const cThreeOrderTensor &dFdx)
 {
@@ -172,13 +179,13 @@ cThreeOrderTensor CalcDPDx(const cFourOrderTensor &dPdF,
 }
 /**
  * \brief           calculate sitffness matrix K
- * 
+ *
  *  1. calculate dPdF
  *  2. calculate dFdx
  *  3. calculate some selection matrix (for each tet)
  *  4. finish the element stiffness mat
  *  5. assembly
-*/
+ */
 // void cSoftBodyImplicit::CalculateStiffnessMatrix()
 // {
 //     // auto & tet : this->mTetArrayShared
@@ -225,13 +232,12 @@ void cSoftBodyImplicit::CheckDFDx()
                 float dFdx_diff_norm = dFdx_diff.norm();
                 if (dFdx_diff_norm > 10 * eps)
                 {
-                    std::cout << "[error] failed, dFdx diff norm = " << dFdx_diff_norm << std::endl;
-                    std::cout << "dFdx num = \n"
-                              << dFdx_num << std::endl;
-                    std::cout << "dFdx ana = \n"
-                              << dFdx_ana << std::endl;
-                    std::cout << "dFdx diff = \n"
-                              << dFdx_diff << std::endl;
+                    std::cout
+                        << "[error] failed, dFdx diff norm = " << dFdx_diff_norm
+                        << std::endl;
+                    std::cout << "dFdx num = \n" << dFdx_num << std::endl;
+                    std::cout << "dFdx ana = \n" << dFdx_ana << std::endl;
+                    std::cout << "dFdx diff = \n" << dFdx_diff << std::endl;
                 }
 
                 mXcur[3 * cur_v + comp] -= eps;
@@ -252,20 +258,17 @@ void cSoftBodyImplicit::CheckDFDF()
 {
     tMatrix3d F = tMatrix3d::Random();
     tMatrixXd DFDF_ana = CalcDFDF(F).ExpandToMatrix();
-    auto CalcItself = [](const tMatrix3d &val) -> tMatrix3d
-    {
-        return val;
-    };
-    tMatrixXd DFDF_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcItself, F, tVector2i(3, 3)).ExpandToMatrix();
+    auto CalcItself = [](const tMatrix3d &val) -> tMatrix3d { return val; };
+    tMatrixXd DFDF_num =
+        CalcNumericalDerivaitve_MatrixWRTMatrix(CalcItself, F, tVector2i(3, 3))
+            .ExpandToMatrix();
     tMatrixXd DFDF_diff = DFDF_ana - DFDF_num;
     double DFDF_diff_norm = DFDF_diff.norm();
     std::cout << "dFdF diff norm = " << DFDF_diff_norm << std::endl;
     if (DFDF_diff_norm > 1e-4)
     {
-        std::cout << "[error] dFdF ana = \n"
-                  << DFDF_ana << std::endl;
-        std::cout << "[error] DFDF num = \n"
-                  << DFDF_num << std::endl;
+        std::cout << "[error] dFdF ana = \n" << DFDF_ana << std::endl;
+        std::cout << "[error] DFDF num = \n" << DFDF_num << std::endl;
         exit(1);
     }
     // else{
@@ -279,8 +282,10 @@ void cSoftBodyImplicit::CheckDEDF()
     // CalcDPDF();
     // 1. check dEdF (E is green strain)
     tMatrix3d F = tMatrix3d::Random();
-    auto dEdF_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcGreenStrain, F, tVector2i(3, 3));
-    std::cout << "dEdF shape = " << dEdF_num.GetShape().transpose() << std::endl;
+    auto dEdF_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcGreenStrain, F,
+                                                            tVector2i(3, 3));
+    std::cout << "dEdF shape = " << dEdF_num.GetShape().transpose()
+              << std::endl;
     auto dEdF_ana = CalcDEDF(F);
     {
         auto dEdF_num_mat = dEdF_num.ExpandToMatrix();
@@ -290,10 +295,8 @@ void cSoftBodyImplicit::CheckDEDF()
         std::cout << "dEdF diff norm = " << dEdF_diff_norm << std::endl;
         if (dEdF_diff_norm > 1e-4)
         {
-            std::cout << "[error] dEdF ana = \n"
-                      << dEdF_ana_mat << std::endl;
-            std::cout << "[error] dEdF num = \n"
-                      << dEdF_num_mat << std::endl;
+            std::cout << "[error] dEdF ana = \n" << dEdF_ana_mat << std::endl;
+            std::cout << "[error] dEdF num = \n" << dEdF_num_mat << std::endl;
             exit(1);
         }
     }
@@ -303,7 +306,8 @@ void cSoftBodyImplicit::CheckDEDF()
 // {
 // tMatrix3d F = tMatrix3d::Random();
 // // 1. check dPdF (P is PK1)
-// auto dPdF_part2_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part2, F, tVector2i(3, 3)).ExpandToMatrix();
+// auto dPdF_part2_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part2,
+// F, tVector2i(3, 3)).ExpandToMatrix();
 
 // auto dPdF_part2_ana = CalcDPDF_part2(F).ExpandToMatrix();
 // auto dPdF_part2_diff = (dPdF_part2_ana - dPdF_part2_num) / (2 * gMu);
@@ -325,13 +329,15 @@ void cSoftBodyImplicit::CheckDEDF()
 // {
 //     tMatrix3d F = tMatrix3d::Random();
 //     // 1. check dPdF (P is PK1)
-//     auto dPdF_part1_num = CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part1, F, tVector2i(3, 3)).ExpandToMatrix();
+//     auto dPdF_part1_num =
+//     CalcNumericalDerivaitve_MatrixWRTMatrix(CalcPK1_part1, F, tVector2i(3,
+//     3)).ExpandToMatrix();
 
 //     auto dPdF_part1_ana = CalcDPDF_part1(F).ExpandToMatrix();
 //     auto dPdF_part1_diff = (dPdF_part1_ana - dPdF_part1_num) / (2 * gMu);
 //     double dPdF_part1_diff_norm = dPdF_part1_diff.norm();
-//     std::cout << "dPdF_part1_diff_norm = " << dPdF_part1_diff_norm << std::endl;
-//     if (dPdF_part1_diff_norm > 1e-4)
+//     std::cout << "dPdF_part1_diff_norm = " << dPdF_part1_diff_norm <<
+//     std::endl; if (dPdF_part1_diff_norm > 1e-4)
 //     {
 //         std::cout << "dPdF_part1_num = \n"
 //                   << dPdF_part1_num << std::endl;
@@ -341,7 +347,8 @@ void cSoftBodyImplicit::CheckDEDF()
 //                   << dPdF_part1_diff << std::endl;
 //         exit(1);
 //     }
-//     // std::cout << "dPdF_part1 shape = " << dPdF_part1_num.GetShape().transpose() << std::endl;
+//     // std::cout << "dPdF_part1 shape = " <<
+//     dPdF_part1_num.GetShape().transpose() << std::endl;
 // }
 void cSoftBodyImplicit::InitDDsDxTensor()
 {
@@ -460,8 +467,8 @@ void cSoftBodyImplicit::CheckElementStiffnessMat(int tet_id)
     //           << mF[tet_id] << std::endl;
     // std::cout << "old P = \n"
     //           << CalcPK1(mF[tet_id]) << std::endl;
-    // std::cout << "old force recalc = " << CalcTetIntForce(tet_id).transpose() << std::endl;
-    // exit(1);
+    // std::cout << "old force recalc = " << CalcTetIntForce(tet_id).transpose()
+    // << std::endl; exit(1);
     for (size_t _idx = 0; _idx < 12; _idx++)
     {
         size_t pos = v_lst[_idx];
@@ -471,7 +478,8 @@ void cSoftBodyImplicit::CheckElementStiffnessMat(int tet_id)
         cSoftBody::UpdateIntForce();
         tVectorXd new_force = GetTetForce(tet_id, mIntForce);
         K_num.col(_idx) = (new_force - old_force) / eps;
-        std::cout << "new force " << _idx << " = " << new_force.transpose() << std::endl;
+        std::cout << "new force " << _idx << " = " << new_force.transpose()
+                  << std::endl;
         mXcur[pos] -= eps;
         SyncPosToVectorArray();
         UpdateDeformationGradientForTet(tet_id);
@@ -524,9 +532,12 @@ void cSoftBodyImplicit::CheckGlobalStiffnessMat()
     std::cout << "globalK_diff_norm = " << globalK_diff_norm << std::endl;
     if (globalK_diff_norm > 1)
     {
-        std::cout << "[error] check failed: globalK_diff = " << globalK_diff << std::endl;
-        std::cout << "[error] check failed: globalK_ana = " << globalK_ana << std::endl;
-        std::cout << "[error] check failed: globalK_num = " << globalK_num << std::endl;
+        std::cout << "[error] check failed: globalK_diff = " << globalK_diff
+                  << std::endl;
+        std::cout << "[error] check failed: globalK_ana = " << globalK_ana
+                  << std::endl;
+        std::cout << "[error] check failed: globalK_num = " << globalK_num
+                  << std::endl;
         exit(1);
     }
 
@@ -547,10 +558,11 @@ tEigenArr<tMatrix3d> GetTTensor()
 }
 /**
  * \brief       calculate element stiffness matrix
-*/
+ */
 tMatrixXd cSoftBodyImplicit::CalcElementStiffnessMatrix(int tet_id)
 {
-    cThreeOrderTensor dPdx = CalcDPDx(mMaterial->CalcDPDF(mF[tet_id]), CalcDFDx(tet_id));
+    cThreeOrderTensor dPdx =
+        CalcDPDx(mMaterial->CalcDPDF(mF[tet_id]), CalcDFDx(tet_id));
 
     dPdx.TensorMatrixProductWithoutCopy(0, 1, mInvDm[tet_id].transpose());
 
@@ -560,10 +572,12 @@ tMatrixXd cSoftBodyImplicit::CalcElementStiffnessMatrix(int tet_id)
     for (size_t i = 0; i < 12; i++)
         for (size_t j = 0; j < 12; j++)
         {
-            K(i, j) = -mInitTetVolume[tet_id] * T_lst[i].cwiseProduct(dPdx(j)).sum();
+            K(i, j) =
+                -mInitTetVolume[tet_id] * T_lst[i].cwiseProduct(dPdx(j)).sum();
         }
-    // std::cout << "ele volume " << tet_id << " = " << mInitTetVolume[tet_id] << std::endl;
-    // std::cout << "K_ele for tet " << tet_id << " = \n" << K << std::endl;
+    // std::cout << "ele volume " << tet_id << " = " << mInitTetVolume[tet_id]
+    // << std::endl; std::cout << "K_ele for tet " << tet_id << " = \n" << K <<
+    // std::endl;
     return K;
 }
 
@@ -572,7 +586,8 @@ void cSoftBodyImplicit::CheckDPDx()
     UpdateDeformationGradient();
     int tet_id = 0;
 
-    cThreeOrderTensor dPdx_ana = CalcDPDx(mMaterial->CalcDPDF(mF[tet_id]), CalcDFDx(tet_id));
+    cThreeOrderTensor dPdx_ana =
+        CalcDPDx(mMaterial->CalcDPDF(mF[tet_id]), CalcDFDx(tet_id));
 
     // 1. calculate P_old
     tVectorXd tet_pos = GetTetVerticesPos(tet_id, mXcur);
@@ -601,12 +616,9 @@ void cSoftBodyImplicit::CheckDPDx()
         std::cout << "dPdx_diff_norm = " << dPdx_diff_norm << std::endl;
         if (dPdx_diff_norm > 1)
         {
-            std::cout << "dPdx_ana = \n"
-                      << dPdx_ana_comp << std::endl;
-            std::cout << "dPdx_num = \n"
-                      << dPdx_num_comp << std::endl;
-            std::cout << "dPdx_diff = \n"
-                      << dPdx_diff << std::endl;
+            std::cout << "dPdx_ana = \n" << dPdx_ana_comp << std::endl;
+            std::cout << "dPdx_num = \n" << dPdx_num_comp << std::endl;
+            std::cout << "dPdx_diff = \n" << dPdx_diff << std::endl;
             exit(1);
         }
 
@@ -619,13 +631,15 @@ void cSoftBodyImplicit::CheckDPDx()
     }
 }
 
-void cSoftBodyImplicit::SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_vertices_pos)
+void cSoftBodyImplicit::SetTetVerticesPos(size_t tet_id,
+                                          const tVectorXd &tet_vertices_pos)
 {
     for (size_t i = 0; i < 4; i++)
     {
         size_t v_id = mTetArrayShared[tet_id]->mVertexId[i];
         mXcur.segment(3 * v_id, 3) = tet_vertices_pos.segment(3 * i, 3);
-        mVertexArray[v_id]->mPos.segment(0, 3) = tet_vertices_pos.segment(3 * i, 3);
+        mVertexArray[v_id]->mPos.segment(0, 3) =
+            tet_vertices_pos.segment(3 * i, 3);
     }
 }
 
@@ -640,14 +654,14 @@ void cSoftBodyImplicit::SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_ve
 //     // 3. compare
 //     tVectorXd diff = tet_int_force_sel - tet_int_force_old;
 //     std::cout << "diff = " << diff.transpose() << std::endl;
-//     std::cout << "tet_int_force_sel = " << tet_int_force_sel.transpose() << std::endl;
-//     std::cout << "tet_int_force_old = " << tet_int_force_old.transpose() << std::endl;
-//     exit(1);
+//     std::cout << "tet_int_force_sel = " << tet_int_force_sel.transpose() <<
+//     std::endl; std::cout << "tet_int_force_old = " <<
+//     tet_int_force_old.transpose() << std::endl; exit(1);
 // }
 
 /**
  * \brief               global stiffness matrix assembly
-*/
+ */
 tMatrixXd cSoftBodyImplicit::CalcGlobalStiffnessMatrix()
 {
     // matrix assmebly
@@ -665,7 +679,8 @@ tMatrixXd cSoftBodyImplicit::CalcGlobalStiffnessMatrix()
             {
                 size_t global_vj_idx = tet->mVertexId[j];
 
-                global_K.block(3 * global_vi_idx, 3 * global_vj_idx, 3, 3) += ele_K.block(3 * i, 3 * j, 3, 3);
+                global_K.block(3 * global_vi_idx, 3 * global_vj_idx, 3, 3) +=
+                    ele_K.block(3 * i, 3 * j, 3, 3);
             }
         }
     }
@@ -682,7 +697,8 @@ tSparseMatd cSoftBodyImplicit::CalcGlobalStiffnessSparseMatrix()
     for (int tet_id = 0; tet_id < GetNumOfTets(); tet_id++)
     {
         std::vector<tTriplet> sub_triples = {};
-        // std::cout << "omp num thread = " << omp_get_num_threads() << std::endl;
+        // std::cout << "omp num thread = " << omp_get_num_threads() <<
+        // std::endl;
         auto tet = mTetArrayShared[tet_id];
         tMatrixXd ele_K = CalcElementStiffnessMatrix(tet_id);
         for (size_t i = 0; i < 4; i++)
@@ -699,17 +715,22 @@ tSparseMatd cSoftBodyImplicit::CalcGlobalStiffnessSparseMatrix()
                 sub_triples.push_back(tTriplet(i3, j3 + 2, ele_K_part(0, 2)));
 
                 sub_triples.push_back(tTriplet(i3 + 1, j3, ele_K_part(1, 0)));
-                sub_triples.push_back(tTriplet(i3 + 1, j3 + 1, ele_K_part(1, 1)));
-                sub_triples.push_back(tTriplet(i3 + 1, j3 + 2, ele_K_part(1, 2)));
+                sub_triples.push_back(
+                    tTriplet(i3 + 1, j3 + 1, ele_K_part(1, 1)));
+                sub_triples.push_back(
+                    tTriplet(i3 + 1, j3 + 2, ele_K_part(1, 2)));
 
                 sub_triples.push_back(tTriplet(i3 + 2, j3, ele_K_part(2, 0)));
-                sub_triples.push_back(tTriplet(i3 + 2, j3 + 1, ele_K_part(2, 1)));
-                sub_triples.push_back(tTriplet(i3 + 2, j3 + 2, ele_K_part(2, 2)));
+                sub_triples.push_back(
+                    tTriplet(i3 + 2, j3 + 1, ele_K_part(2, 1)));
+                sub_triples.push_back(
+                    tTriplet(i3 + 2, j3 + 2, ele_K_part(2, 2)));
             }
         }
 
 #pragma omp critical
-        tripletList.insert(tripletList.end(), sub_triples.begin(), sub_triples.end());
+        tripletList.insert(tripletList.end(), sub_triples.begin(),
+                           sub_triples.end());
     }
 
     mat.setFromTriplets(tripletList.begin(), tripletList.end());
@@ -735,5 +756,6 @@ tVectorXd cSoftBodyImplicit::GetMassMatrixDiag()
 }
 tVector2f cSoftBodyImplicit::GetRayleightDamping()
 {
-    return tVector2f(mRayleighDamplingA, mRayleighDamplingB);
+    return tVector2f(mMaterial->mRayleighDamplingA,
+                     mMaterial->mRayleighDamplingB);
 }
