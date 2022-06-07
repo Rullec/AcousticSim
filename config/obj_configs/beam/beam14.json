@@ -1,0 +1,25 @@
+{
+    "object_name": "soft_body",
+    "object_type": "SoftBody",
+    "material_type": "STVK",
+    "material_type.stvk": "NEO_HOOKEAN",
+    "init_translation": [
+        0,
+        0.2,
+        0
+    ],
+    "init_rotation": [
+        0,
+        0,
+        0
+    ],
+    "tet_path": "data/tetmesh/beam14/beam14.1",
+    "friction": 0,
+    "collision_k": 1000,
+    "always_resolve_modal_analysis": true,
+    "material": "config/materials/wood.json",
+    "acoustic_sampling_freq_HZ": 48000,
+    "acoustic_duration": 1.0,
+    "hammer_force": 100,
+    "num_of_max_modes" : 400
+}

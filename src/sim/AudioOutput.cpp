@@ -70,7 +70,7 @@ void cAudioOutput::SetContent(unsigned int frame_count, float *tar_buf)
             if(gCurFrame > num_of_data)
             {
                 gCurFrame %= num_of_data;
-                printf("after a cycle\n");
+                // printf("after a cycle\n");
             }
             // float cur_value = std::sin(gCurFrame / 10) * 0.1;
             // real_output[cur_frame * 1 + 0] = cur_value;

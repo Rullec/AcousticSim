@@ -22,7 +22,6 @@ protected:
     tMatrixXd mVertexMateralCoords; // cloth's material coordinates
     cBaraffMaterialPtr mMaterial;
     tSparseMatd mStiffnessMatrix;
-    float mRayleightA, mRayleightB;
     tVector3f mStretchK, mBendingK; // warp weft bias
     cBaseBendingMaterialPtr mBendingMaterial;
     float mRayleighA, mRayleighB; // rayleigh damping

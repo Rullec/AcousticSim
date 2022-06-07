@@ -1,5 +1,7 @@
 {
-    "youngs": 7.1e9,
-    "poisson_ratio": 0.43,
-    "rho": 750
+    "youngs": 1.1e10,
+    "poisson_ratio": 0.25,
+    "rho": 750,
+    "rayleigh_damping_a": 60,
+    "rayleigh_damping_b": 2e-6
 }

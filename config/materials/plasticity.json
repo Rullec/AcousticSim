@@ -1,7 +1,7 @@
 {
-    "rayleigh_damping_a": 10,
-    "rayleigh_damping_b": 1e-6,
-    "youngs": 2.32e9,
-    "poisson_ratio": 0.394,
-    "rho": 900
+    "rayleigh_damping_a": 30,
+    "rayleigh_damping_b": 8e-7,
+    "youngs": 3.5e9,
+    "poisson_ratio": 0.34,
+    "rho": 1050
 }

@@ -37,7 +37,9 @@ void cAcousticSoftBody::Init(const Json::Value &conf)
         cFileUtil::GetFilename(this->mMaterial->mMatPath));
 
     play_wave->DumpToWAV(cFileUtil::ConcatFilename("log/", mat_name + ".wav"));
+    std::cout << "total mass = " << CalcTotalMass() << std::endl;
 }
+
 tVectorXd CalcWave(double coef_j, double w, double xi, double wd, double dt,
                    int num_of_steps)
 {
@@ -81,22 +83,47 @@ void cAcousticSoftBody::CalculateModalVibration()
     double dt = 1.0 / mAcousticSamplingFreqHZ;
     mModalVibrationsInfo.clear();
     mModalWaves.clear();
+    mIsModeValid.clear();
     for (int mode_id = 0; mode_id < num_of_modes; mode_id++)
     {
         double coef_j = dt * UTFinit[mode_id];
-        double w = std::sqrt(mEigenValues[mode_id]);
+        double eigen_val = mEigenValues[mode_id];
+        double w = std::sqrt(eigen_val);
+        bool failed_or_invisibled = false;
+        if (w < 2 * M_PI * 20 || w > 2 * M_PI * 20000)
+        {
+            printf("[debug] mode %d w %.1f is invisible, ignore\n", mode_id, w);
+            failed_or_invisibled = true;
+        }
+        if (std::isnan(w))
+            failed_or_invisibled = true;
         double xi =
             (this->mMaterial->mRayleighDamplingA +
              this->mMaterial->mRayleighDamplingB * mEigenValues[mode_id]) /
             (2 * w);
-        if (xi >= 1)
+        if (!failed_or_invisibled && xi >= 1)
         {
             SIM_WARN("mode {} xi {} >=1!, system is overdamped set to 1",
                      mode_id, xi);
             xi = 1;
+            failed_or_invisibled = true;
         }
+
         double wd = w * std::sqrt(1 - xi * xi);
+
         printf("mode %d w %.1f xi %.2f wd %.1f\n", mode_id, w, xi, wd);
+        if (failed_or_invisibled == true)
+        {
+            // mModalVibrationsInfo.push_back(tVector(0, 0, 0, 0));
+            printf("invalid mode, set to zero\n");
+            coef_j = 0, w = 0, xi = 0, wd = 0;
+            mIsModeValid.push_back(false);
+        }
+        else
+        {
+            mIsModeValid.push_back(true);
+        }
+
         mModalVibrationsInfo.push_back(tVector(coef_j, w, xi, wd));
 
         tVectorXd data = CalcWave(coef_j, w, xi, wd, dt,
@@ -234,14 +261,15 @@ void cAcousticSoftBody::EigenDecompose(tVectorXd &eigenValues,
         Eigen::GeneralizedEigenSolver<tMatrixXd> ges;
 
         int num_of_dof = mInvLumpedMassMatrixDiag.size();
-        tMatrixXd dense_M = tMatrixXd::Zero(num_of_dof, num_of_dof);
-        dense_M.diagonal() = mInvLumpedMassMatrixDiag.cwiseInverse();
+        // tMatrixXd dense_M = tMatrixXd::Zero(num_of_dof, num_of_dof);
+        // dense_M.diagonal() = mInvLumpedMassMatrixDiag.cwiseInverse();
+        tMatrixXd dense_M = mRawMassMatrix.toDense();
 
-        tMatrixXd dense_K = mGlobalStiffnessSparseMatrix.toDense();
+        tMatrixXd dense_K = -mGlobalStiffnessSparseMatrix.toDense();
         std::cout << "stiffness diag = " << dense_K.diagonal().transpose()
                   << std::endl;
 
-        ges.compute(-dense_K, dense_M);
+        ges.compute(dense_K, dense_M);
         eigenValues = ges.eigenvalues().real();
         eigenVecs = ges.eigenvectors().real().transpose();
         // std::cout << "eigenvalues = " << eigenvalues.transpose() <<
@@ -256,7 +284,12 @@ tDiscretedWavePtr cAcousticSoftBody::CalculateVertexVibration(int v_id)
     tVectorXf new_data = tVectorXf::Zero(mModalWaves[0]->data.size());
     for (int i = 0; i < num_of_modes; i++)
     {
-        new_data += weight[i] * mModalWaves[i]->data;
+        if (mIsModeValid[i] == true)
+            new_data += weight[i] * mModalWaves[i]->data;
+        else
+        {
+            printf("mode %d is invalid\n");
+        }
     }
 
     // scale sound
@@ -269,4 +302,11 @@ tDiscretedWavePtr cAcousticSoftBody::CalculateVertexVibration(int v_id)
 double cAcousticSoftBody::GetDt() const
 {
     return 1.0 / mAcousticSamplingFreqHZ;
+}
+
+double cAcousticSoftBody::CalcTotalMass() const
+{
+    std::cout << mInvLumpedMassMatrixDiag.cwiseInverse().transpose()
+              << std::endl;
+    return mInvLumpedMassMatrixDiag.cwiseInverse().sum();
 }

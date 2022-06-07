@@ -17,13 +17,13 @@ protected:
     int mNumOfMaxModes;
     tVectorXd mEigenValues;
     tMatrixXd mEigenVecs;
-    
+
     tEigenArr<tVector> mModalVibrationsInfo;
     std::vector<tDiscretedWavePtr> mModalWaves;
     void SolveForMonopole();
     std::string GetWaveName() const;
     std::vector<tVector3d> mSurfaceSoundPressureGrad;
-
+    std::vector<int> mIsModeValid;
     tEigenArr<tMatrixXd>
     SolveVibration(const tVectorXd &MassDiag, const tSparseMatd &StiffMat,
                    const tVector2f &rayleigh_damping, const tVectorXd &xcur,
@@ -34,4 +34,5 @@ protected:
     virtual tDiscretedWavePtr CalculateVertexVibration(int v_id);
     int GetNumOfModes() const;
     double GetDt() const;
+    double CalcTotalMass() const;
 };

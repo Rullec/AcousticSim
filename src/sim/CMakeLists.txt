@@ -79,3 +79,7 @@ add_library(sim_lib ${SIM_SRC})
 target_compile_options(sim_lib PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-w>)
 # target_link_libraries(sim_lib)
 # target_link_libraries(sim_lib OpenMP::OpenMP_CXX)
+
+pybind11_add_module(softbody ./softbody/softbody_export.cpp)
+target_link_libraries(softbody PRIVATE sim_lib utils_lib JSON geo_lib imgui_lib)
+move_pybind11_release_to_dir(${DLL_OUTPUT_DIR} softbody)

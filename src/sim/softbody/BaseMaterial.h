@@ -31,7 +31,6 @@ public:
     virtual double GetLameSecondCoefMu() const;
     virtual double GetRho() const;
     virtual std::string GetMaterialPath() const;
-
     double mYoungsModulusNew;     // young's modulus
     double mPoissonRatioNew; // Poisson's ratio
     double mRho;    // density kg.m-3

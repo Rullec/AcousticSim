@@ -6,6 +6,7 @@
 #include "utils/JsonUtil.h"
 #include "utils/RenderUtil.h"
 #include "utils/RotUtil.h"
+#include "utils/SparseUtil.h"
 #include "utils/TetUtil.h"
 #include <iostream>
 #include <set>
@@ -63,6 +64,7 @@ void cSoftBody::Init(const Json::Value &conf)
     InitInvDm();
     InitPos();
     InitTetVolume();
+    InitRawMassMatrix();
     InitDiagLumpedMassMatrix();
     InitForceVector();
     // mXcur[3 * mTetArrayShared[0]->mVertexId[0] + 1] += 0.02;
@@ -375,6 +377,9 @@ double cSoftBody::CalcEnergy() { return 0; }
  */
 void cSoftBody::InitDiagLumpedMassMatrix()
 {
+    // calcualte sum of volume
+    std::cout << "total init volume = " << mInitTetVolume.sum() << std::endl;
+
     int dof = GetNumOfFreedoms();
     int num_of_v = GetNumOfVertices();
     tVectorXd DLMM_diag = tVectorXd::Zero(num_of_v);
@@ -400,6 +405,8 @@ void cSoftBody::InitDiagLumpedMassMatrix()
     }
     // std::cout << "rho = " << mRho << std::endl;
     DLMM_diag = DLMM_diag.eval() / 20 * this->mRho;
+    std::cout << "total init mass = " << DLMM_diag.sum() << std::endl;
+
     // std::cout << "DLMM = " << DLMM_diag.transpose();
     // mInvLumpedMassMatrixDiag = DLMM_diag.cwiseInverse();
     mInvLumpedMassMatrixDiag.noalias() = tVectorXd::Zero(dof);
@@ -410,10 +417,62 @@ void cSoftBody::InitDiagLumpedMassMatrix()
         mInvLumpedMassMatrixDiag[3 * i + 1] = val;
         mInvLumpedMassMatrixDiag[3 * i + 2] = val;
     }
+    std::cout << "new total mass = "
+              << mInvLumpedMassMatrixDiag.cwiseInverse().sum() << std::endl;
+    // exit(1);
     // std::cout << "mInvLumpedMassMatrixDiag = " <<
     // mInvLumpedMassMatrixDiag.transpose();
     SIM_ASSERT(mInvLumpedMassMatrixDiag.hasNaN() == false);
     // exit(1);
+}
+
+void cSoftBody::InitRawMassMatrix()
+{
+    // calcualte sum of volume
+
+    int dof = GetNumOfFreedoms();
+    int num_of_v = GetNumOfVertices();
+    tVectorXd DLMM_diag = tVectorXd::Zero(num_of_v);
+
+    tMatrix4f ele_mass_template = tMatrix4f::Zero();
+    ele_mass_template << 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2;
+
+    ele_mass_template *= mRho / 20;
+
+    /*
+     *  M_{total} = rho / 20 * [ \sum_e
+     *       V_e * S_e^T *
+     *          (2 1 1 1)
+     *          (1 2 1 1)
+     *          (1 1 2 1)
+     *          (1 1 1 2) * S_e
+     */
+    std::vector<tTriplet> tripletList = {};
+    for (size_t i = 0; i < GetNumOfTets(); i++)
+    {
+        auto cur_tet = mTetArrayShared[i];
+        // 1. shape the volume
+        double tet_volume = mInitTetVolume[i];
+
+        tMatrix4f tet_ele_mass = tet_volume * ele_mass_template;
+
+        for (int a = 0; a < 4; a++)
+            for (int b = 0; b < 4; b++)
+            {
+                int v0 = cur_tet->mVertexId[a];
+                int v1 = cur_tet->mVertexId[b];
+                double mass = tet_ele_mass(a, b);
+                tripletList.push_back(tTriplet(3 * v0 + 0, 3 * v1 + 0, mass));
+                tripletList.push_back(tTriplet(3 * v0 + 1, 3 * v1 + 1, mass));
+                tripletList.push_back(tTriplet(3 * v0 + 2, 3 * v1 + 2, mass));
+            }
+        // 3. add the component
+    }
+
+    mRawMassMatrix.setZero();
+    mRawMassMatrix.resize(3 * num_of_v, 3 * num_of_v);
+    mRawMassMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
+    std::cout << "new total mass is " << mRawMassMatrix.sum() << std::endl;
 }
 
 int cSoftBody::GetNumOfTets() const { return this->mTetArrayShared.size(); }

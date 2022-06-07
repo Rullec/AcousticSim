@@ -39,3 +39,7 @@ main
 
 data/
 log/
+*wav
+dlls/
+
+__pycache__

@@ -21,8 +21,8 @@ cBaraffCloth::~cBaraffCloth() {}
 cBaseBendingMaterialPtr mDiMaterial = std::make_shared<cDihedralMaterial>();
 void cBaraffCloth::Init(const Json::Value &conf)
 {
-    mRayleightA = cJsonUtil::ParseAsDouble("rayleigh_damping_a", conf);
-    mRayleightB = cJsonUtil::ParseAsDouble("rayleigh_damping_b", conf);
+    mRayleighA = cJsonUtil::ParseAsDouble("rayleigh_damping_a", conf);
+    mRayleighB = cJsonUtil::ParseAsDouble("rayleigh_damping_b", conf);
     bool mEnableGravity = cJsonUtil::ParseAsDouble("enable_gravity", conf);
     mMaxCGIters = cJsonUtil::ParseAsInt("max_iters", conf);
     cBaseCloth::Init(conf);
@@ -272,7 +272,7 @@ void cBaraffCloth::SolveForDx(double dt)
     }
 
     tSparseMatd W =
-        (1 + dt * mRayleightA) * M + dt * (mRayleightB - dt) * mStiffnessMatrix;
+        (1 + dt * mRayleighA) * M + dt * (mRayleighB - dt) * mStiffnessMatrix;
     // add effect for constraint points
     // for (auto &i : this->mConstraint_StaticPointIds)
     // {
@@ -335,8 +335,8 @@ void cBaraffCloth::UpdateCollisionForce(tVectorXd &col_force)
 #include "InnerForceCalculator.h"
 void cBaraffCloth::UpdateImGui()
 {
-    ImGui::SliderFloat("dampingA", &mRayleightA, 0, 1);
-    ImGui::SliderFloat("dampingB", &mRayleightB, -1e-2, 0);
+    ImGui::SliderFloat("dampingA", &mRayleighA, 0, 1);
+    ImGui::SliderFloat("dampingB", &mRayleighB, -1e-2, 0);
 
     tVector3f stretch = mStretchK.cast<float>();
     tVector3f bending = mBendingK.cast<float>();

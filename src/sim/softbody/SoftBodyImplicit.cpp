@@ -2,6 +2,7 @@
 #include "geometries/Tetrahedron.h"
 #include "sim/softbody/FourOrderTensor.h"
 #include "sim/softbody/ThreeOrderTensor.h"
+#include "utils/JsonUtil.h"
 #include "utils/LogUtil.h"
 #include "utils/TimeUtil.hpp"
 #include <iostream>
@@ -18,6 +19,7 @@ extern cFourOrderTensor CalcNumericalDerivaitve_MatrixWRTMatrix(
     float eps = 1e-5);
 
 cSoftBodyImplicit::cSoftBodyImplicit(int id_) : cSoftBody(id_) {}
+cSoftBodyImplicit::cSoftBodyImplicit() : cSoftBody(0) {}
 
 cSoftBodyImplicit::~cSoftBodyImplicit() {}
 
@@ -127,8 +129,8 @@ void cSoftBodyImplicit::SolveForNextPosSparse(float dt)
 {
     tVectorXd MassDiag = mInvLumpedMassMatrixDiag.cwiseInverse();
 
-    tSparseMatd A =
-        dt * (this->mMaterial->mRayleighDamplingB - dt) * this->mGlobalStiffnessSparseMatrix;
+    tSparseMatd A = dt * (this->mMaterial->mRayleighDamplingB - dt) *
+                    this->mGlobalStiffnessSparseMatrix;
     // std::cout << "A.diagonal() = " << A.diagonal().size() << std::endl;
     // std::cout << "MassDiag = " << MassDiag.size() << std::endl;
 
@@ -754,8 +756,90 @@ tVectorXd cSoftBodyImplicit::GetMassMatrixDiag()
 {
     return mInvLumpedMassMatrixDiag.cwiseInverse();
 }
-tVector2f cSoftBodyImplicit::GetRayleightDamping()
+tVector2f cSoftBodyImplicit::GetRayleighDamping()
 {
     return tVector2f(mMaterial->mRayleighDamplingA,
                      mMaterial->mRayleighDamplingB);
+}
+std::vector<Eigen::Triplet<double>>
+to_triplets(const Eigen::SparseMatrix<double> &M)
+{
+    std::vector<Eigen::Triplet<double>> v;
+    for (int i = 0; i < M.outerSize(); i++)
+        for (typename Eigen::SparseMatrix<double>::InnerIterator it(M, i); it;
+             ++it)
+            v.emplace_back(it.row(), it.col(), it.value());
+    return v;
+}
+
+tVectorXd cSoftBodyImplicit::GetGlobalStiffnessMatrixEntrys() const
+{
+    auto triplets_array = to_triplets(mGlobalStiffnessSparseMatrix);
+    tVectorXd val = tVectorXd::Zero(3 * triplets_array.size());
+    for (int i = 0; i < triplets_array.size(); i++)
+    {
+        auto tri = triplets_array[i];
+
+        val[3 * i + 0] = tri.row();
+        val[3 * i + 1] = tri.col();
+        val[3 * i + 2] = tri.value();
+    }
+    return val;
+}
+
+tVectorXd cSoftBodyImplicit::GetGlobalRawMassMatrixEntrys() const
+{
+    auto triplets_array = to_triplets(mRawMassMatrix);
+    tVectorXd val = tVectorXd::Zero(3 * triplets_array.size());
+    for (int i = 0; i < triplets_array.size(); i++)
+    {
+        auto tri = triplets_array[i];
+
+        val[3 * i + 0] = tri.row();
+        val[3 * i + 1] = tri.col();
+        val[3 * i + 2] = tri.value();
+    }
+    return val;
+}
+
+void cSoftBodyImplicit::InitFromFile(const std::string &name)
+{
+    Json::Value root;
+    cJsonUtil::LoadJson(name, root);
+    cSoftBodyImplicit::Init(root);
+
+    // update
+    UpdateDeformationGradient();
+    mGlobalStiffnessSparseMatrix = CalcGlobalStiffnessSparseMatrix();
+}
+
+tVectorXd cSoftBodyImplicit::GetVertexPos() const
+{
+    int num_of_v = GetNumOfVertices();
+    tVectorXd pos = tVectorXd::Zero(3 * num_of_v);
+    for (int i = 0; i < num_of_v; i++)
+    {
+        pos.segment(3 * i, 3) = mVertexArray[i]->mPos.segment(0, 3);
+    }
+    return pos;
+}
+
+#include "geometries/Tetrahedron.h"
+tEigenArr<tVector4i> cSoftBodyImplicit::GetTetVertexIdx() const
+{
+    tEigenArr<tVector4i> id_array = {};
+    for (auto &tet : mTetArrayShared)
+    {
+        id_array.push_back(tet->mVertexId);
+    }
+    return id_array;
+}
+
+float cSoftBodyImplicit::GetYoungsModulus() const
+{
+    return this->mMaterial->mYoungsModulusNew;
+}
+float cSoftBodyImplicit::GetPoissonRatio() const
+{
+    return this->mMaterial->mPoissonRatioNew;
 }

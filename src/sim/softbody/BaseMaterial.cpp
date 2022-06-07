@@ -65,7 +65,7 @@ void cBaseMaterial::Init(const Json::Value &conf)
         mRayleighDamplingB =
             cJsonUtil::ParseAsFloat("rayleigh_damping_b", material_json);
 
-        SIM_INFO("rayleight damping a {} b {}", mRayleighDamplingA,
+        SIM_INFO("Rayleigh damping a {} b {}", mRayleighDamplingA,
                  mRayleighDamplingB);
     }
     else

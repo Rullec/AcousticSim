@@ -1,7 +1,7 @@
-
 cmake_minimum_required(VERSION 3.0.0)
 
-
+add_subdirectory(includes/pybind11)
+include_directories(includes/pybind11/include)
 
 if(NOT APPLE)
     project(ClothSim VERSION 0.1.0 LANGUAGES CUDA CXX)

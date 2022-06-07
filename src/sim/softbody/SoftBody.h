@@ -1,6 +1,7 @@
 #pragma once
 #include "sim/BaseObject.h"
 #include "sim/softbody/BaseMaterial.h"
+#include "utils/SparseUtil.h"
 /**
  * \brief           softbody object (mostly based on 3D FEM)
  */
@@ -60,9 +61,11 @@ protected:
     std::vector<int> mSurfaceTriangleIdArray;
     std::vector<int> mSurfaceEdgeIdArray;
     std::vector<int> mSurfaceVertexIdArray;
+    tSparseMatd mRawMassMatrix;
     virtual void InitInvDm();
     virtual void InitPos();
     virtual void InitDiagLumpedMassMatrix();
+    virtual void InitRawMassMatrix();
     virtual void InitTetVolume();
     virtual void InitSurface();
     virtual void InitForceVector();

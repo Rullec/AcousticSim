@@ -5,13 +5,21 @@ class cSoftBodyImplicit : public cSoftBody
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    explicit cSoftBodyImplicit();
     explicit cSoftBodyImplicit(int id_);
     virtual ~cSoftBodyImplicit();
     virtual void Update(float dt) override;
+    virtual void InitFromFile(const std::string &name);
     virtual void Init(const Json::Value &conf) override;
     virtual tSparseMatd GetGlobalStiffnessMatrix() const;
+    virtual tVectorXd GetGlobalStiffnessMatrixEntrys() const;
+    virtual tVectorXd GetGlobalRawMassMatrixEntrys() const;
     virtual tVectorXd GetMassMatrixDiag();
-    virtual tVector2f GetRayleightDamping();
+    virtual tVector2f GetRayleighDamping();
+    virtual tVectorXd GetVertexPos() const;
+    virtual tEigenArr<tVector4i> GetTetVertexIdx() const;
+    virtual float GetYoungsModulus() const;
+    virtual float GetPoissonRatio() const;
 
 protected:
     virtual tEigenArr<tMatrix3d> CalcDFDx(int ele_id);
@@ -25,7 +33,8 @@ protected:
     virtual void CheckElementStiffnessMat(int tet_id);
     virtual void CheckGlobalStiffnessMat();
 
-    virtual void SetTetVerticesPos(size_t tet_id, const tVectorXd &tet_vertices_pos);
+    virtual void SetTetVerticesPos(size_t tet_id,
+                                   const tVectorXd &tet_vertices_pos);
 
     virtual void UpdateIntForce() override;
     virtual void SolveForNextPos(float dt) override;
