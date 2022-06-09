@@ -34,7 +34,7 @@ class cVibObj:
 
 
 if __name__ == "__main__":
-    path = "vib_steel_stvk.json"
+    path = "../../data/vib_steel_stvk.json"
     obj = cVibObj()
     obj.load(path)
 
