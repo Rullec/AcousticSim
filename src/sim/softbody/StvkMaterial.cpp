@@ -33,7 +33,7 @@ cFourOrderTensor CalcDEDF(const tMatrix3d &F)
 }
 
 cStvkMaterial::cStvkMaterial() : cBaseMaterial(eMaterialType::STVK) {}
-void cStvkMaterial::Init(const Json::Value &conf) { cBaseMaterial::Init(conf); }
+
 tMatrix3d cStvkMaterial::CalcP(const tMatrix3d &F) const
 {
     return CalcP_part1(F) + CalcP_part2(F);

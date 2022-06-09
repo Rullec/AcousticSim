@@ -4,5 +4,4 @@ namespace Json
     class Value;
 };
 SIM_DECLARE_PTR(cBaseMaterial);
-cBaseMaterialPtr BuildMaterial(const Json::Value &);
-cBaseMaterialPtr BuildDefaultMaterial(eMaterialType);
+cBaseMaterialPtr BuildMaterial(std::string mat_path, eMaterialType mat_type);

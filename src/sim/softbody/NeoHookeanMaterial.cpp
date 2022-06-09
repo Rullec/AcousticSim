@@ -40,11 +40,6 @@ cNeoHookeanMaterial::cNeoHookeanMaterial() : cBaseMaterial(eMaterialType::NEO_HO
 
 }
 
-void cNeoHookeanMaterial::Init(const Json::Value &conf)
-{
-    cBaseMaterial::Init(conf);
-}
-
 tMatrix3d cNeoHookeanMaterial::CalcP(const tMatrix3d &F) const
 {
     // tMatrix3d FinvT = F.transpose().inverse();

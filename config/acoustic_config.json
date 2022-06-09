@@ -20,11 +20,11 @@
             "friction": 0,
             "collision_k": 1000,
             "always_resolve_modal_analysis": true,
-            "material": "config/materials/rubber.json",
+            "material_path": "config/materials/rubber.json",
             "acoustic_sampling_freq_HZ": 48000,
             "acoustic_duration": 1.0,
             "hammer_force": 10,
-            "num_of_max_modes" : 200
+            "num_of_max_modes" : -1
         }
     ],
     "window_height": 800,
@@ -37,13 +37,13 @@
     "camera": {
         "camera_type": "arcball_cam",
         "camera_pos": [
-            0.0,
-            0.1,
-            0.5
+            2.0,
+            2.0,
+            2.0
         ],
         "camera_focus": [
             0.0,
-            0.1,
+            0.0,
             0.0
         ],
         "fov": 52.5,

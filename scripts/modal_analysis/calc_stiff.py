@@ -25,20 +25,15 @@ def calcB(tet_vertex_pos_lst):
     M = np.zeros([4, 4])
     M[:, 0] = 1
     for i in range(4):
-        # print(f"v{i} pos {tet_vertex_pos_lst[i]}")
         M[i, 1:] = tet_vertex_pos_lst[i]
     Mdet_6V = np.linalg.det(M)
     assert Mdet_6V > 0
     C = Mdet_6V * np.linalg.inv(M).T
-    # Minv = np.linalg.inv(M)
-    # print(f"cofactor {C}")
+
     beta = C[:, 1]
     gamma = C[:, 2]
     delta = C[:, 3]
-    # print(f"beta {beta}")
-    # print(f"gamma {gamma}")
-    # print(f"delta {delta}")
-    # exit()
+
     # 2. calculate [B]
     B = np.zeros([6, 12])
     for i in range(4):
@@ -88,6 +83,8 @@ def calcD(body):
 from scipy.sparse import coo_matrix
 
 from tqdm import tqdm
+
+
 def calc_stiffness(body: softbody):
 
     # 1. calculate D
@@ -103,7 +100,7 @@ def calc_stiffness(body: softbody):
     print(f"[info] total num of tet {num_of_tet}")
     dof = len(vertex_lst)
 
-    for t in tqdm( range(num_of_tet)):
+    for t in tqdm(range(num_of_tet)):
         # 2. calculate B for each element
         tet_vpos = [vertex_lst[3 * vid:3 * vid + 3] for vid in tet_vid_lst[t]]
         B = calcB(tet_vpos)
@@ -128,7 +125,6 @@ def calc_stiffness(body: softbody):
                         val_lst.append(K_ele[3 * a + j, 3 * b + k])
 
     K_global = coo_matrix((val_lst, (row_lst, col_lst)), shape=(dof, dof))
-    # print(K_global)
     return K_global
 
 

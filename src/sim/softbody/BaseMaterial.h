@@ -23,7 +23,9 @@ struct cBaseMaterial : std::enable_shared_from_this<cBaseMaterial>
 public:
     explicit cBaseMaterial(eMaterialType type);
     eMaterialType GetType() const;
-    virtual void Init(const Json::Value &conf);
+    virtual void Init(std::string math_path);
+    // virtual void Init(const Json::Value &conf);
+    // virtual void Init(std::string math_path, double youngs_modulus, double poisson_ratio, double rho, double damping_a, double damping_b);
     virtual tMatrix3d CalcP(const tMatrix3d &F) const = 0; // PK1
     virtual cFourOrderTensor CalcDPDF(const tMatrix3d &F) const = 0;
     virtual void CheckDPDF(const tMatrix3d &F) const;
@@ -37,6 +39,7 @@ public:
     float mRayleighDamplingA,
         mRayleighDamplingB; // rayleigh damping for mass mat and stiffness mat
     std::string mMatPath;   // material path
+    std::string mName;
     eMaterialType mType;
 };
 

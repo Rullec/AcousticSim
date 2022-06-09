@@ -1,4 +1,5 @@
 {
+    "name": "rubber",
     "rayleigh_damping_a": 100,
     "rayleigh_damping_b": 2e-7,
     "youngs": 0.05e9,

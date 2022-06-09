@@ -1,5 +1,5 @@
 #pragma once
-#include "BaseMaterial.h"
+#include "BaseBendingMaterial.h"
 using tMatrix12f = Eigen::Matrix<float, 12, 12>;
 
 class cQBendingMaterial : public cBaseBendingMaterial

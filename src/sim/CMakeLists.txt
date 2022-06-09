@@ -19,7 +19,7 @@ set(CLOTH_SRC
     # cloth/BaraffMaterialUnstable.cpp
     cloth/BaraffMaterial.cpp
     cloth/QBendingMaterial.cpp
-    cloth/BaseMaterial.cpp
+    cloth/BaseBendingMaterial.cpp
     cloth/DihedralBending.cpp
     cloth/InnerForceCalculator.cpp
     # cloth/ImplicitCloth.cpp   
@@ -55,6 +55,7 @@ set(SOFTBODY_SRC
     softbody/StvkMaterial.cpp
     softbody/MaterialBuilder.cpp
     softbody/BaseMaterial.cpp
+    softbody/AcousticLinearElasticity.cpp
     AcousticSoftBody.cpp
     AudioOutput.cpp
     AudioWave.cpp

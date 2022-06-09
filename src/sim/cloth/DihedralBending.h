@@ -1,5 +1,5 @@
 #pragma once
-#include "BaseMaterial.h"
+#include "BaseBendingMaterial.h"
 // using tMatrix12f = Eigen::Matrix<float, 12, 12>;
 // using tVector12f = Eigen::Matrix<float, 12, 1>;
 using tMatrix12d = Eigen::Matrix<double, 12, 12>;

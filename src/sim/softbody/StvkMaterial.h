@@ -4,7 +4,6 @@ class cStvkMaterial : public cBaseMaterial
 {
 public:
     cStvkMaterial();
-    virtual void Init(const Json::Value &conf) override;
     virtual tMatrix3d CalcP(const tMatrix3d &F) const override; // PK1
     virtual cFourOrderTensor CalcDPDF(const tMatrix3d &F) const override;
     virtual void CheckDPDF(const tMatrix3d &F) const override;

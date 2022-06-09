@@ -1,15 +1,14 @@
 #include "MaterialBuilder.h"
-#include "utils/JsonUtil.h"
 #include "sim/softbody/BaseMaterial.h"
 #include "sim/softbody/NeoHookeanMaterial.h"
 #include "sim/softbody/StvkMaterial.h"
+#include "utils/JsonUtil.h"
 
-cBaseMaterialPtr BuildMaterial(const Json::Value &conf)
+cBaseMaterialPtr BuildMaterial(std::string mat_path, eMaterialType mat_type)
 {
-    std::string material_type_str = cJsonUtil::ParseAsString("material_type", conf);
     cBaseMaterialPtr mat = nullptr;
 
-    switch (BuildMaterialTypeFromStr(material_type_str))
+    switch (mat_type)
     {
     case eMaterialType::STVK:
     {
@@ -25,40 +24,11 @@ cBaseMaterialPtr BuildMaterial(const Json::Value &conf)
     }
     default:
     {
-        SIM_ERROR("unsupported material type {}", material_type_str);
+        SIM_ERROR("unsupported material type {}", mat_type);
         break;
     }
     }
-    mat->Init(conf);
-    return mat;
-}
+    mat->Init(mat_path);
 
-cBaseMaterialPtr BuildDefaultMaterial(eMaterialType type)
-{
-    float mMu = 2e4;
-    float mLambda = 0.7;
-    Json::Value conf;
-    conf["youngs"] = mMu;
-    conf["poisson_ratio"] = mLambda;
-    cBaseMaterialPtr mat = nullptr;
-    switch (type)
-    {
-    case eMaterialType::STVK:
-    {
-        mat = std::make_shared<cStvkMaterial>();
-        break;
-    }
-    case eMaterialType::NEO_HOOKEAN:
-    {
-        mat = std::make_shared<cNeoHookeanMaterial>();
-        break;
-    }
-    default:
-    {
-        SIM_ERROR("unsupported material type {}", type);
-        break;
-    }
-    }
-    mat->Init(conf);
     return mat;
 }

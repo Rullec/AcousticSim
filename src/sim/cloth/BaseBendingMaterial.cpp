@@ -1,4 +1,4 @@
-#include "BaseMaterial.h"
+#include "BaseBendingMaterial.h"
 #include "geometries/Primitives.h"
 #include "utils/LogUtil.h"
 #include <set>

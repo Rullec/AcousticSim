@@ -1,4 +1,5 @@
 {
+    "name": "plasticity",
     "rayleigh_damping_a": 30,
     "rayleigh_damping_b": 8e-7,
     "youngs": 3.5e9,

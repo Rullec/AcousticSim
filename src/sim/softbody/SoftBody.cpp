@@ -1,6 +1,7 @@
 #include "SoftBody.h"
 #include "geometries/Primitives.h"
 #include "geometries/Tetrahedron.h"
+#include "imgui.h"
 #include "sim/softbody/BaseMaterial.h"
 #include "sim/softbody/MaterialBuilder.h"
 #include "utils/JsonUtil.h"
@@ -50,7 +51,14 @@ void cSoftBody::Init(const Json::Value &conf)
                       mTetArrayShared);
     InitTetTransform(conf);
 
-    mMaterial = BuildMaterial(conf);
+    {
+        std::string mat_model_str =
+            cJsonUtil::ParseAsString("material_type", conf);
+        std::string mat_path = cJsonUtil::ParseAsString("material_path", conf);
+        auto mat_type = BuildMaterialTypeFromStr(mat_model_str);
+        mMaterial = BuildMaterial(mat_path, mat_type);
+    }
+
     mRho = mMaterial->GetRho();
 
     mFrictionCoef = cJsonUtil::ParseAsFloat("friction", conf);
@@ -510,7 +518,6 @@ eMaterialType cSoftBody::GetMaterialType() const
 /**
  * \brief           update imgui
  */
-#include "imgui.h"
 void cSoftBody::UpdateImGui()
 {
 
@@ -535,8 +542,9 @@ void cSoftBody::UpdateImGui()
     if (old_idx != item_cur_idx)
     {
         // rebuild the material
-        mMaterial =
-            BuildDefaultMaterial(static_cast<eMaterialType>(item_cur_idx));
+
+        mMaterial = BuildMaterial(mMaterial->mMatPath,
+                                  static_cast<eMaterialType>(item_cur_idx));
     }
 }
 

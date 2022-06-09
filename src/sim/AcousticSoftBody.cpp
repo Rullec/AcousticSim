@@ -1,18 +1,64 @@
 #include "sim/AcousticSoftBody.h"
 #include "geometries/Primitives.h"
+#include "imgui.h"
 #include "sim/AudioOutput.h"
 #include "sim/AudioWave.h"
+#include "sim/softbody/AcousticLinearElasticity.h"
 #include "sim/softbody/BaseMaterial.h"
 #include "utils/FileUtil.h"
 #include "utils/JsonUtil.h"
 #include <fstream>
 #include <iostream>
 extern cAudioOutputPtr gAudioOutput;
+eMaterialType GetHyperMaterialFromAcousticMaterial(std::string name);
+std::string GetAcousticMaterialNameFromHyperMaterial(eMaterialType type);
+int GetAcousticMaterialFromName(std::string name)
+{
+    if (name == "stvk")
+    {
+        return 0;
+    }
+    else if (name == "neohookean")
+    {
+        return 1;
+    }
+    else if (name == "linear_elasticity")
+    {
+        return 2;
+    }
+    else
+    {
+        SIM_ERROR("no material for name {}", name);
+    }
+}
+
+std::string GetAcousticMaterialNameFromIdx(int idx)
+{
+    std::string name = "";
+    switch (idx)
+    {
+    case 0:
+        name = "stvk";
+        break;
+    case 1:
+        name = "neohookean";
+        break;
+    case 2:
+        name = "linear_elasticity";
+        break;
+    default:
+        SIM_ERROR("material name from idx {}", name);
+    }
+    return name;
+}
+
 cAcousticSoftBody::cAcousticSoftBody(int id_) : cSoftBodyImplicit(id_) {}
 
 void cAcousticSoftBody::Init(const Json::Value &conf)
 {
     cSoftBodyImplicit::Init(conf);
+    mAcousticMaterialModelIdx = GetAcousticMaterialFromName(
+        GetAcousticMaterialNameFromHyperMaterial(this->mMaterial->GetType()));
     mAcousticSamplingFreqHZ =
         cJsonUtil::ParseAsInt("acoustic_sampling_freq_HZ", conf);
     bool always_resolve =
@@ -23,11 +69,29 @@ void cAcousticSoftBody::Init(const Json::Value &conf)
     mHammerForce = cJsonUtil::ParseAsDouble("hammer_force", conf);
     mNumOfMaxModes = cJsonUtil::ParseAsInt("num_of_max_modes", conf);
 
+    // load many material types ... for selection
+    LoadMaterialParams();
+
+    // init linear elasticity stiffness matrix
+    mLinearElasticityStiffnessMatrix =
+        cAcousticLinearElasticity::CalcGlobalStiffness(
+            mVertexArray, mTetArrayShared, this->mMaterial->mYoungsModulusNew,
+            this->mMaterial->mPoissonRatioNew,
+            this->mMaterial->mRayleighDamplingA,
+            this->mMaterial->mRayleighDamplingB);
+    // std::cout << "linear K = \n"
+    //           << mLinearElasticityStiffnessMatrix.toDense() << std::endl;
+    ResolveVibration();
+}
+void cAcousticSoftBody::ResolveVibration()
+{
+    printf("[info] ------------resolve vibration-------------\n");
     // Init noise
     UpdateDeformationGradient();
     mGlobalStiffnessSparseMatrix = CalcGlobalStiffnessSparseMatrix();
 
     EigenDecompose(mEigenValues, mEigenVecs);
+
     CalculateModalVibration();
     auto play_wave = CalculateVertexVibration(0);
     gAudioOutput->SetWave(play_wave);
@@ -39,7 +103,6 @@ void cAcousticSoftBody::Init(const Json::Value &conf)
     play_wave->DumpToWAV(cFileUtil::ConcatFilename("log/", mat_name + ".wav"));
     std::cout << "total mass = " << CalcTotalMass() << std::endl;
 }
-
 tVectorXd CalcWave(double coef_j, double w, double xi, double wd, double dt,
                    int num_of_steps)
 {
@@ -54,8 +117,12 @@ tVectorXd CalcWave(double coef_j, double w, double xi, double wd, double dt,
 }
 int cAcousticSoftBody::GetNumOfModes() const
 {
-
-    return SIM_MIN(mNumOfMaxModes, mEigenValues.size());
+    if (mNumOfMaxModes <= 0)
+    {
+        return mEigenValues.size();
+    }
+    else
+        return SIM_MIN(mNumOfMaxModes, mEigenValues.size());
 }
 /**
  * \brief   calcualte modal vibration
@@ -265,9 +332,17 @@ void cAcousticSoftBody::EigenDecompose(tVectorXd &eigenValues,
         // dense_M.diagonal() = mInvLumpedMassMatrixDiag.cwiseInverse();
         tMatrixXd dense_M = mRawMassMatrix.toDense();
 
-        tMatrixXd dense_K = -mGlobalStiffnessSparseMatrix.toDense();
-        std::cout << "stiffness diag = " << dense_K.diagonal().transpose()
-                  << std::endl;
+        tMatrixXd dense_K;
+        if (this->mAcousticMaterialModelIdx == 2)
+        {
+            printf("[info] take linear elasticity's K matrix\n");
+            dense_K = mLinearElasticityStiffnessMatrix;
+        }
+        else
+        {
+            printf("[info] take hyper elasticity's K matrix\n");
+            dense_K = -mGlobalStiffnessSparseMatrix.toDense();
+        }
 
         ges.compute(dense_K, dense_M);
         eigenValues = ges.eigenvalues().real();
@@ -309,4 +384,175 @@ double cAcousticSoftBody::CalcTotalMass() const
     std::cout << mInvLumpedMassMatrixDiag.cwiseInverse().transpose()
               << std::endl;
     return mInvLumpedMassMatrixDiag.cwiseInverse().sum();
+}
+
+#include "sim/softbody/MaterialBuilder.h"
+
+void cAcousticSoftBody::UpdateImGui()
+{
+    // material model selection
+    if (ImGui::BeginCombo(
+            "material model idx",
+            GetAcousticMaterialNameFromIdx(mAcousticMaterialModelIdx).c_str()))
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            std::string name = GetAcousticMaterialNameFromIdx(i);
+            bool is_selected = (i == mAcousticMaterialModelIdx);
+
+            if (ImGui::Selectable(name.c_str(), is_selected))
+            {
+                if (mAcousticMaterialModelIdx != i)
+                {
+                    // change material
+                    ChangeMaterial(mAcousticMaterialModelIdx, i);
+                }
+            }
+            if (is_selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    // material model selection
+    if (ImGui::BeginCombo(
+            "material param idx",
+            this->mMaterialParamNameLst[this->mMaterialParamIdx].c_str()))
+    {
+        for (int i = 0; i < mMaterialParamNameLst.size(); i++)
+        {
+            std::string name = mMaterialParamNameLst[i];
+            bool is_selected = (i == mMaterialParamIdx);
+
+            if (ImGui::Selectable(name.c_str(), is_selected))
+            {
+                if (mMaterialParamIdx != i)
+                {
+                    // change material
+                    mMaterialParamIdx = i;
+                    mMaterial->Init(mMaterialParamPathLst[mMaterialParamIdx]);
+                    ResolveVibration();
+                }
+            }
+            if (is_selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    if (ImGui::Button("resolve vibration\n"))
+    {
+        ResolveVibration();
+    }
+}
+
+std::string GetAcousticMaterialNameFromHyperMaterial(eMaterialType type)
+{
+    if (type == eMaterialType::STVK)
+        return "stvk";
+    else if (type == eMaterialType::NEO_HOOKEAN)
+        return "neohookean";
+    return "";
+}
+eMaterialType GetHyperMaterialFromAcousticMaterial(std::string name)
+{
+    if (name == "stvk")
+        return eMaterialType::STVK;
+    else if (name == "neohookean")
+        return eMaterialType::NEO_HOOKEAN;
+}
+#include "sim/softbody/NeoHookeanMaterial.h"
+#include "sim/softbody/StvkMaterial.h"
+void cAcousticSoftBody::ChangeMaterial(int old_idx, int new_idx)
+{
+    std::string old_name = GetAcousticMaterialNameFromIdx(old_idx);
+    std::string new_name = GetAcousticMaterialNameFromIdx(new_idx);
+    bool old_is_hyper = (old_name == "stvk") || (old_name == "neohookean");
+    bool new_is_hyper = (new_name == "stvk") || (new_name == "neohookean");
+
+    bool enable_hyper_convert = false;
+    if (old_is_hyper == true)
+    {
+        if (new_is_hyper)
+        {
+            // hyper convert
+            enable_hyper_convert = true;
+        }
+        else
+        {
+            // new is linear
+            // do nothing
+        }
+    }
+    else
+    {
+        // old is linear
+        // new must be hyper
+        if (new_name != GetAcousticMaterialNameFromHyperMaterial(
+                            this->mMaterial->GetType()))
+        {
+            // hyper convert
+            enable_hyper_convert = true;
+        }
+        else
+        {
+            // do nothing
+        }
+    }
+
+    if (true == enable_hyper_convert)
+    {
+        eMaterialType new_hyper_type =
+            GetHyperMaterialFromAcousticMaterial(new_name);
+        ;
+        cBaseMaterialPtr new_mat = nullptr;
+        if (new_hyper_type == eMaterialType::STVK)
+        {
+            new_mat = std::make_shared<cStvkMaterial>();
+        }
+        else if (new_hyper_type == eMaterialType::NEO_HOOKEAN)
+        {
+            new_mat = std::make_shared<cNeoHookeanMaterial>();
+        }
+        new_mat->Init(mMaterial->mMatPath);
+        mMaterial = new_mat;
+    }
+    mAcousticMaterialModelIdx = new_idx;
+
+    // recalculate vibration
+    ResolveVibration();
+}
+
+/**
+ * \brief       load material params
+ */
+void cAcousticSoftBody::LoadMaterialParams()
+{
+    SIM_ASSERT(mMaterial != nullptr);
+    // 1. get root dir
+    std::string material_params_rootdir =
+        cFileUtil::GetDir(mMaterial->GetMaterialPath());
+    mMaterialParamNameLst.clear();
+    mMaterialParamPathLst.clear();
+    mMaterialParamIdx = -1;
+    auto mat_paths = cFileUtil::ListDir(material_params_rootdir);
+    for (int i = 0; i < mat_paths.size(); i++)
+    {
+        // 2. list dir, load json; load their name
+        Json::Value root;
+        auto mat_path = mat_paths[i];
+        cJsonUtil::LoadJson(mat_path, root);
+        std::string mat_name = root["name"].asString();
+        mMaterialParamNameLst.push_back(mat_name);
+        mMaterialParamPathLst.push_back(mat_path);
+        if (mMaterial->mName == mat_name)
+        {
+            mMaterialParamIdx = i;
+        }
+    }
+
+    // 3. judge current
 }

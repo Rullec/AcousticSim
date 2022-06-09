@@ -1,4 +1,5 @@
 {
+    "name": "wood",
     "youngs": 1.1e10,
     "poisson_ratio": 0.25,
     "rho": 750,

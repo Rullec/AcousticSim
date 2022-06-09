@@ -38,39 +38,45 @@ eMaterialType cBaseMaterial::GetType() const { return mType; }
 */
 double cBaseMaterial::GetLameFirstCoefLambda() const
 {
-    return mYoungsModulusNew * mPoissonRatioNew / ((1 + mPoissonRatioNew) * (1 - 2 * mPoissonRatioNew));
+    return mYoungsModulusNew * mPoissonRatioNew /
+           ((1 + mPoissonRatioNew) * (1 - 2 * mPoissonRatioNew));
 }
 /*
     \mu = E / (2 * (1 + poisson))
 */
 double cBaseMaterial::GetLameSecondCoefMu() const
 {
-    return mYoungsModulusNew / ( 2 * (1 + mPoissonRatioNew));
+    return mYoungsModulusNew / (2 * (1 + mPoissonRatioNew));
 }
 double cBaseMaterial::GetRho() const { return this->mRho; }
 
-void cBaseMaterial::Init(const Json::Value &conf)
+void cBaseMaterial::Init(std::string path)
 {
+    mMatPath = path;
+    Json::Value material_json;
+    SIM_ASSERT(cJsonUtil::LoadJson(mMatPath, material_json))
+    mName = cJsonUtil::ParseAsString("name", material_json);
+    mYoungsModulusNew = cJsonUtil::ParseAsDouble("youngs", material_json);
+    mPoissonRatioNew = cJsonUtil::ParseAsDouble("poisson_ratio", material_json);
+    mRho = cJsonUtil::ParseAsDouble("rho", material_json);
+    mRayleighDamplingA =
+        cJsonUtil::ParseAsFloat("rayleigh_damping_a", material_json);
+    mRayleighDamplingB =
+        cJsonUtil::ParseAsFloat("rayleigh_damping_b", material_json);
 
-    if (conf.isMember("material"))
-    {
-        mMatPath = cJsonUtil::ParseAsString("material", conf);
-        Json::Value material_json;
-        SIM_ASSERT(cJsonUtil::LoadJson(mMatPath, material_json))
-        mYoungsModulusNew = cJsonUtil::ParseAsDouble("youngs", material_json);
-        mPoissonRatioNew = cJsonUtil::ParseAsDouble("poisson_ratio", material_json);
-        mRho = cJsonUtil::ParseAsDouble("rho", material_json);
-        mRayleighDamplingA =
-            cJsonUtil::ParseAsFloat("rayleigh_damping_a", material_json);
-        mRayleighDamplingB =
-            cJsonUtil::ParseAsFloat("rayleigh_damping_b", material_json);
-
-        SIM_INFO("Rayleigh damping a {} b {}", mRayleighDamplingA,
-                 mRayleighDamplingB);
-    }
-    else
-    {
-        SIM_ERROR("no material key")
-    }
+    SIM_INFO("Rayleigh damping a {} b {}", mRayleighDamplingA,
+             mRayleighDamplingB);
 }
 std::string cBaseMaterial::GetMaterialPath() const { return this->mMatPath; }
+
+// void cBaseMaterial::Init(std::string mat_path, double youngs_modulus,
+//                          double poisson_ratio, double rho, double damping_a,
+//                          double damping_b)
+// {
+//     mYoungsModulusNew = youngs_modulus;
+//     mPoissonRatioNew = poisson_ratio;
+//     mRho = rho;
+//     mRayleighDamplingA = damping_a;
+//     mRayleighDamplingB = damping_b;
+//     mMatPath = mat_path;
+// }

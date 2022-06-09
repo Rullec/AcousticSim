@@ -58,6 +58,8 @@ def get_result(conf_path):
 
     # linear elasticity
     Kmat = calc_stiffness(a)
+    np.savetxt("log.py", Kmat.todense())
+        
 
     # lumped diag M
     # M = a.GetMassMatrixDiag()
@@ -154,7 +156,7 @@ def save_to_wav(name, sound):
 
 if __name__ == "__main__":
     confs = [
-        # "config/obj_configs/obj0.json",
+        "config/obj_configs/obj0.json",
         # "config/obj_configs/obj38.json",
         # "config/obj_configs/obj98.json",
         # "config/obj_configs/beam/beam0.json",
@@ -171,8 +173,8 @@ if __name__ == "__main__":
         # "config/obj_configs/beam/beam12.json",
         # "config/obj_configs/beam/beam13.json",
         # "config/obj_configs/beam/beam14.json"
-        "config/obj_configs/plate/plate_122.json",
-        "config/obj_configs/plate/plate_434.json"
+        # "config/obj_configs/plate/plate_122.json",
+        # "config/obj_configs/plate/plate_434.json"
     ]
 
     for _idx, i in enumerate(confs):
