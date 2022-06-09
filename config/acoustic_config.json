@@ -8,7 +8,7 @@
             "material_type.stvk": "NEO_HOOKEAN",
             "init_translation": [
                 0,
-                0.2,
+                0.6,
                 0
             ],
             "init_rotation": [
@@ -43,7 +43,7 @@
         ],
         "camera_focus": [
             0.0,
-            0.0,
+            0.6,
             0.0
         ],
         "fov": 52.5,

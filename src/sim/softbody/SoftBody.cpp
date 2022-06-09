@@ -65,9 +65,9 @@ void cSoftBody::Init(const Json::Value &conf)
     mCollisionK = cJsonUtil::ParseAsFloat("collision_k", conf);
 
     std::cout << "load from path " << mTetMeshPath << " done\n";
+    InitSurface();
     UpdateTriangleNormal();
     UpdateVertexNormalFromTriangleNormal();
-    InitSurface();
 
     InitInvDm();
     InitPos();
@@ -167,25 +167,37 @@ void cSoftBody::UpdateTriangleNormal()
 }
 void cSoftBody::UpdateVertexNormalFromTriangleNormal()
 {
-    // 1. clear all vertex normal
-    // cTimeUtil::Begin("update_v_normal");
-    for (auto &x : mVertexArray)
-        x->mNormal.setZero();
-    // 2. iter each edge
-    for (auto &x : mTriangleArray)
+    // only handle the surface vertex
+    tEigenArr<tVector> vertex_normal(mSurfaceVertexIdArray.size(),
+                                     tVector::Zero());
+    std::vector<int> times(mSurfaceVertexIdArray.size(), 0);
+    for (int i = 0; i < mSurfaceTriangleIdArray.size(); i++)
     {
-        mVertexArray[x->mId0]->mNormal += x->mNormal;
-        mVertexArray[x->mId1]->mNormal += x->mNormal;
-        mVertexArray[x->mId2]->mNormal += x->mNormal;
+        int tri_id = mSurfaceTriangleIdArray[i];
+        int v0 = std::find(mSurfaceVertexIdArray.begin(),
+                           mSurfaceVertexIdArray.end(),
+                           mTriangleArray[tri_id]->mId0) -
+                 mSurfaceVertexIdArray.begin();
+        int v1 = std::find(mSurfaceVertexIdArray.begin(),
+                           mSurfaceVertexIdArray.end(),
+                           mTriangleArray[tri_id]->mId1) -
+                 mSurfaceVertexIdArray.begin();
+        int v2 = std::find(mSurfaceVertexIdArray.begin(),
+                           mSurfaceVertexIdArray.end(),
+                           mTriangleArray[tri_id]->mId2) -
+                 mSurfaceVertexIdArray.begin();
+        vertex_normal[v0] += mTriangleArray[tri_id]->mNormal;
+        vertex_normal[v1] += mTriangleArray[tri_id]->mNormal;
+        vertex_normal[v2] += mTriangleArray[tri_id]->mNormal;
+        times[v0] += 1;
+        times[v1] += 1;
+        times[v2] += 1;
     }
 
-    // 3. averge each vertex
-    for (int i = 0; i < mVertexArray.size(); i++)
+    for (int i = 0; i < mSurfaceVertexIdArray.size(); i++)
     {
-        auto &v = mVertexArray[i];
-        v->mNormal.normalize();
+        mVertexArray[i]->mNormal = vertex_normal[i] / times[i];
     }
-    // cTimeUtil::End("update_v_normal");
 }
 
 // only get the number of surface triangles
