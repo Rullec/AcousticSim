@@ -163,9 +163,7 @@ void cKinematicBody::BuildPlane()
 void cKinematicBody::BuildCustomKinematicBody()
 {
     // std::cout << "mesh path = " << mCustomMeshPath << std::endl;
-    cObjUtil::tParams obj_params;
-    obj_params.mPath = mCustomMeshPath;
-    cObjUtil::LoadObj(obj_params, mVertexArray, mEdgeArray, mTriangleArray);
+    cObjUtil::LoadObj(mCustomMeshPath, mVertexArray, mEdgeArray, mTriangleArray);
 
     // tMatrix trans = GetWorldTransform();
     tVector scale_vec = GetScaleVec();

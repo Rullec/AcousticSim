@@ -7,8 +7,8 @@ if(UNIX)
     endif()
 endif()
 
-find_package(MPI REQUIRED)
-include_directories(${MPI_CXX_INCLUDE_DIRS})
+# find_package(MPI REQUIRED)
+# include_directories(${MPI_CXX_INCLUDE_DIRS})
 
 add_library(utils_lib FileUtil.cpp
 JsonUtil.cpp
@@ -22,21 +22,21 @@ RotUtil.cpp
 ObjUtil.cpp
 TetUtil.cpp
 # DepthImageSaver.cpp
-MPIUtil.cpp
+# MPIUtil.cpp
 StringUtil.cpp
 RenderUtil.cpp
 )
 
-target_link_libraries(utils_lib JSON ${MPI_CXX_LIBRARIES})
+target_link_libraries(utils_lib PRIVATE JSON)
 # target_link_libraries(utils_lib ${MPI_CXX_LIBRARIES})
 
 
 # spdlog lib version on win32
 if(WIN32)
-    target_link_libraries(utils_lib spdlog)
+    target_link_libraries(utils_lib PRIVATE spdlog)
 endif()
 
 # only for linux
 if(UNIX AND (NOT DEFINED APPLE))
-    target_link_libraries(utils_lib stdc++fs)
+    target_link_libraries(utils_lib PRIVATE stdc++fs)
 endif()

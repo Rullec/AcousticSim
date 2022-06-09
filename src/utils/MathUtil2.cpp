@@ -43,24 +43,6 @@ void cMathUtil::ThresholdOp(tVectorXd &v, double threshold)
     v = (threshold < v.array().abs()).select(v, 0.0f);
 }
 
-tVector cMathUtil::CalcAxisAngleFromOneVectorToAnother(const tVector &v0_,
-                                                       const tVector &v1_)
-{
-    tVector v0 = v0_.normalized(), v1 = v1_.normalized();
-
-    tVector rot_axis = v0.cross3(v1);
-    double theta = std::asin(rot_axis.norm()); //[-pi/2, pi/2]
-
-    // if the angle between v0 and v1 > 90
-    if (v0.dot(v1) < 0)
-    {
-        theta = theta > 0 ? (theta + (M_PI / 2 - theta) * 2)
-                          : (theta + (-M_PI / 2 - theta) * 2);
-    }
-    rot_axis = rot_axis.normalized() * std::fabs(theta);
-    return rot_axis;
-}
-
 double cMathUtil::Truncate(double num, int digits)
 {
     return round(num * pow(10, digits)) / pow(10, digits);

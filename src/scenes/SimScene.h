@@ -41,6 +41,7 @@ public:
     virtual void Update(double dt) override;
     virtual void UpdateRenderingResource();
     virtual void Reset() override;
+    virtual bool IsRenderingResourceSizeUpdated() const;
     virtual const tVectorXf &GetTriangleDrawBuffer();
     virtual const tVectorXf &GetEdgesDrawBuffer();
     virtual const tVectorXf &GetPointDrawBuffer();
@@ -60,6 +61,8 @@ public:
     virtual std::vector<cKinematicBodyPtr> GetObstacleList();
     virtual bool IsSimPaused() const;
     virtual void UpdateImGui();
+    virtual int GetNumOfDrawEdges() const;
+    virtual int GetNumOfDrawTriangles() const;
 
 protected:
     tSimStateMachinePtr mSimStateMachine;
@@ -80,10 +83,9 @@ protected:
     // std::vector<tTriangle *> mTriangleArray; // total triangles
 
     cCollisionDetecterPtr mColDetecter; // collision detecter
-
+    bool mIsRenderingResourceSizeUpdated;
     // base methods
     void CalcDampingForce(const tVectorXd &vel, tVectorXd &damping) const;
-    virtual void InitDrawBuffer();
     virtual void InitRaycaster(const Json::Value &conf);
 
     void ClearForce(); // clear all forces
@@ -95,8 +97,6 @@ protected:
     virtual int CalcEdgesDrawBuffer(int st = 0); //
     virtual int GetNumOfVertices() const;
     virtual int GetNumOfFreedom() const;
-    virtual int GetNumOfDrawEdges() const;
-    virtual int GetNumOfTriangles() const;
     void CalcNodePositionVector(tVectorXd &pos) const;
     virtual void UpdateObjects();
     virtual void CreateObstacle(const Json::Value &conf);

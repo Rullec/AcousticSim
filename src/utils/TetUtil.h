@@ -1,6 +1,6 @@
 #pragma once
-#include "utils/MathUtil.h"
 #include "utils/DefUtil.h"
+#include "utils/MathUtil.h"
 #include <string>
 #include <vector>
 
@@ -20,14 +20,12 @@ using tTetPtrVector = std::vector<tTetPtr>;
 class cTetUtil
 {
 public:
-    static void LoadTet(const std::string &path,
-                        tVertexPtrVector &vertex_vec,
-                        tEdgePtrVector &edge_vec,
-                        tTrianglePtrVector &tri_vec,
+    static void LoadTet(const std::string &path, tVertexPtrVector &vertex_vec,
+                        tEdgePtrVector &edge_vec, tTrianglePtrVector &tri_vec,
                         tTetPtrVector &tet_vec);
-    static float CalculateTetVolume(
-        const tVector &pos0,
-        const tVector &pos1,
-        const tVector &pos2,
-        const tVector &pos3);
+    static float CalculateTetVolume(const tVector &pos0, const tVector &pos1,
+                                    const tVector &pos2, const tVector &pos3);
+    static void AdjustTriangleIndexOrderForSurface(tVertexPtrVector &vertex_vec,
+                                                   tTrianglePtrVector &tri_vec,
+                                                   tTetPtrVector &tet_vec);
 };

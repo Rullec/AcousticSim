@@ -10,4 +10,7 @@ add_library(
     TriangulatorDelaunay.cpp
     ObjectBVH.cpp
     AABB.cpp
+    Arrow.cpp
 )
+
+target_link_libraries(geo_lib PRIVATE utils_lib)

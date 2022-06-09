@@ -45,6 +45,14 @@ endif()
 if(WIN32)
     # add_definitions(-D _USE_MATH_DEFINES)
     # add_definitions(-D _CRT_NO_VA_START_VALIDATION)
+    ###### set cpp flags
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
+
+    ###### set cuda flags
+    set(CMAKE_CUDA_FLAGS_DEBUG "-g -G  -Xcompiler=\"-MDd -O0 -Ob0\" ")
+    set(CMAKE_CUDA_FLAGS_RELEASE " -Xcompiler=\"-MD -O2 -Ob2\" -DNDEBUG")
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4061 /wd4244 /wd4246 /wd4305 /wd4267 /wd4711 /wd4710 /wd4514 /wd4477")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
@@ -87,7 +95,7 @@ add_subdirectory(./src/scenes)
 set(my_libs ${scenes_lib} ${utils_lib} ${imgui_lib})
 
 add_executable(main ./src/main.cpp)
-target_link_libraries(main ${libs} scenes_lib utils_lib geo_lib)
+target_link_libraries(main PRIVATE ${libs} scenes_lib utils_lib geo_lib)
 
 if(WIN32)
     move_release_to_src(main)

@@ -314,9 +314,7 @@ void cBaseCloth::InitGeometry(const Json::Value &conf)
             SIM_ERROR("cloth obj path {} doesn't exist", mClothObjPath);
             exit(1);
         }
-        cObjUtil::tParams params;
-        params.mPath = mClothObjPath;
-        cObjUtil::LoadObj(params, mVertexArray, mEdgeArray, mTriangleArray);
+        cObjUtil::LoadObj(mClothObjPath, mVertexArray, mEdgeArray, mTriangleArray);
         for (auto &x : mVertexArray)
         {
             // x->mPos /= 1e3;

@@ -565,6 +565,13 @@ void cDrawScene::Update(double dt)
     // cTimeUtil::Begin("sim_step");
     mSimScene->Update(dt);
     mSimScene->UpdateRenderingResource();
+    // if rendering resource size changed, we need to recreate command buffers
+
+    if (mSimScene->IsRenderingResourceSizeUpdated())
+    {
+        printf("--------simscene resource size changed!--------\n");
+        // CreateCommandBuffers();
+    }
     // cTimeUtil::End("sim_step");
     DrawFrame();
     if (mEnableCamAutoRot)
@@ -861,27 +868,27 @@ void cDrawScene::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,
 
 void cDrawScene::CreateVertexBufferSim()
 {
+    // 1. get buffer
     const tVectorXf &draw_buffer = mSimScene->GetTriangleDrawBuffer();
-    // std::cout << "[debug] get triangle draw buffer size = "
-    //           << draw_buffer.size() << std::endl;
-    VkDeviceSize buffer_size = sizeof(float) * draw_buffer.size();
 
-    if (buffer_size > SIM_VK_VERTEX_BUFFER_SIZE)
+    // 2. allocate a big buffer size (100MB)
+    VkDeviceSize real_buffer_size = sizeof(float) * draw_buffer.size();
+    VkDeviceSize allocate_larger_buffer_size = SIM_VK_VERTEX_BUFFER_SIZE;
+
+    if (real_buffer_size > allocate_larger_buffer_size)
     {
         SIM_ERROR(
             "current vertex buffer size {} > max size {}, please increase "
             "SIM_VK_VERTEX_BUFFER_SIZE",
-            buffer_size, SIM_VK_VERTEX_BUFFER_SIZE);
+            real_buffer_size, allocate_larger_buffer_size);
         exit(1);
     }
 
-    if (buffer_size == 0)
-    {
-        return;
-    }
     VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    CreateBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VkDeviceMemory stagingBufferMemory; // the real memory
+
+    // allocate a bigger staging buffer
+    CreateBuffer(allocate_larger_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                  stagingBuffer, stagingBufferMemory);
@@ -889,21 +896,22 @@ void cDrawScene::CreateVertexBufferSim()
     // 5. copy the vertex data to the buffer
     void *data = nullptr;
     // map the memory to "data" ptr;
-    vkMapMemory(mDevice, stagingBufferMemory, 0, buffer_size, 0, &data);
+    vkMapMemory(mDevice, stagingBufferMemory, 0, real_buffer_size, 0, &data);
 
     // write the data
-    memcpy(data, draw_buffer.data(), buffer_size);
+    memcpy(data, draw_buffer.data(), real_buffer_size);
 
     // unmap
     vkUnmapMemory(mDevice, stagingBufferMemory);
 
-    CreateBuffer(buffer_size,
+    // allocate a bigger GPU buffer
+    CreateBuffer(allocate_larger_buffer_size,
                  VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mVertexBufferSim,
                  mVertexBufferMemorySim);
 
-    CopyBuffer(stagingBuffer, mVertexBufferSim, buffer_size);
+    CopyBuffer(stagingBuffer, mVertexBufferSim, real_buffer_size);
     vkDestroyBuffer(mDevice, stagingBuffer, nullptr);
     vkFreeMemory(mDevice, stagingBufferMemory, nullptr);
 }
@@ -926,6 +934,11 @@ void cDrawScene::DrawFrame()
     bool need_to_recreate_swapchain =
         FenceAndAcquireImageFromSwapchain(imageIndex);
 
+    // reset command buffer
+    ResetCommandBuffers();
+    // record command buffer
+    RecordCommandBuffers();
+
     // updating the uniform buffer values
     // cTimeUtil::Begin("update_buffers");
     UpdateMVPUniformValue(imageIndex);
@@ -947,7 +960,58 @@ void cDrawScene::DrawFrame()
         RecreateSwapChain();
     }
 }
+void cDrawScene::ResetCommandBuffers()
+{
+    for (auto &cmd : this->mCommandBuffers)
+        vkResetCommandBuffer(cmd, 0);
+}
+void cDrawScene::RecordCommandBuffers()
+{
+    for (int i = 0; i < mCommandBuffers.size(); i++)
+    {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.pInheritanceInfo = nullptr;
+        beginInfo.flags = 0;
+        SIM_ASSERT(VK_SUCCESS ==
+                   vkBeginCommandBuffer(mCommandBuffers[i], &beginInfo));
 
+        // 3. start a render pass
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = mRenderPass;
+        renderPassInfo.framebuffer = mSwapChainFramebuffers[i];
+
+        renderPassInfo.renderArea.extent = mSwapChainExtent;
+        renderPassInfo.renderArea.offset = {0, 0};
+
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = {1.0f, 1.0f, 1.0f, 1.0f};
+        clearValues[1].depthStencil = {1.0f, 0};
+
+        renderPassInfo.clearValueCount =
+            static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues = clearValues.data();
+
+        // full black clear color
+        // VkClearValue clear_color = {1.0f, 1.0f, 1.0f, 1.0f};
+        renderPassInfo.clearValueCount = clearValues.size();
+        renderPassInfo.pClearValues = clearValues.data();
+
+        // begin render pass
+        vkCmdBeginRenderPass(mCommandBuffers[i], &renderPassInfo,
+                             VK_SUBPASS_CONTENTS_INLINE);
+
+        CreateTriangleCommandBuffers(i);
+        CreateLineCommandBuffers(i);
+        CreatePointCommandBuffers(i);
+
+        // end render pass
+        vkCmdEndRenderPass(mCommandBuffers[i]);
+
+        SIM_ASSERT(VK_SUCCESS == vkEndCommandBuffer(mCommandBuffers[i]));
+    }
+}
 void cDrawScene::UpdatePointBuffer(int idx)
 {
     VkDeviceSize buffer_size =
@@ -1432,50 +1496,7 @@ void cDrawScene::CreateCommandBuffers()
                                         mCommandBuffers.data()) == VK_SUCCESS);
 
     // 2. record the command buffers
-    for (int i = 0; i < mCommandBuffers.size(); i++)
-    {
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.pInheritanceInfo = nullptr;
-        beginInfo.flags = 0;
-        SIM_ASSERT(VK_SUCCESS ==
-                   vkBeginCommandBuffer(mCommandBuffers[i], &beginInfo));
-
-        // 3. start a render pass
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = mRenderPass;
-        renderPassInfo.framebuffer = mSwapChainFramebuffers[i];
-
-        renderPassInfo.renderArea.extent = mSwapChainExtent;
-        renderPassInfo.renderArea.offset = {0, 0};
-
-        std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = {1.0f, 1.0f, 1.0f, 1.0f};
-        clearValues[1].depthStencil = {1.0f, 0};
-
-        renderPassInfo.clearValueCount =
-            static_cast<uint32_t>(clearValues.size());
-        renderPassInfo.pClearValues = clearValues.data();
-
-        // full black clear color
-        // VkClearValue clear_color = {1.0f, 1.0f, 1.0f, 1.0f};
-        renderPassInfo.clearValueCount = clearValues.size();
-        renderPassInfo.pClearValues = clearValues.data();
-
-        // begin render pass
-        vkCmdBeginRenderPass(mCommandBuffers[i], &renderPassInfo,
-                             VK_SUBPASS_CONTENTS_INLINE);
-
-        CreateTriangleCommandBuffers(i);
-        CreateLineCommandBuffers(i);
-        CreatePointCommandBuffers(i);
-
-        // end render pass
-        vkCmdEndRenderPass(mCommandBuffers[i]);
-
-        SIM_ASSERT(VK_SUCCESS == vkEndCommandBuffer(mCommandBuffers[i]));
-    }
+    RecordCommandBuffers();
     // SIM_INFO("Create Command buffers succ");
 }
 

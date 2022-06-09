@@ -77,10 +77,24 @@ set(
 add_library(sim_lib ${SIM_SRC})
 
 # disable warnings of nvcc
+# message(STATUS "CMAKE_CXX_FLAGS_RELEASE " ${CMAKE_CXX_FLAGS_RELEASE})
+# message(STATUS "CMAKE_CXX_FLAGS_DEBUG " ${CMAKE_CXX_FLAGS_DEBUG})
+# message(STATUS "CMAKE_CUDA_FLAGS_DEBUG " ${CMAKE_CUDA_FLAGS_DEBUG})
+# message(FATAL_ERROR "CMAKE_CUDA_FLAGS_RELEASE " ${CMAKE_CUDA_FLAGS_RELEASE})
+
 target_compile_options(sim_lib PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-w>)
+
+# # support debug mode for cuda
+# if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+#     target_compile_options(sim_lib PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+#             -G -src-in-ptx
+#             >)
+# endif()
+
+
 # target_link_libraries(sim_lib)
 # target_link_libraries(sim_lib OpenMP::OpenMP_CXX)
 
-pybind11_add_module(softbody ./softbody/softbody_export.cpp)
-target_link_libraries(softbody PRIVATE sim_lib utils_lib JSON geo_lib imgui_lib)
-move_pybind11_release_to_dir(${DLL_OUTPUT_DIR} softbody)
+# pybind11_add_module(softbody ./softbody/softbody_export.cpp)
+# target_link_libraries(softbody sim_lib utils_lib JSON geo_lib imgui_lib)
+# move_pybind11_release_to_dir(${DLL_OUTPUT_DIR} softbody)

@@ -60,6 +60,9 @@ public:
     virtual int GetNumOfTriangles() const;
     virtual int GetNumOfEdges() const;
     virtual int GetNumOfVertices() const;
+    virtual int GetNumOfDrawTriangles() const;
+    virtual int GetNumOfDrawEdges() const;
+    virtual int GetNumOfDrawVertices() const;
     void SetVertexColorAlpha(float val);
     float GetVertexColorAlpha() const;
 

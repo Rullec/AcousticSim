@@ -1,20 +1,17 @@
 #include "TetUtil.h"
-#include "utils/LogUtil.h"
-#include "utils/FileUtil.h"
-#include "utils/StringUtil.h"
 #include "geometries/Primitives.h"
 #include "geometries/Tetrahedron.h"
+#include "utils/FileUtil.h"
+#include "utils/LogUtil.h"
+#include "utils/StringUtil.h"
 #include <iostream>
 #include <sstream>
 
 /**
  * \brief       Calculate the volume for given tet
-*/
-float cTetUtil::CalculateTetVolume(
-    const tVector &pos0,
-    const tVector &pos1,
-    const tVector &pos2,
-    const tVector &pos3)
+ */
+float cTetUtil::CalculateTetVolume(const tVector &pos0, const tVector &pos1,
+                                   const tVector &pos2, const tVector &pos3)
 {
     // 1/6 * (AB X AC) \cdot (AD)
     tVector AB = pos1 - pos0;
@@ -30,7 +27,7 @@ float cTetUtil::CalculateTetVolume(
  * \param edge_vec      all edges
  * \param tri_vec       all triangles vector
  * \param tet_vec       all tets vector
-*/
+ */
 
 tVector3i GetSortedTriplet(int a, int b, int c)
 {
@@ -75,8 +72,7 @@ int FindTriangle(tTrianglePtrVector tri_vec, int v0, int v1, int v2)
     for (int i = 0; i < tri_vec.size(); i++)
     {
 
-        tVector3i cur = GetSortedTriplet(tri_vec[i]->mId0,
-                                         tri_vec[i]->mId1,
+        tVector3i cur = GetSortedTriplet(tri_vec[i]->mId0, tri_vec[i]->mId1,
                                          tri_vec[i]->mId2);
         if ((cur - target).norm() < 1e-3)
         {
@@ -91,8 +87,7 @@ int FindEdge(tEdgePtrVector edge_vec, int v0, int v1)
     for (int i = 0; i < edge_vec.size(); i++)
     {
         auto cur_e = edge_vec[i];
-        if (
-            (v0 == cur_e->mId0 && v1 == cur_e->mId1) ||
+        if ((v0 == cur_e->mId0 && v1 == cur_e->mId1) ||
             (v1 == cur_e->mId0 && v0 == cur_e->mId1))
         {
             return i;
@@ -101,10 +96,8 @@ int FindEdge(tEdgePtrVector edge_vec, int v0, int v1)
     return -1;
 }
 #include "utils/ColorUtil.h"
-void cTetUtil::LoadTet(const std::string &path,
-                       tVertexPtrVector &vertex_vec,
-                       tEdgePtrVector &edge_vec,
-                       tTrianglePtrVector &tri_vec,
+void cTetUtil::LoadTet(const std::string &path, tVertexPtrVector &vertex_vec,
+                       tEdgePtrVector &edge_vec, tTrianglePtrVector &tri_vec,
                        tTetPtrVector &tet_vec)
 
 {
@@ -144,7 +137,8 @@ void cTetUtil::LoadTet(const std::string &path,
             cur_v->mColor = ColorAn;
             // cur_v->mMass = 1.0;
             istr >> v_id >> cur_v->mPos[0] >> cur_v->mPos[1] >> cur_v->mPos[2];
-            // std::cout << "v " << v_id << " = " << cur_v->mPos.transpose() << std::endl;
+            // std::cout << "v " << v_id << " = " << cur_v->mPos.transpose() <<
+            // std::endl;
             vertex_vec.push_back(cur_v);
         }
     }
@@ -170,7 +164,8 @@ void cTetUtil::LoadTet(const std::string &path,
             int e_id;
             auto cur_e = std::make_shared<tEdge>();
             istr >> e_id >> cur_e->mId0 >> cur_e->mId1;
-            // printf("edge %d from %d to %d\n", e_id, cur_e->mId0, cur_e->mId1);
+            // printf("edge %d from %d to %d\n", e_id, cur_e->mId0,
+            // cur_e->mId1);
             edge_vec.push_back(cur_e);
         }
     }
@@ -189,15 +184,17 @@ void cTetUtil::LoadTet(const std::string &path,
         {
             istr >> num_of_triangles;
             SIM_ASSERT(tri_lines.size() - 1 == num_of_triangles);
-            // std::cout << "num of triangles = " << num_of_triangles << std::endl;
+            // std::cout << "num of triangles = " << num_of_triangles <<
+            // std::endl;
         }
         else
         {
             int f_id;
             auto cur_t = std::make_shared<tTriangle>();
-            int boundary_marker = 0;    // 0: internal, -1: boundary
-            istr >> f_id >> cur_t->mId0 >> cur_t->mId1 >> cur_t->mId2 >> boundary_marker;
-            
+            int boundary_marker = 0; // 0: internal, -1: boundary
+            istr >> f_id >> cur_t->mId0 >> cur_t->mId1 >> cur_t->mId2 >>
+                boundary_marker;
+
             {
                 int edge_id = FindEdge(edge_vec, cur_t->mId0, cur_t->mId1);
                 if (edge_vec[edge_id]->mTriangleId0 == -1)
@@ -258,7 +255,8 @@ void cTetUtil::LoadTet(const std::string &path,
         {
             int t_id;
             auto cur_t = std::make_shared<tTet>();
-            istr >> t_id >> cur_t->mVertexId[0] >> cur_t->mVertexId[1] >> cur_t->mVertexId[2] >> cur_t->mVertexId[3];
+            istr >> t_id >> cur_t->mVertexId[0] >> cur_t->mVertexId[1] >>
+                cur_t->mVertexId[2] >> cur_t->mVertexId[3];
             // printf("tet %d contains node %d %d %d %d\n",
             //        t_id,
             //        cur_t->mVertexId[0],
@@ -267,33 +265,80 @@ void cTetUtil::LoadTet(const std::string &path,
             //        cur_t->mVertexId[3]);
             // triangle0 : v0, v1, v2
             cur_t->mTriangleId[0] =
-                FindTriangle(
-                    tri_vec,
-                    cur_t->mVertexId[0],
-                    cur_t->mVertexId[1],
-                    cur_t->mVertexId[2]);
+                FindTriangle(tri_vec, cur_t->mVertexId[0], cur_t->mVertexId[1],
+                             cur_t->mVertexId[2]);
             cur_t->mTriangleId[1] =
-                FindTriangle(
-                    tri_vec,
-                    cur_t->mVertexId[1],
-                    cur_t->mVertexId[3],
-                    cur_t->mVertexId[2]);
+                FindTriangle(tri_vec, cur_t->mVertexId[1], cur_t->mVertexId[3],
+                             cur_t->mVertexId[2]);
             cur_t->mTriangleId[2] =
-                FindTriangle(
-                    tri_vec,
-                    cur_t->mVertexId[2],
-                    cur_t->mVertexId[3],
-                    cur_t->mVertexId[0]);
+                FindTriangle(tri_vec, cur_t->mVertexId[2], cur_t->mVertexId[3],
+                             cur_t->mVertexId[0]);
             cur_t->mTriangleId[3] =
-                FindTriangle(
-                    tri_vec,
-                    cur_t->mVertexId[3],
-                    cur_t->mVertexId[1],
-                    cur_t->mVertexId[0]);
+                FindTriangle(tri_vec, cur_t->mVertexId[3], cur_t->mVertexId[1],
+                             cur_t->mVertexId[0]);
             tet_vec.push_back(cur_t);
-            // std::cout << "tet triangle = " << cur_t->mTriangleId.transpose() << std::endl;
+            // std::cout << "tet triangle = " << cur_t->mTriangleId.transpose()
+            // << std::endl;
         }
     }
-    // exit(1);
-    return;
+    AdjustTriangleIndexOrderForSurface(vertex_vec, tri_vec, tet_vec);
+}
+#include <set>
+void cTetUtil::AdjustTriangleIndexOrderForSurface(tVertexPtrVector &vertex_vec,
+                                                  tTrianglePtrVector &tri_vec,
+                                                  tTetPtrVector &tet_vec)
+{
+    // 1. recognize boundary triangle
+    std::vector<int> triangle_involved_times(tri_vec.size(), 0);
+    std::vector<int> triangles_involved_tet(tri_vec.size(), -1);
+    for (int i = 0; i < tet_vec.size(); i++)
+    {
+        auto tet = tet_vec[i];
+        triangle_involved_times[tet->mTriangleId[0]] += 1;
+        triangle_involved_times[tet->mTriangleId[1]] += 1;
+        triangle_involved_times[tet->mTriangleId[2]] += 1;
+        triangle_involved_times[tet->mTriangleId[3]] += 1;
+
+        triangles_involved_tet[tet->mTriangleId[0]] = i;
+        triangles_involved_tet[tet->mTriangleId[1]] = i;
+        triangles_involved_tet[tet->mTriangleId[2]] = i;
+        triangles_involved_tet[tet->mTriangleId[3]] = i;
+    }
+
+    // 2. check surface triangle
+    for (int i = 0; i < tri_vec.size(); i++)
+    {
+        if (triangle_involved_times[i] == 1)
+        {
+            // surface triangle
+            auto cur_tet = tet_vec[triangles_involved_tet[i]];
+            auto cur_tri = tri_vec[i];
+            int tri_vid0 = cur_tri->mId0;
+            int tri_vid1 = cur_tri->mId1;
+            int tri_vid2 = cur_tri->mId2;
+            tVector tri_v0 = vertex_vec[tri_vid0]->mPos;
+            tVector tri_v1 = vertex_vec[tri_vid1]->mPos;
+            tVector tri_v2 = vertex_vec[tri_vid2]->mPos;
+            std::set<int> triangle_vid = {};
+            std::set<int> tet_vid = {
+                cur_tet->mVertexId[0], cur_tet->mVertexId[1],
+                cur_tet->mVertexId[2], cur_tet->mVertexId[3]};
+            tet_vid.erase(cur_tri->mId0);
+            tet_vid.erase(cur_tri->mId1);
+            tet_vid.erase(cur_tri->mId2);
+            int another_vid = *tet_vid.begin();
+
+            // judge whether this triangle is inner pointed
+            bool inner_surface =
+                ((tri_v1 - tri_v0).cross3(tri_v2 - tri_v1))
+                    .dot(vertex_vec[another_vid]->mPos - tri_v0) > 0;
+            if (inner_surface)
+            {
+                // printf("[check] surface tri %d is oppo, correct.\n", i);
+                SIM_SWAP(cur_tri->mId0, cur_tri->mId2);
+                SIM_SWAP(cur_tri->mEId0, cur_tri->mEId1);
+            }
+        }
+        // auto cur_tri = tri_vec[i];
+    }
 }

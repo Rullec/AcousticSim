@@ -64,7 +64,8 @@ void cSimScene::Init(const std::string &conf_path)
 
     CreateCollisionDetecter();
 
-    InitDrawBuffer();
+    UpdateRenderingResource();
+    mIsRenderingResourceSizeUpdated = false;
     InitRaycaster(root);
 
     mSimStateMachine->SimulatorInitDone(
@@ -97,32 +98,6 @@ void cSimScene::SaveCurrentScene()
         cObjExporter::ExportObj(x->GetObjName() + ".obj", x->GetVertexArray(),
                                 x->GetTriangleArray());
     }
-}
-
-void cSimScene::InitDrawBuffer()
-{
-    // 2. build arrays
-    // init the buffer
-    {
-        int num_of_triangles = GetNumOfTriangles();
-        int num_of_vertices = num_of_triangles * 3;
-        int size_per_vertices = RENDERING_SIZE_PER_VERTICE;
-        int trinalge_size = num_of_vertices * size_per_vertices;
-
-        mTriangleDrawBuffer.resize(trinalge_size);
-        // std::cout << "triangle draw buffer size = " <<
-        // mTriangleDrawBuffer.size() << std::endl; exit(0);
-    }
-    {
-
-        int size_per_edge = 2 * RENDERING_SIZE_PER_VERTICE;
-        mEdgesDrawBuffer.resize(GetNumOfDrawEdges() * size_per_edge);
-    }
-    {
-        int num_of_v = GetNumOfVertices();
-        mPointDrawBuffer.resize(num_of_v * RENDERING_SIZE_PER_VERTICE);
-    }
-    UpdateRenderingResource();
 }
 
 /**
@@ -246,17 +221,17 @@ int cSimScene::GetNumOfDrawEdges() const
     int num_of_edges = 0;
     for (auto &x : mObjectList)
     {
-        num_of_edges += x->GetNumOfEdges();
+        num_of_edges += x->GetNumOfDrawEdges();
     }
     return num_of_edges;
 }
 
-int cSimScene::GetNumOfTriangles() const
+int cSimScene::GetNumOfDrawTriangles() const
 {
     int num_of_triangles = 0;
     for (auto &x : mObjectList)
     {
-        num_of_triangles += x->GetNumOfTriangles();
+        num_of_triangles += x->GetNumOfDrawTriangles();
     }
     return num_of_triangles;
 }
@@ -287,9 +262,45 @@ void cSimScene::CalcTriangleDrawBuffer()
 }
 
 const tVectorXf &cSimScene::GetEdgesDrawBuffer() { return mEdgesDrawBuffer; }
-
+bool cSimScene::IsRenderingResourceSizeUpdated() const
+{
+    return mIsRenderingResourceSizeUpdated;
+}
 void cSimScene::UpdateRenderingResource()
 {
+    mIsRenderingResourceSizeUpdated = false;
+    {
+        int num_of_triangles = GetNumOfDrawTriangles();
+        int num_of_vertices = num_of_triangles * 3;
+        int size_per_vertices = RENDERING_SIZE_PER_VERTICE;
+        int tar_size = num_of_vertices * size_per_vertices;
+        if (mTriangleDrawBuffer.size() != tar_size)
+        {
+            mIsRenderingResourceSizeUpdated = true;
+            mTriangleDrawBuffer.resize(tar_size);
+        }
+        // std::cout << "triangle draw buffer size = " <<
+        // mTriangleDrawBuffer.size() << std::endl; exit(0);
+    }
+    {
+
+        int size_per_edge = 2 * RENDERING_SIZE_PER_VERTICE;
+        int tar_size = GetNumOfDrawEdges() * size_per_edge;
+        if (mEdgesDrawBuffer.size() != tar_size)
+        {
+            mIsRenderingResourceSizeUpdated = true;
+            mEdgesDrawBuffer.resize(tar_size);
+        }
+    }
+    {
+        int num_of_v = GetNumOfVertices();
+        int tar_size = num_of_v * RENDERING_SIZE_PER_VERTICE;
+        if (tar_size != mPointDrawBuffer.size())
+        {
+            mIsRenderingResourceSizeUpdated = true;
+            mPointDrawBuffer.resize(tar_size);
+        }
+    }
     CalcEdgesDrawBuffer();
     CalcTriangleDrawBuffer();
     CalcPointDrawBuffer();
@@ -347,7 +358,7 @@ void cSimScene::MouseButton(int button, int action, int mods) {}
 #include "GLFW/glfw3.h"
 void cSimScene::Key(int key, int scancode, int action, int mods)
 {
-    std::cout << "[sim scene] key = " << key << std::endl;
+    // std::cout << "[sim scene] key = " << key << std::endl;
     mSimStateMachine->Key(key, scancode, action, mods);
     switch (key)
     {

@@ -883,6 +883,11 @@ void cDrawScene::CreateCommandPool()
     auto queue_families = findQueueFamilies(mPhysicalDevice, mSurface);
     VkCommandPoolCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+
+    info.flags =
+        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // support re-record
+                                                         // command buffer each
+                                                         // time
     info.queueFamilyIndex = queue_families.graphicsFamily.value();
     SIM_ASSERT(vkCreateCommandPool(mDevice, &info, nullptr, &mCommandPool) ==
                VK_SUCCESS);
@@ -1015,16 +1020,17 @@ void cDrawScene::CreatePointCommandBuffers(int i)
 
 void cDrawScene::CreateLineBuffer()
 {
-    VkDeviceSize buffer_size =
+    VkDeviceSize real_buffer_size =
         sizeof(axes_vertices[0]) * GetNumOfLineVertices();
-    if (buffer_size > SIM_VK_LINE_BUFFER_SIZE)
+    VkDeviceSize larger_buffer_size = SIM_VK_LINE_BUFFER_SIZE;
+    if (real_buffer_size > larger_buffer_size)
     {
         SIM_ERROR("current line buffer size {} > max size {}, please increase "
                   "SIM_VK_LINE_BUFFER_SIZE",
-                  buffer_size, SIM_VK_LINE_BUFFER_SIZE);
+                  real_buffer_size, SIM_VK_LINE_BUFFER_SIZE);
         exit(1);
     }
-    CreateBuffer(buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    CreateBuffer(larger_buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                  mLineBuffer, mLineBufferMemory);
@@ -1032,15 +1038,17 @@ void cDrawScene::CreateLineBuffer()
 
 void cDrawScene::CreatePointBuffer()
 {
-    VkDeviceSize buffer_size = sizeof(axes_vertices[0]) * GetNumOfDrawPoints();
-    if (buffer_size > SIM_VK_POINT_BUFFER_SIZE)
+    VkDeviceSize real_buffer_size =
+        sizeof(axes_vertices[0]) * GetNumOfDrawPoints();
+    VkDeviceSize larger_buffer_size = SIM_VK_POINT_BUFFER_SIZE;
+    if (real_buffer_size > larger_buffer_size)
     {
         SIM_ERROR("current point buffer size {} > max size {}, please increase "
                   "SIM_VK_POINT_BUFFER_SIZE",
-                  buffer_size, SIM_VK_POINT_BUFFER_SIZE);
+                  real_buffer_size, SIM_VK_POINT_BUFFER_SIZE);
         exit(1);
     }
-    CreateBuffer(buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    CreateBuffer(larger_buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                  mPointBuffer, mPointBufferMemory);

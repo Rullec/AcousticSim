@@ -218,57 +218,6 @@ void cBaseObject::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
             this->mVertexArray[tri->mId0], this->mVertexArray[tri->mId1],
             this->mVertexArray[tri->mId2], tri->mColor, res, st);
     }
-    // 1. calculate affected vid
-    // for (auto info : mPointTriangleCollisionInfo)
-    // {
-    //     // handle triangle
-    //     if (info->mObj1->GetObjId() == mObjId)
-    //     {
-    //         // std::cout << "change triangle color " << info->mTriangleId1
-    //         //           << std::endl;
-    //         // change triangle color
-    //         res.segment(
-    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
-    //             +
-    //                 0 * RENDERING_SIZE_PER_VERTICE + 3,
-    //             4) = ColorShoJoHi.cast<float>();
-    //         res.segment(
-    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
-    //             +
-    //                 1 * RENDERING_SIZE_PER_VERTICE + 3,
-    //             4) = ColorShoJoHi.cast<float>();
-    //         res.segment(
-    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
-    //             +
-    //                 2 * RENDERING_SIZE_PER_VERTICE + 3,
-    //             4) = ColorShoJoHi.cast<float>();
-    //     }
-    // }
-    // for (auto info : mPointTriangleCollisionInfo)
-    // {
-    //     // handle triangle
-    //     if (info->mObj1->GetObjId() == mObjId)
-    //     {
-    //         // std::cout << "change triangle color " << info->mTriangleId1
-    //         //           << std::endl;
-    //         // change triangle color
-    //         res.segment(
-    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
-    //             +
-    //                 0 * RENDERING_SIZE_PER_VERTICE + 3,
-    //             4) = ColorShoJoHi.cast<float>();
-    //         res.segment(
-    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
-    //             +
-    //                 1 * RENDERING_SIZE_PER_VERTICE + 3,
-    //             4) = ColorShoJoHi.cast<float>();
-    //         res.segment(
-    //             old_st + 3 * RENDERING_SIZE_PER_VERTICE * info->mTriangleId1
-    //             +
-    //                 2 * RENDERING_SIZE_PER_VERTICE + 3,
-    //             4) = ColorShoJoHi.cast<float>();
-    //     }
-    // }
 }
 
 void cBaseObject::CalcPointDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const
@@ -352,3 +301,7 @@ void cBaseObject::CalcTriangleInitArea()
             mVertexArray[tri->mId2]->mPos);
     }
 }
+
+int cBaseObject::GetNumOfDrawTriangles() const { return mTriangleArray.size(); }
+int cBaseObject::GetNumOfDrawEdges() const { return mEdgeArray.size(); }
+int cBaseObject::GetNumOfDrawVertices() const { return mVertexArray.size(); }

@@ -689,7 +689,7 @@ void cLinctexCloth::ApplyMultiFoldsNoise(int num_of_folds, double max_amp)
         node_vec.normalize();
         // std::cout << tVector(1, 0, 0, 0).cross3(tVector(0, 0, -1, 0)) <<
         // std::endl; exit(0);
-        tVector res = cMathUtil::CalcAxisAngleFromOneVectorToAnother(
+        tVector res = cRotUtil::CalcAxisAngleFromOneVectorToAnother(
             tVector(1, 0, 0, 0), node_vec);
         if (res[1] < 0)
         {

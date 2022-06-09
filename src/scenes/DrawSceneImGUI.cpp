@@ -308,7 +308,8 @@ void cDrawSceneImGui::Update(double dt)
         }
         default:
         { // no gui
-            std::cout << "Get scene type " << mSimScene->GetSceneType() << std::endl;
+            std::cout << "Get scene type " << mSimScene->GetSceneType()
+                      << std::endl;
             break;
         }
         }
@@ -332,8 +333,8 @@ void cDrawSceneImGui::Update(double dt)
 }
 
 /**
- * \brief           imgui setting for acoustic simulation scene 
-*/
+ * \brief           imgui setting for acoustic simulation scene
+ */
 void cDrawSceneImGui::UpdateSimImGui()
 {
     ImVec2 init_window_size = ImVec2(300, 400);
@@ -360,9 +361,16 @@ void cDrawSceneImGui::UpdateSimImGui()
 }
 void cDrawSceneImGui::DrawFrame()
 {
+
     uint32_t imageIndex;
     bool need_to_recreate_swapchain =
         FenceAndAcquireImageFromSwapchain(imageIndex);
+    
+    // reset command buffer
+    ResetCommandBuffers();
+    // record command buffer
+    RecordCommandBuffers();
+
     // updating the uniform buffer values
     // cTimeUtil::Begin("update_buffers");
     UpdateMVPUniformValue(imageIndex);
@@ -542,10 +550,7 @@ void cDrawSceneImGui::Scroll(double xoff, double yoff)
 /**
  * \brief           reset the scene imgui
  */
-void cDrawSceneImGui::Reset()
-{
-    cDrawScene::Reset();
-}
+void cDrawSceneImGui::Reset() { cDrawScene::Reset(); }
 
 void cDrawSceneImGui::Init(const std::string &conf_path)
 {

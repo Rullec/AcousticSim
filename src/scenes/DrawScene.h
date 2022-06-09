@@ -140,6 +140,8 @@ protected:
     int GetNumOfLineVertices() const;
     int GetNumOfDrawPoints() const;
     tVector GetPerturbOrigin(const tVector &cursor_world_pos) const;
+    void ResetCommandBuffers();
+    void RecordCommandBuffers();
 
     VkInstance mInstance;
     VkPhysicalDevice mPhysicalDevice;

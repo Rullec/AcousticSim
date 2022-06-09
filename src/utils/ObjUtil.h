@@ -18,12 +18,7 @@ SIM_DECLARE_PTR(tVertex);
 class cObjUtil
 {
 public:
-    struct tParams
-    {
-        std::string mPath; // obj file path
-    };
-
-    static void LoadObj(const tParams &param,
+    static void LoadObj(const std::string &path,
                         std::vector<tVertexPtr> &mVertexArray,
                         std::vector<tEdgePtr> &mEdgeArray,
                         std::vector<tTrianglePtr> &mTriangleArray);

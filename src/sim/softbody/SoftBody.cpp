@@ -152,12 +152,17 @@ void cSoftBody::UpdateTriangleNormal()
     for (int i = 0; i < this->mTriangleArray.size(); i++)
     {
         auto cur_t = mTriangleArray[i];
-        tVector e01 =
-            mVertexArray[cur_t->mId1]->mPos - mVertexArray[cur_t->mId0]->mPos;
-
-        tVector e12 =
-            mVertexArray[cur_t->mId2]->mPos - mVertexArray[cur_t->mId1]->mPos;
+        auto v0 = mVertexArray[cur_t->mId0]->mPos;
+        auto v1 = mVertexArray[cur_t->mId1]->mPos;
+        auto v2 = mVertexArray[cur_t->mId2]->mPos;
+        tVector e01 = v1 - v0;
+        tVector e12 = v2 - v1;
         cur_t->mNormal = e01.cross3(e12).normalized();
+        // std::cout << "v0 = " << v0.transpose() << std::endl;
+        // std::cout << "v1 = " << v1.transpose() << std::endl;
+        // std::cout << "v2 = " << v2.transpose() << std::endl;
+        // std::cout << "t " << i << " normal = " << cur_t->mNormal.transpose()
+        //           << std::endl;
     }
 }
 void cSoftBody::UpdateVertexNormalFromTriangleNormal()
@@ -198,6 +203,7 @@ void cSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
     {
         int tri_id = mSurfaceTriangleIdArray[idx];
         auto tri = mTriangleArray[tri_id];
+        tri->mColor[3] = 0.5;
         cRenderUtil::CalcTriangleDrawBufferSingle(
             mVertexArray[tri->mId0], mVertexArray[tri->mId1],
             mVertexArray[tri->mId2], tri->mColor, res, st);

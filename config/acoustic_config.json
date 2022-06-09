@@ -20,7 +20,7 @@
             "friction": 0,
             "collision_k": 1000,
             "always_resolve_modal_analysis": true,
-            "material_path": "config/materials/rubber.json",
+            "material_path": "config/materials/steel.json",
             "acoustic_sampling_freq_HZ": 48000,
             "acoustic_duration": 1.0,
             "hammer_force": 10,

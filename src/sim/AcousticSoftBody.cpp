@@ -68,9 +68,26 @@ void cAcousticSoftBody::Init(const Json::Value &conf)
            mAcousticSamplingFreqHZ, mAcousticDuration);
     mHammerForce = cJsonUtil::ParseAsDouble("hammer_force", conf);
     mNumOfMaxModes = cJsonUtil::ParseAsInt("num_of_max_modes", conf);
+    mSelectedVertexForHearing = 0;
+    mEnableDrawVertexNormal = false;
+    mEnableDrawTriNormal = true;
+
+    // confirm normal
+    InitArrowFromNormal();
 
     // load many material types ... for selection
     LoadMaterialParams();
+    // std::cout << "linear K = \n"
+    //           << mLinearElasticityStiffnessMatrix.toDense() << std::endl;
+    ResolveModalVibration();
+    GenerateSound();
+}
+void cAcousticSoftBody::ResolveModalVibration()
+{
+    printf("[info] ------------resolve vibration-------------\n");
+    // Init noise
+    UpdateDeformationGradient();
+    mGlobalStiffnessSparseMatrix = CalcGlobalStiffnessSparseMatrix();
 
     // init linear elasticity stiffness matrix
     mLinearElasticityStiffnessMatrix =
@@ -79,21 +96,14 @@ void cAcousticSoftBody::Init(const Json::Value &conf)
             this->mMaterial->mPoissonRatioNew,
             this->mMaterial->mRayleighDamplingA,
             this->mMaterial->mRayleighDamplingB);
-    // std::cout << "linear K = \n"
-    //           << mLinearElasticityStiffnessMatrix.toDense() << std::endl;
-    ResolveVibration();
-}
-void cAcousticSoftBody::ResolveVibration()
-{
-    printf("[info] ------------resolve vibration-------------\n");
-    // Init noise
-    UpdateDeformationGradient();
-    mGlobalStiffnessSparseMatrix = CalcGlobalStiffnessSparseMatrix();
 
     EigenDecompose(mEigenValues, mEigenVecs);
 
     CalculateModalVibration();
-    auto play_wave = CalculateVertexVibration(0);
+}
+void cAcousticSoftBody::GenerateSound()
+{
+    auto play_wave = CalculateVertexVibration(mSelectedVertexForHearing);
     gAudioOutput->SetWave(play_wave);
 
     // save
@@ -101,7 +111,6 @@ void cAcousticSoftBody::ResolveVibration()
         cFileUtil::GetFilename(this->mMaterial->mMatPath));
 
     play_wave->DumpToWAV(cFileUtil::ConcatFilename("log/", mat_name + ".wav"));
-    std::cout << "total mass = " << CalcTotalMass() << std::endl;
 }
 tVectorXd CalcWave(double coef_j, double w, double xi, double wd, double dt,
                    int num_of_steps)
@@ -433,7 +442,8 @@ void cAcousticSoftBody::UpdateImGui()
                     // change material
                     mMaterialParamIdx = i;
                     mMaterial->Init(mMaterialParamPathLst[mMaterialParamIdx]);
-                    ResolveVibration();
+                    ResolveModalVibration();
+                    GenerateSound();
                 }
             }
             if (is_selected)
@@ -445,8 +455,27 @@ void cAcousticSoftBody::UpdateImGui()
     }
     if (ImGui::Button("resolve vibration\n"))
     {
-        ResolveVibration();
+        ResolveModalVibration();
+        GenerateSound();
     }
+    if (ImGui::Button("dump vibration"))
+    {
+        DumpResultForTransfer();
+    }
+    // select vid
+    {
+        int old_v = mSelectedVertexForHearing;
+        ImGui::SliderInt("hearing vertex", &mSelectedVertexForHearing, 0,
+                         mVertexArray.size() - 1);
+        if (mSelectedVertexForHearing != old_v)
+        {
+            GenerateSound();
+        }
+    }
+
+    // option
+    ImGui::Checkbox("draw tri normal", &mEnableDrawTriNormal);
+    ImGui::Checkbox("draw vertex normal", &mEnableDrawVertexNormal);
 }
 
 std::string GetAcousticMaterialNameFromHyperMaterial(eMaterialType type)
@@ -523,7 +552,8 @@ void cAcousticSoftBody::ChangeMaterial(int old_idx, int new_idx)
     mAcousticMaterialModelIdx = new_idx;
 
     // recalculate vibration
-    ResolveVibration();
+    ResolveModalVibration();
+    GenerateSound();
 }
 
 /**
@@ -555,4 +585,169 @@ void cAcousticSoftBody::LoadMaterialParams()
     }
 
     // 3. judge current
+}
+
+void cAcousticSoftBody::DumpResultForTransfer()
+{
+    Json::Value geometry, modes, coef;
+    // 1. geo info: surface vertex pos, id, normal vector
+    {
+        int num_of_surface_v = mSurfaceVertexIdArray.size();
+        Json::Value v_lst = Json::arrayValue, pos_lst = Json::arrayValue,
+                    normal_lst = Json::arrayValue;
+        for (int i = 0; i < num_of_surface_v; i++)
+        {
+            int vid = mSurfaceVertexIdArray[i];
+            auto v = mVertexArray[vid];
+
+            tVector3d pos = v->mPos.segment(0, 3);
+            tVector3d normal = v->mNormal.segment(0, 3);
+            v_lst.append(vid);
+            pos_lst.append(cJsonUtil::BuildVectorJson(pos));
+            normal_lst.append(cJsonUtil::BuildVectorJson(normal));
+        }
+        geometry["vertex_id_lst"] = v_lst;
+        geometry["pos_lst"] = pos_lst;
+        geometry["normal_lst"] = normal_lst;
+    }
+
+    // 2. modes
+
+    {
+        modes = Json::arrayValue;
+        int num_of_modes = this->mModalVibrationsInfo.size();
+        for (auto info : mModalVibrationsInfo)
+        {
+            modes.append(cJsonUtil::BuildVectorJson(info));
+        }
+    }
+
+    // 3. coef of the modes for each info
+    {
+        coef = Json::arrayValue;
+        for (auto &surface_v_id : mSurfaceVertexIdArray)
+        {
+            coef.append(
+                cJsonUtil::BuildVectorJson(mEigenVecs.row(surface_v_id)));
+        }
+    }
+    // export name: "vib_" + material_param_name + material_name
+    std::string output =
+        "data/vib_" + this->mMaterialParamNameLst[this->mMaterialParamIdx] +
+        "_" + GetAcousticMaterialNameFromIdx(this->mAcousticMaterialModelIdx) +
+        ".json";
+    Json::Value root;
+    root["geometry"] = geometry;
+    root["modes"] = modes;
+    root["coef"] = coef;
+    cJsonUtil::WriteJson(output, root);
+    std::cout << "dump to " << output << std::endl;
+}
+#include "geometries/Arrow.h"
+void cAcousticSoftBody::InitArrowFromNormal()
+{
+    // only surface vertex
+    tVector min, max;
+    CalcAABB(min, max);
+    tVector size = max - min;
+    double obj_scale = size.segment(0, 3).mean() / 20;
+
+    mDrawVertexNormalArray.clear();
+    for (auto &vid : this->mSurfaceVertexIdArray)
+    {
+        auto arrow = std::make_shared<cArrow>();
+        arrow->SetStEd(mVertexArray[vid]->mPos,
+                       mVertexArray[vid]->mPos +
+                           mVertexArray[vid]->mNormal * obj_scale);
+        mDrawVertexNormalArray.push_back(arrow);
+    }
+
+    // only surface triangles
+    mDrawTriNormalArray.clear();
+    for (auto &tid : this->mSurfaceTriangleIdArray)
+    {
+        tVector normal = mTriangleArray[tid]->mNormal;
+        tVector pos = (mVertexArray[mTriangleArray[tid]->mId0]->mPos +
+                       mVertexArray[mTriangleArray[tid]->mId1]->mPos +
+                       mVertexArray[mTriangleArray[tid]->mId2]->mPos) /
+                      3;
+
+        auto arrow = std::make_shared<cArrow>();
+        arrow->SetStEd(pos, pos + normal * obj_scale);
+        mDrawTriNormalArray.push_back(arrow);
+    }
+}
+
+int cAcousticSoftBody::GetNumOfDrawTriangles() const
+{
+    int raw = cSoftBodyImplicit::GetNumOfDrawTriangles();
+    int num_of_arrow_tri = mDrawVertexNormalArray[0]->GetNumOfDrawTriangles();
+    if (mEnableDrawVertexNormal)
+    {
+        raw += mDrawVertexNormalArray.size() * num_of_arrow_tri;
+    }
+    if (mEnableDrawTriNormal)
+    {
+        raw += mDrawTriNormalArray.size() * num_of_arrow_tri;
+    }
+    return raw;
+}
+int cAcousticSoftBody::GetNumOfDrawEdges() const
+{
+    int raw = cSoftBodyImplicit::GetNumOfDrawEdges();
+    int num_of_arrow_edge = mDrawVertexNormalArray[0]->GetNumOfDrawEdges();
+    if (mEnableDrawVertexNormal)
+    {
+        raw += mDrawVertexNormalArray.size() * num_of_arrow_edge;
+    }
+    if (mEnableDrawTriNormal)
+    {
+        raw += mDrawTriNormalArray.size() * num_of_arrow_edge;
+    }
+    return raw;
+}
+int cAcousticSoftBody::GetNumOfDrawVertices() const
+{
+    int raw = cSoftBodyImplicit::GetNumOfDrawVertices();
+    return raw;
+}
+
+void cAcousticSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                               int &st) const
+{
+    cSoftBodyImplicit::CalcTriangleDrawBuffer(res, st);
+    if (mEnableDrawVertexNormal)
+    {
+        for (auto &v : this->mDrawVertexNormalArray)
+        {
+            v->CalcTriangleDrawBuffer(res, st);
+        }
+    }
+    if (mEnableDrawTriNormal)
+    {
+        for (auto &v : this->mDrawTriNormalArray)
+        {
+            v->CalcTriangleDrawBuffer(res, st);
+        }
+    }
+}
+
+void cAcousticSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                           int &st) const
+{
+    cSoftBodyImplicit::CalcEdgeDrawBuffer(res, st);
+    if (mEnableDrawVertexNormal)
+    {
+        for (auto &v : this->mDrawVertexNormalArray)
+        {
+            v->CalcEdgeDrawBuffer(res, st);
+        }
+    }
+    if (mEnableDrawTriNormal)
+    {
+        for (auto &v : this->mDrawTriNormalArray)
+        {
+            v->CalcEdgeDrawBuffer(res, st);
+        }
+    }
 }
