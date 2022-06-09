@@ -1,8 +1,8 @@
 {
     "name": "steel",
-    "rayleigh_damping_a": 1,
-    "rayleigh_damping_b": 1e-7,
-    "youngs": 6.2E10,
-    "poisson_ratio": 0.2,
-    "rho": 2600
+    "rayleigh_damping_a": 5,
+    "rayleigh_damping_b": 3e-8,
+    "youngs": 2.1E11,
+    "poisson_ratio": 0.29,
+    "rho": 7850
 }
