@@ -14,4 +14,5 @@ protected:
     int mId;
     tVector3d mCenterPos;
     double mStrength;
+    double mOmega; // 2 * pi * frequency
 };

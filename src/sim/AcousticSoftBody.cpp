@@ -627,6 +627,7 @@ void cAcousticSoftBody::DumpResultForTransfer()
         coef = Json::arrayValue;
         for (auto &surface_v_id : mSurfaceVertexIdArray)
         {
+            // ! need to get all eigen vecs, it seems current dump is lacked of DOF!
             coef.append(
                 cJsonUtil::BuildVectorJson(mEigenVecs.row(surface_v_id)));
         }
