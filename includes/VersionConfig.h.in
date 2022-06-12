@@ -1,0 +1,2 @@
+#define ClothSim_VERSION_MAJOR @ClothSim_VERSION_MAJOR@
+#define ClothSim_VERSION_MINOR @ClothSim_VERSION_MINOR@

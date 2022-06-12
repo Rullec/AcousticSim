@@ -9,9 +9,9 @@ public:
     virtual void Init(const std::vector<tVertexPtr> &v_array,
                       const std::vector<tEdgePtr> &e_array,
                       const std::vector<tTrianglePtr> &t_array,
-                      const tVector3d &bending_stiffness_warpweftbias);
+                      const tVector3d &bending_stiffness_warpweftbias) override;
 
-    virtual void Update();
+    virtual void Update() override;
     double CalcEnergy(const tVectorXd &xcur) override;
     tVectorXd CalcForce(const tVectorXd &xcur) override;
     // std::vector<tMatrix12f> GetEleStiffnessMatrixLst() const;

@@ -21,4 +21,4 @@ add_library(
     DrawSceneImGUI.cpp
 )
 
-target_link_libraries(scenes_lib PRIVATE cam_lib imgui_lib sim_lib ${Vulkan_LIBRARIES} ${GLFW3_LIBRARY})
+target_link_libraries(scenes_lib PUBLIC cam_lib imgui_lib sim_lib ${Vulkan_LIBRARIES} ${GLFW3_LIBRARY})

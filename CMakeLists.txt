@@ -1,10 +1,7 @@
-cmake_minimum_required(VERSION 3.0.0)
-
-add_subdirectory(includes/pybind11)
-include_directories(includes/pybind11/include)
+cmake_minimum_required(VERSION 3.10)
 
 if(NOT APPLE)
-    project(ClothSim VERSION 0.1.0 LANGUAGES CUDA CXX)
+    project(ClothSim VERSION 1.0 LANGUAGES CUDA CXX)
     enable_language(CUDA)
     include(CheckLanguage)
     check_language(CUDA)
@@ -19,23 +16,29 @@ if(NOT APPLE)
         set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     endif()
 else()
-    project(ClothSim VERSION 0.1.0 LANGUAGES CXX)
+    project(ClothSim VERSION 1.0 LANGUAGES CXX)
 endif()
 
+add_subdirectory(includes/pybind11)
+set(PYBIND11_INCLUDE_PATH "includes/pybind11/include")
+include_directories(PYBIND11_INCLUDE_PATH)
+include_directories("${PROJECT_SOURCE_DIR}/includes")
+include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/imgui")
+
+
+# set version config; the config header will be generated in build dir
+configure_file(includes/VersionConfig.h.in VersionConfig.h)
+# add build dir into header file
+
+# set language standards
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
 set(CMAKE_DEBUG_POSTFIX "d")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(configure_movecmd)
-include_directories(./includes)
-include_directories(./imgui)
-include_directories(./src)
-
-set(DLL_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/dlls)
-if(NOT EXISTS ${DLL_OUTPUT_DIR})
-    FILE(MAKE_DIRECTORY ${DLL_OUTPUT_DIR})
-    message(STATUS "create dll output dir ${DLL_OUTPUT_DIR}")
-endif()
 
 if(WIN32)
     link_directories(./lib)
@@ -95,7 +98,7 @@ add_subdirectory(./src/scenes)
 set(my_libs ${scenes_lib} ${utils_lib} ${imgui_lib})
 
 add_executable(main ./src/main.cpp)
-target_link_libraries(main PRIVATE ${libs} scenes_lib utils_lib geo_lib)
+target_link_libraries(main PUBLIC ${libs} scenes_lib utils_lib geo_lib)
 
 if(WIN32)
     move_release_to_src(main)
