@@ -59,6 +59,7 @@ set(SOFTBODY_SRC
     ModalSoftBody.cpp
     ModeVibration.cpp
     TransferSoftBody.cpp
+    Monopole.cpp
     AudioOutput.cpp
     AudioWave.cpp
 )

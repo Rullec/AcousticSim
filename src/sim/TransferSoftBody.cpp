@@ -212,7 +212,7 @@ void cTransferSoftBody::InitPole()
             auto pole = std::make_shared<cMonopole>(cur_id++, modal->mW);
             modes.push_back(pole);
         }
-        mPolesArray.push_back(modes);
+        // mPolesArray.push_back(modes);
     }
 }
 
@@ -238,14 +238,14 @@ tVectorXd cTransferSoftBody::GetGrad(int mode_idx)
  */
 tVectorXd cTransferSoftBody::GetX(int mode_idx)
 {
-    tVectorXd x = tVectorXd::Zero(4 * mNumOfMonopolesPerFreq);
+    // tVectorXd x = tVectorXd::Zero(4 * mNumOfMonopolesPerFreq);
 
-    for (int i = 0; i < mPolesArray[mode_idx].size(); i++)
-    {
-        auto cur_pole = mPolesArray[mode_idx][i];
-        // coef
-        x[4 * i] = cur_pole->mStrength;
-        x.segment(4 * i + 1, 3) = cur_pole->mCenterPos;
-    }
-    return x;
+    // for (int i = 0; i < mPolesArray[mode_idx].size(); i++)
+    // {
+    //     auto cur_pole = mPolesArray[mode_idx][i];
+    //     // coef
+    //     x[4 * i] = cur_pole->mStrength;
+    //     x.segment(4 * i + 1, 3) = cur_pole->mCenterPos;
+    // }
+    // return x;
 }
