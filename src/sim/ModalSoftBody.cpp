@@ -14,6 +14,11 @@
 extern cAudioOutputPtr gAudioOutput;
 eMaterialType GetHyperMaterialFromAcousticMaterial(std::string name);
 std::string GetAcousticMaterialNameFromHyperMaterial(eMaterialType type);
+
+tDiscretedWavePtr
+CalculateVertexVibration(int v_id, int num_of_selected_modes,
+                         const std::vector<tDiscretedWavePtr> &mModalWaves,
+                         const tMatrixXd &mVertexModesCoef, double sampling_hz);
 int GetAcousticMaterialFromName(std::string name)
 {
     if (name == "stvk")
@@ -107,8 +112,9 @@ void cModalSoftBody::ResolveModalVibration()
 }
 void cModalSoftBody::GenerateSound()
 {
-    auto play_wave = CalculateVertexVibration(mSelectedVertexForHearing,
-                                              this->mNumOfSelectedModes);
+    auto play_wave = CalculateVertexVibration(
+        mSelectedVertexForHearing, mNumOfSelectedModes, mModalWaves,
+        mVertexModesCoef, mAcousticSamplingFreqHZ);
     gAudioOutput->SetWave(play_wave);
 
     // save
@@ -359,10 +365,12 @@ void cModalSoftBody::EigenDecompose(tVectorXd &eigenValues,
 }
 
 tDiscretedWavePtr
-cModalSoftBody::CalculateVertexVibration(int v_id, int num_of_selected_modes)
+CalculateVertexVibration(int v_id, int num_of_selected_modes,
+                         const std::vector<tDiscretedWavePtr> &mModalWaves,
+                         const tMatrixXd &mVertexModesCoef, double sampling_hz)
 {
     // total num of modes
-    int num_of_modes = this->mModalWaves.size();
+    int num_of_modes = mModalWaves.size();
 
     tVectorXd weight = mVertexModesCoef.row(v_id);
     tVectorXf new_data = tVectorXf::Zero(mModalWaves[0]->data.size());
@@ -398,8 +406,12 @@ cModalSoftBody::CalculateVertexVibration(int v_id, int num_of_selected_modes)
 
         // generate sound
     }
+    printf("[info] generate sound for vertex %d\n", v_id);
     for (auto &i : selected_modes)
     {
+        // std::cout << "mode " << i << " weight = " << weight[i] << " data = "
+        //           << mModalWaves[i]->data.segment(0, 2).transpose()
+        //           << std::endl;
         new_data += weight[i] * mModalWaves[i]->data;
     }
     printf("[info] generate sound from %d modes\n", selected_modes.size());
@@ -407,7 +419,7 @@ cModalSoftBody::CalculateVertexVibration(int v_id, int num_of_selected_modes)
 
     // scale sound
     new_data = 1.0 / new_data.cwiseAbs().maxCoeff() * new_data;
-    auto mode_wave = std::make_shared<tDiscretedWave>(GetDt());
+    auto mode_wave = std::make_shared<tDiscretedWave>(1.0 / sampling_hz);
     mode_wave->SetData(new_data);
     return mode_wave;
 }
@@ -513,8 +525,8 @@ void cModalSoftBody::UpdateImGui()
         old_val = SIM_MAX(old_val, 2);
         if (old_val != mNumOfSelectedModes)
         {
-            GenerateSound();
             mNumOfSelectedModes = old_val;
+            GenerateSound();
         }
     }
 }
@@ -659,7 +671,7 @@ void cModalSoftBody::DumpResultForTransfer()
     {
         modes = Json::arrayValue;
         int num_of_modes = this->mModalVibrationsInfo.size();
-        for (auto & info : mModalVibrationsInfo)
+        for (auto &info : mModalVibrationsInfo)
         {
             modes.append(cJsonUtil::BuildVectorJson(info->GetCoefVec()));
         }

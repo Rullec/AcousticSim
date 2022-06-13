@@ -562,6 +562,9 @@ void cDrawScene::Update(double dt)
         //           << mPerturb->GetPerturbForce().transpose() << std::endl;
     }
 
+    // update camera pos
+    mSimScene->SetCameraPos(mCamera->GetCameraPos().cast<double>());
+
     // cTimeUtil::Begin("sim_step");
     mSimScene->Update(dt);
     mSimScene->UpdateRenderingResource();

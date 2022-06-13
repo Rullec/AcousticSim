@@ -3,6 +3,9 @@
 
 SIM_DECLARE_CLASS_AND_PTR(tDiscretedWave);
 SIM_DECLARE_CLASS_AND_PTR(cArrow);
+SIM_DECLARE_CLASS_AND_PTR(cMonopole);
+SIM_DECLARE_STRUCT_AND_PTR(tModeVibration);
+
 class cTransferSoftBody : public cSoftBodyImplicit
 {
 public:
@@ -23,12 +26,23 @@ protected:
     virtual void SolveMonopole(int mode_idx);
     virtual void LoadModalAnalysisResult();
     virtual void InitSurfaceNormal();
-    virtual void CalcSoundPressure();
-
-    tEigenArr<tVector> mModalVibrationsInfo;
+    virtual tVectorXd CalcSoundPressure(int mode_idx);
+    virtual void SetModalVibrationSound();
+    tEigenArr<tModeVibrationPtr> mModalVibrationArray;
     tMatrixXd mSurfaceVertexDOFCoef;
     std::string mModalAnlysisResultPath;
-    bool mEnableDumpedModalSolution;    // use undamped & dumped modal analysis result
-    int mNumOfMonopoles;   // number of monopoles
+    bool mEnableDumpedModalSolution; // use undamped & dumped modal analysis
+                                     // result
+    int mNumOfMonopolesPerFreq;      // number of monopoles
     tEigenArr<tVector> mSurfaceVertexNormalArray;
+    struct tPolesPerFreq
+    {
+        std::vector<cMonopolePtr> mPoles;
+        double mOmega;
+    };
+    std::vector<tPolesPerFreq> mPolesArray;
+    virtual void InitPole();
+    virtual double GetEnergy(int mode_idx);
+    virtual tVectorXd GetGrad(int mode_idx);
+    virtual tVectorXd GetX(int mode_idx);
 };

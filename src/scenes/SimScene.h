@@ -63,7 +63,7 @@ public:
     virtual void UpdateImGui();
     virtual int GetNumOfDrawEdges() const;
     virtual int GetNumOfDrawTriangles() const;
-
+    virtual void SetCameraPos(const tVector3d & cam_pos);
 protected:
     tSimStateMachinePtr mSimStateMachine;
     tPerturb *mPerturb;
@@ -73,7 +73,8 @@ protected:
     bool mEnableCollisionDetection;
     std::vector<cBaseObjectPtr> mObjectList;
     cRaycasterPtr mRaycaster; // raycaster
-
+    tVector3d mCamPos;
+    
     tVectorXf mTriangleDrawBuffer, mEdgesDrawBuffer,
         mPointDrawBuffer; // buffer to triangle buffer drawing (should use index
                           // buffer to improve the velocity)

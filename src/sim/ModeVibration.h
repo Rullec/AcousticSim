@@ -9,10 +9,13 @@
     qddot + (a  + b * eigen_val) qdot + eigen_val * q = UTf_init
 
     for mode j, solution:
-    q_j(t)  = dt * Utf_init_j / (w_d) e^{- \xi * w * t} sin(w_d * t)
+    q_j(t)  = dt * f_j^U / (w_d) e^{- \xi * w * t} sin(w_d * t)
             = coef_j / w_d e^{- \xi * w * t} sin(w_d * t)
+    
+    f^U is the generalized force
+
     we need to calculate
-        1. coef_j
+        1. coef_j = dt * f_J^U
         3. w = \sqrt(eigen_val)
         4. xi = (a + b * eigen_val) / (2 * w)
         2. w_d = w * (1 - xi^2)

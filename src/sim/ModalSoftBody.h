@@ -51,8 +51,6 @@ protected:
                                 tMatrixXd &eigenVecs) const;
     virtual void CalculateModalVibration(const tVectorXd &eigen_vals,
                                          const tMatrixXd &eigen_vecs);
-    virtual tDiscretedWavePtr
-    CalculateVertexVibration(int v_id, int num_of_selected_modes);
     double GetDt() const;
     double CalcTotalMass() const;
     virtual void ChangeMaterial(int old_idx, int new_idx);

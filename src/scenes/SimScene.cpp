@@ -40,6 +40,7 @@ cSimScene::cSimScene()
     mPerturb = nullptr;
     mSimStateMachine = std::make_shared<tSimStateMachine>();
     mSceneType = eSceneType::SCENE_SIM;
+    mCamPos.setZero();
     // mColDetecter = nullptr;
 }
 
@@ -560,3 +561,5 @@ void cSimScene::CalcPointDrawBuffer()
         x->CalcPointDrawBuffer(render_ref, st);
     }
 }
+
+void cSimScene::SetCameraPos(const tVector3d &cam_pos) { mCamPos = cam_pos; }

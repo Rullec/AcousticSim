@@ -1,11 +1,12 @@
 #include "sim/Monopole.h"
 #include "utils/DefUtil.h"
 
-cMonopole::cMonopole(int _id)
+cMonopole::cMonopole(int _id, double omega)
 {
     mId = _id;
     mCenterPos.setZero();
-    mStrength = 0;
+    mStrength = 1.0;
+    mOmega = omega;
 }
 
 void cMonopole::Init(double strength, const tVector3d &center_pos)
@@ -43,4 +44,9 @@ tVector3d cMonopole::EvaluatePressureGrad(const tVector3d &pos)
     double deno = 4 * M_PI * x_minus_r * x_minus_r * x_minus_r;
     deno = SIM_MAX(1e-10, deno);
     return (mCenterPos - pos) / (deno);
+}
+
+void cMonopole::CheckGrad() 
+{
+    
 }
