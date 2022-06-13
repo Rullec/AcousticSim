@@ -206,12 +206,15 @@ void cTransferSoftBody::InitPole()
     for (int i = 0; i < num_of_modes; i++)
     {
         auto modal = mModalVibrationArray[i];
-        std::vector<cMonopolePtr> modes = {};
+        tPolesPerFreq data;
+        // std::vector<cMonopolePtr> modes = {};
+        data.mPoles = {};
         for (int j = 0; j < mNumOfMonopolesPerFreq; j++)
         {
             auto pole = std::make_shared<cMonopole>(cur_id++, modal->mW);
-            modes.push_back(pole);
+            data.mPoles.push_back(pole);
         }
+        data.mOmega = mModalVibrationArray[i]->mW;
         // mPolesArray.push_back(modes);
     }
 }
@@ -219,18 +222,14 @@ void cTransferSoftBody::InitPole()
 /**
  * \brief           get energy
  */
-double cTransferSoftBody::GetEnergy(int mode_idx) 
-{
-
+double cTransferSoftBody::GetEnergy(int mode_idx) {
+    // calcualte residual 
 }
 
 /**
  * \brief           get grad
  */
-tVectorXd cTransferSoftBody::GetGrad(int mode_idx) 
-{
-
-}
+tVectorXd cTransferSoftBody::GetGrad(int mode_idx) {}
 
 /**
  * \brief           get solution X
@@ -238,14 +237,14 @@ tVectorXd cTransferSoftBody::GetGrad(int mode_idx)
  */
 tVectorXd cTransferSoftBody::GetX(int mode_idx)
 {
-    // tVectorXd x = tVectorXd::Zero(4 * mNumOfMonopolesPerFreq);
+    tVectorXd x = tVectorXd::Zero(4 * mNumOfMonopolesPerFreq);
 
-    // for (int i = 0; i < mPolesArray[mode_idx].size(); i++)
-    // {
-    //     auto cur_pole = mPolesArray[mode_idx][i];
-    //     // coef
-    //     x[4 * i] = cur_pole->mStrength;
-    //     x.segment(4 * i + 1, 3) = cur_pole->mCenterPos;
-    // }
-    // return x;
+    for (int i = 0; i < mNumOfMonopolesPerFreq; i++)
+    {
+        auto cur_pole = mPolesArray[mode_idx].mPoles[i];
+        // coef
+        x[4 * i] = cur_pole->mStrength;
+        x.segment(4 * i + 1, 3) = cur_pole->mCenterPos;
+    }
+    return x;
 }

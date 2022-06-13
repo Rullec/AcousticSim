@@ -142,8 +142,14 @@ void SparseMatVecProd(const tSparseMatd &A, const tVectorXd &b, tVectorXd &res)
     }
     // return b;
 }
+#include "sim/Monopole.h"
 int main(int argc, char **argv)
 {
+    // auto pole = cMonopole(0, 2.7);
+    // pole.mCenterPos.setRandom();
+    // pole.CheckGrad_dPdc();
+    // pole.CheckGrad_dPdo();
+    // exit(1);
     cMathUtil::SeedRand(0);
     Eigen::setNbThreads(15);
     std::string conf = "";
