@@ -1007,7 +1007,7 @@ void cDrawScene::CreatePointCommandBuffers(int i)
 
     // SIM_ERROR("VkBuffer mLineBuffer; vkDeviceMemory mLineBufferMemory; need
     // to be inited");
-    VkBuffer pointBuffers[] = {mPointBuffer};
+    VkBuffer pointBuffers[1] = {mPointBuffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(mCommandBuffers[i], 0, 1, pointBuffers, offsets);
 

@@ -1,4 +1,5 @@
-#include "sim/AcousticSoftBody.h"
+#include "sim/ModalSoftBody.h"
+#include "ModeVibration.h"
 #include "geometries/Primitives.h"
 #include "imgui.h"
 #include "sim/AudioOutput.h"
@@ -9,6 +10,7 @@
 #include "utils/JsonUtil.h"
 #include <fstream>
 #include <iostream>
+#include <set>
 extern cAudioOutputPtr gAudioOutput;
 eMaterialType GetHyperMaterialFromAcousticMaterial(std::string name);
 std::string GetAcousticMaterialNameFromHyperMaterial(eMaterialType type);
@@ -52,9 +54,9 @@ std::string GetAcousticMaterialNameFromIdx(int idx)
     return name;
 }
 
-cAcousticSoftBody::cAcousticSoftBody(int id_) : cSoftBodyImplicit(id_) {}
+cModalSoftBody::cModalSoftBody(int id_) : cSoftBodyImplicit(id_) {}
 
-void cAcousticSoftBody::Init(const Json::Value &conf)
+void cModalSoftBody::Init(const Json::Value &conf)
 {
     cSoftBodyImplicit::Init(conf);
     mAcousticMaterialModelIdx = GetAcousticMaterialFromName(
@@ -67,7 +69,6 @@ void cAcousticSoftBody::Init(const Json::Value &conf)
     printf("[log] acoustic sampling freq %d HZ, duration %.1f s\n",
            mAcousticSamplingFreqHZ, mAcousticDuration);
     mHammerForce = cJsonUtil::ParseAsDouble("hammer_force", conf);
-    mNumOfMaxModes = cJsonUtil::ParseAsInt("num_of_max_modes", conf);
     mSelectedVertexForHearing = 0;
     mEnableDrawVertexNormal = false;
     mEnableDrawTriNormal = true;
@@ -80,9 +81,10 @@ void cAcousticSoftBody::Init(const Json::Value &conf)
     // std::cout << "linear K = \n"
     //           << mLinearElasticityStiffnessMatrix.toDense() << std::endl;
     ResolveModalVibration();
+    mNumOfSelectedModes = this->mModalWaves.size() / 2;
     GenerateSound();
 }
-void cAcousticSoftBody::ResolveModalVibration()
+void cModalSoftBody::ResolveModalVibration()
 {
     printf("[info] ------------resolve vibration-------------\n");
     // Init noise
@@ -97,13 +99,16 @@ void cAcousticSoftBody::ResolveModalVibration()
             this->mMaterial->mRayleighDamplingA,
             this->mMaterial->mRayleighDamplingB);
 
-    EigenDecompose(mEigenValues, mEigenVecs);
+    tVectorXd eigen_vals;
+    tMatrixXd eigen_vecs;
+    EigenDecompose(eigen_vals, eigen_vecs);
 
-    CalculateModalVibration();
+    CalculateModalVibration(eigen_vals, eigen_vecs);
 }
-void cAcousticSoftBody::GenerateSound()
+void cModalSoftBody::GenerateSound()
 {
-    auto play_wave = CalculateVertexVibration(mSelectedVertexForHearing);
+    auto play_wave = CalculateVertexVibration(mSelectedVertexForHearing,
+                                              this->mNumOfSelectedModes);
     gAudioOutput->SetWave(play_wave);
 
     // save
@@ -112,58 +117,40 @@ void cAcousticSoftBody::GenerateSound()
 
     play_wave->DumpToWAV(cFileUtil::ConcatFilename("log/", mat_name + ".wav"));
 }
-tVectorXd CalcWave(double coef_j, double w, double xi, double wd, double dt,
-                   int num_of_steps)
-{
-    // q(t) = coef_j / w_d e^{- \xi * w * t} sin(w_d * t)
-    tVectorXd data = tVectorXd::Zero(num_of_steps);
-    for (int i = 0; i < num_of_steps; i++)
-    {
-        double t = i * dt;
-        data[i] = coef_j / wd * std::exp(-xi * w * t) * std::sin(wd * t);
-    }
-    return data;
-}
-int cAcousticSoftBody::GetNumOfModes() const
-{
-    if (mNumOfMaxModes <= 0)
-    {
-        return mEigenValues.size();
-    }
-    else
-        return SIM_MIN(mNumOfMaxModes, mEigenValues.size());
-}
+
 /**
  * \brief   calcualte modal vibration
  */
-void cAcousticSoftBody::CalculateModalVibration()
+void cModalSoftBody::CalculateModalVibration(const tVectorXd &eigen_vals,
+                                             const tMatrixXd &eigen_vecs)
 {
-    int num_of_modes = GetNumOfModes();
+    int num_of_dof = eigen_vals.size();
     // solve mode vibration
     tVector3d hammer_force = tVector3d::Ones() * this->mHammerForce;
     tVectorXd UTFinit =
-        mEigenVecs.transpose().block(0, 0, num_of_modes, 3) * hammer_force;
-    /*
-        modal vibration equation:
-        qddot + (a  + b * eigen_val) qdot + eigen_val * q = UTf_init
+        eigen_vecs.transpose().block(0, 0, num_of_dof, 3) * hammer_force;
 
-        for mode j, solution:
-        q_j(t)  = dt * Utf_init_j / (w_d) e^{- \xi * w * t} sin(w_d * t)
-                = coef_j / w_d e^{- \xi * w * t} sin(w_d * t)
-        we need to calculate
-            1. coef_j
-            3. w = \sqrt(eigen_val)
-            4. xi = (a + b * eigen_val) / (2 * w)
-            2. w_d = w * (1 - xi^2)
-    */
+    // 1. remove surface rows in eigen vectors (prepare for coef extraction)
+    int num_of_surface_v = mSurfaceVertexIdArray.size();
+    tMatrixXd surface_vertex_vecs =
+        tMatrixXd::Zero(3 * num_of_surface_v, eigen_vecs.cols());
+    for (int i = 0; i < num_of_surface_v; i++)
+    {
+        for (int j = 0; j < 3; j++)
+            surface_vertex_vecs.row(3 * i + j) =
+                eigen_vecs.row(3 * mSurfaceVertexIdArray[i] + j);
+    }
+
     double dt = 1.0 / mAcousticSamplingFreqHZ;
     mModalVibrationsInfo.clear();
     mModalWaves.clear();
-    mIsModeValid.clear();
-    for (int mode_id = 0; mode_id < num_of_modes; mode_id++)
+
+    // 2. solve the solution for each mode
+    std::vector<int> valid_dof_array = {};
+    for (int mode_id = 0; mode_id < num_of_dof; mode_id++)
     {
         double coef_j = dt * UTFinit[mode_id];
-        double eigen_val = mEigenValues[mode_id];
+        double eigen_val = eigen_vals[mode_id];
         double w = std::sqrt(eigen_val);
         bool failed_or_invisibled = false;
         if (w < 2 * M_PI * 20 || w > 2 * M_PI * 20000)
@@ -173,10 +160,9 @@ void cAcousticSoftBody::CalculateModalVibration()
         }
         if (std::isnan(w))
             failed_or_invisibled = true;
-        double xi =
-            (this->mMaterial->mRayleighDamplingA +
-             this->mMaterial->mRayleighDamplingB * mEigenValues[mode_id]) /
-            (2 * w);
+        double xi = (this->mMaterial->mRayleighDamplingA +
+                     this->mMaterial->mRayleighDamplingB * eigen_val) /
+                    (2 * w);
         if (!failed_or_invisibled && xi >= 1)
         {
             SIM_WARN("mode {} xi {} >=1!, system is overdamped set to 1",
@@ -193,31 +179,42 @@ void cAcousticSoftBody::CalculateModalVibration()
             // mModalVibrationsInfo.push_back(tVector(0, 0, 0, 0));
             printf("invalid mode, set to zero\n");
             coef_j = 0, w = 0, xi = 0, wd = 0;
-            mIsModeValid.push_back(false);
+            continue;
         }
         else
         {
-            mIsModeValid.push_back(true);
+            // 3. get the valid & visible modes
+            auto cur_vib = std::make_shared<tModeVibration>(coef_j, w, xi, wd);
+            mModalVibrationsInfo.push_back(cur_vib);
+
+            valid_dof_array.push_back(mode_id);
+            tVectorXd data =
+                cur_vib->GetWave(mAcousticDuration, mAcousticSamplingFreqHZ);
+            auto mode_wave = std::make_shared<tDiscretedWave>(dt);
+            mode_wave->SetData(data.cast<float>());
+            mModalWaves.push_back(mode_wave);
         }
-
-        mModalVibrationsInfo.push_back(tVector(coef_j, w, xi, wd));
-
-        tVectorXd data = CalcWave(coef_j, w, xi, wd, dt,
-                                  mAcousticDuration * mAcousticSamplingFreqHZ);
-        auto mode_wave = std::make_shared<tDiscretedWave>(dt);
-        mode_wave->SetData(data.cast<float>());
-        mModalWaves.push_back(mode_wave);
     }
+
+    // 4. get the coef for valid id
+    int num_of_valid_dof = valid_dof_array.size();
+    mVertexModesCoef.resize(3 * num_of_surface_v, num_of_valid_dof);
+    for (int i = 0; i < num_of_valid_dof; i++)
+    {
+        mVertexModesCoef.col(i) = surface_vertex_vecs.col(valid_dof_array[i]);
+    }
+    printf("[info] get surface vertex %d/%d, valid modes %d/%d\n",
+           num_of_surface_v, mVertexArray.size(), num_of_valid_dof, num_of_dof);
 }
 
-void cAcousticSoftBody::Update(float dt)
+void cModalSoftBody::Update(float dt)
 {
     // cSoftBodyImplicit::Update(dt);
 
     // update second
 }
 
-void cAcousticSoftBody::SolveForMonopole()
+void cModalSoftBody::SolveForMonopole()
 {
     // 1. get outer surface vertex, and accel
     // 2. set a monopole place, calculate the residual
@@ -225,7 +222,7 @@ void cAcousticSoftBody::SolveForMonopole()
 }
 #include "utils/FileUtil.h"
 #include "utils/StringUtil.h"
-std::string cAcousticSoftBody::GetWaveName() const
+std::string cModalSoftBody::GetWaveName() const
 {
     // 1. mesh name
     auto mesh_name = cFileUtil::GetFilename(mTetMeshPath);
@@ -330,8 +327,8 @@ tVectorXd SolveModeITimeSeries(double m, double c, double k, double fprev,
 
     return q_vec;
 }
-void cAcousticSoftBody::EigenDecompose(tVectorXd &eigenValues,
-                                       tMatrixXd &eigenVecs) const
+void cModalSoftBody::EigenDecompose(tVectorXd &eigenValues,
+                                    tMatrixXd &eigenVecs) const
 {
     {
         Eigen::GeneralizedEigenSolver<tMatrixXd> ges;
@@ -361,20 +358,52 @@ void cAcousticSoftBody::EigenDecompose(tVectorXd &eigenValues,
     }
 }
 
-tDiscretedWavePtr cAcousticSoftBody::CalculateVertexVibration(int v_id)
+tDiscretedWavePtr
+cModalSoftBody::CalculateVertexVibration(int v_id, int num_of_selected_modes)
 {
-    int num_of_modes = this->GetNumOfModes();
-    tVectorXd weight = mEigenVecs.row(v_id).segment(0, num_of_modes);
+    // total num of modes
+    int num_of_modes = this->mModalWaves.size();
+
+    tVectorXd weight = mVertexModesCoef.row(v_id);
     tVectorXf new_data = tVectorXf::Zero(mModalWaves[0]->data.size());
-    for (int i = 0; i < num_of_modes; i++)
+
+    // 1. begin to select modes
+    std::set<int> selected_modes = {};
+    if (num_of_selected_modes > num_of_modes)
     {
-        if (mIsModeValid[i] == true)
-            new_data += weight[i] * mModalWaves[i]->data;
-        else
-        {
-            printf("mode %d is invalid\n");
-        }
+        printf("[log] use full %d modes to build sound\n", num_of_modes);
+
+        for (int i = 0; i < num_of_modes; i++)
+            selected_modes.insert(i);
     }
+    else
+    {
+        SIM_ASSERT(num_of_selected_modes >= 2);
+        double stepsize = num_of_modes * 1.0 / (num_of_selected_modes - 1);
+        int st = 0;
+        for (int i = 0; i < num_of_selected_modes; i++)
+        {
+            int cur_selection = int(st + i * stepsize);
+            cur_selection =
+                cMathUtil::Clamp(cur_selection, 0, num_of_modes - 1);
+            selected_modes.insert(cur_selection);
+        }
+        printf("[info] get %d modes where target %d modes\n",
+               selected_modes.size(), num_of_modes);
+        while (selected_modes.size() < num_of_selected_modes)
+        {
+            selected_modes.insert(
+                cMathUtil::RandInt(0, num_of_selected_modes - 1));
+        }
+
+        // generate sound
+    }
+    for (auto &i : selected_modes)
+    {
+        new_data += weight[i] * mModalWaves[i]->data;
+    }
+    printf("[info] generate sound from %d modes\n", selected_modes.size());
+    // 2. get result
 
     // scale sound
     new_data = 1.0 / new_data.cwiseAbs().maxCoeff() * new_data;
@@ -383,12 +412,9 @@ tDiscretedWavePtr cAcousticSoftBody::CalculateVertexVibration(int v_id)
     return mode_wave;
 }
 
-double cAcousticSoftBody::GetDt() const
-{
-    return 1.0 / mAcousticSamplingFreqHZ;
-}
+double cModalSoftBody::GetDt() const { return 1.0 / mAcousticSamplingFreqHZ; }
 
-double cAcousticSoftBody::CalcTotalMass() const
+double cModalSoftBody::CalcTotalMass() const
 {
     std::cout << mInvLumpedMassMatrixDiag.cwiseInverse().transpose()
               << std::endl;
@@ -397,7 +423,7 @@ double cAcousticSoftBody::CalcTotalMass() const
 
 #include "sim/softbody/MaterialBuilder.h"
 
-void cAcousticSoftBody::UpdateImGui()
+void cModalSoftBody::UpdateImGui()
 {
     // material model selection
     if (ImGui::BeginCombo(
@@ -476,6 +502,21 @@ void cAcousticSoftBody::UpdateImGui()
     // option
     ImGui::Checkbox("draw tri normal", &mEnableDrawTriNormal);
     ImGui::Checkbox("draw vertex normal", &mEnableDrawVertexNormal);
+
+    int num_of_modes = this->mModalWaves.size();
+    ImGui::Text("num of modes (solved): %d", num_of_modes);
+
+    {
+        int old_val = mNumOfSelectedModes;
+        ImGui::DragInt("num of selected modes", &old_val, 1.0, 2, num_of_modes);
+
+        old_val = SIM_MAX(old_val, 2);
+        if (old_val != mNumOfSelectedModes)
+        {
+            GenerateSound();
+            mNumOfSelectedModes = old_val;
+        }
+    }
 }
 
 std::string GetAcousticMaterialNameFromHyperMaterial(eMaterialType type)
@@ -486,6 +527,7 @@ std::string GetAcousticMaterialNameFromHyperMaterial(eMaterialType type)
         return "neohookean";
     return "";
 }
+
 eMaterialType GetHyperMaterialFromAcousticMaterial(std::string name)
 {
     if (name == "stvk")
@@ -495,7 +537,7 @@ eMaterialType GetHyperMaterialFromAcousticMaterial(std::string name)
 }
 #include "sim/softbody/NeoHookeanMaterial.h"
 #include "sim/softbody/StvkMaterial.h"
-void cAcousticSoftBody::ChangeMaterial(int old_idx, int new_idx)
+void cModalSoftBody::ChangeMaterial(int old_idx, int new_idx)
 {
     std::string old_name = GetAcousticMaterialNameFromIdx(old_idx);
     std::string new_name = GetAcousticMaterialNameFromIdx(new_idx);
@@ -559,7 +601,7 @@ void cAcousticSoftBody::ChangeMaterial(int old_idx, int new_idx)
 /**
  * \brief       load material params
  */
-void cAcousticSoftBody::LoadMaterialParams()
+void cModalSoftBody::LoadMaterialParams()
 {
     SIM_ASSERT(mMaterial != nullptr);
     // 1. get root dir
@@ -587,7 +629,7 @@ void cAcousticSoftBody::LoadMaterialParams()
     // 3. judge current
 }
 
-void cAcousticSoftBody::DumpResultForTransfer()
+void cModalSoftBody::DumpResultForTransfer()
 {
     Json::Value geometry, modes, coef;
     // 1. geo info: surface vertex pos, id, normal vector
@@ -606,6 +648,7 @@ void cAcousticSoftBody::DumpResultForTransfer()
             pos_lst.append(cJsonUtil::BuildVectorJson(pos));
             normal_lst.append(cJsonUtil::BuildVectorJson(normal));
         }
+        geometry["tet_path"] = mTetMeshPath;
         geometry["vertex_id_lst"] = v_lst;
         geometry["pos_lst"] = pos_lst;
         geometry["normal_lst"] = normal_lst;
@@ -616,9 +659,9 @@ void cAcousticSoftBody::DumpResultForTransfer()
     {
         modes = Json::arrayValue;
         int num_of_modes = this->mModalVibrationsInfo.size();
-        for (auto info : mModalVibrationsInfo)
+        for (auto & info : mModalVibrationsInfo)
         {
-            modes.append(cJsonUtil::BuildVectorJson(info));
+            modes.append(cJsonUtil::BuildVectorJson(info->GetCoefVec()));
         }
     }
 
@@ -627,9 +670,14 @@ void cAcousticSoftBody::DumpResultForTransfer()
         coef = Json::arrayValue;
         for (auto &surface_v_id : mSurfaceVertexIdArray)
         {
-            // ! need to get all eigen vecs, it seems current dump is lacked of DOF!
-            coef.append(
-                cJsonUtil::BuildVectorJson(mEigenVecs.row(surface_v_id)));
+            // ! need to get all eigen vecs, it seems current dump is lacked of
+            // DOF!
+            coef.append(cJsonUtil::BuildVectorJson(
+                mVertexModesCoef.row(3 * surface_v_id + 0)));
+            coef.append(cJsonUtil::BuildVectorJson(
+                mVertexModesCoef.row(3 * surface_v_id + 1)));
+            coef.append(cJsonUtil::BuildVectorJson(
+                mVertexModesCoef.row(3 * surface_v_id + 2)));
         }
     }
     // export name: "vib_" + material_param_name + material_name
@@ -645,7 +693,7 @@ void cAcousticSoftBody::DumpResultForTransfer()
     std::cout << "dump to " << output << std::endl;
 }
 #include "geometries/Arrow.h"
-void cAcousticSoftBody::InitArrowFromNormal()
+void cModalSoftBody::InitArrowFromNormal()
 {
     // only surface vertex
     tVector min, max;
@@ -679,7 +727,7 @@ void cAcousticSoftBody::InitArrowFromNormal()
     }
 }
 
-int cAcousticSoftBody::GetNumOfDrawTriangles() const
+int cModalSoftBody::GetNumOfDrawTriangles() const
 {
     int raw = cSoftBodyImplicit::GetNumOfDrawTriangles();
     int num_of_arrow_tri = mDrawVertexNormalArray[0]->GetNumOfDrawTriangles();
@@ -693,7 +741,7 @@ int cAcousticSoftBody::GetNumOfDrawTriangles() const
     }
     return raw;
 }
-int cAcousticSoftBody::GetNumOfDrawEdges() const
+int cModalSoftBody::GetNumOfDrawEdges() const
 {
     int raw = cSoftBodyImplicit::GetNumOfDrawEdges();
     int num_of_arrow_edge = mDrawVertexNormalArray[0]->GetNumOfDrawEdges();
@@ -707,14 +755,14 @@ int cAcousticSoftBody::GetNumOfDrawEdges() const
     }
     return raw;
 }
-int cAcousticSoftBody::GetNumOfDrawVertices() const
+int cModalSoftBody::GetNumOfDrawVertices() const
 {
     int raw = cSoftBodyImplicit::GetNumOfDrawVertices();
     return raw;
 }
 
-void cAcousticSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                               int &st) const
+void cModalSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                            int &st) const
 {
     cSoftBodyImplicit::CalcTriangleDrawBuffer(res, st);
     if (mEnableDrawVertexNormal)
@@ -733,8 +781,8 @@ void cAcousticSoftBody::CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
     }
 }
 
-void cAcousticSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                           int &st) const
+void cModalSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                        int &st) const
 {
     cSoftBodyImplicit::CalcEdgeDrawBuffer(res, st);
     if (mEnableDrawVertexNormal)

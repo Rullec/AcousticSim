@@ -3,11 +3,13 @@
 
 SIM_DECLARE_CLASS_AND_PTR(tDiscretedWave);
 SIM_DECLARE_CLASS_AND_PTR(cArrow);
-class cAcousticSoftBody : public cSoftBodyImplicit
+SIM_DECLARE_STRUCT_AND_PTR(tModeVibration);
+
+class cModalSoftBody : public cSoftBodyImplicit
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    explicit cAcousticSoftBody(int id_);
+    explicit cModalSoftBody(int id_);
     virtual void Init(const Json::Value &conf) override;
     virtual void Update(float dt) override;
     virtual void UpdateImGui() override;
@@ -16,14 +18,14 @@ public:
     virtual int GetNumOfDrawVertices() const override;
     virtual void CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
                                         int &st) const override;
-    virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res, int &st) const override;
+    virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
+                                    int &st) const override;
+
 protected:
     double mAcousticSamplingFreqHZ;
     float mAcousticDuration;
     double mHammerForce;
-    int mNumOfMaxModes;
-    tVectorXd mEigenValues;
-    tMatrixXd mEigenVecs;
+
     // material model idx: stvk, neoohookean or linear
     int mAcousticMaterialModelIdx;
 
@@ -34,12 +36,12 @@ protected:
 
     // selected vertex
     int mSelectedVertexForHearing;
-    tEigenArr<tVector> mModalVibrationsInfo;
+    tEigenArr<tModeVibrationPtr> mModalVibrationsInfo;
     std::vector<tDiscretedWavePtr> mModalWaves;
+    int mNumOfSelectedModes;
+    tMatrixXd mVertexModesCoef;
     void SolveForMonopole();
     std::string GetWaveName() const;
-    std::vector<tVector3d> mSurfaceSoundPressureGrad;
-    std::vector<int> mIsModeValid;
     tSparseMatd mLinearElasticityStiffnessMatrix;
     tEigenArr<tMatrixXd>
     SolveVibration(const tVectorXd &MassDiag, const tSparseMatd &StiffMat,
@@ -47,9 +49,10 @@ protected:
                    const tVectorXd &xprev, int sampling_freq, float duration);
     virtual void EigenDecompose(tVectorXd &eigenValues,
                                 tMatrixXd &eigenVecs) const;
-    virtual void CalculateModalVibration();
-    virtual tDiscretedWavePtr CalculateVertexVibration(int v_id);
-    int GetNumOfModes() const;
+    virtual void CalculateModalVibration(const tVectorXd &eigen_vals,
+                                         const tMatrixXd &eigen_vecs);
+    virtual tDiscretedWavePtr
+    CalculateVertexVibration(int v_id, int num_of_selected_modes);
     double GetDt() const;
     double CalcTotalMass() const;
     virtual void ChangeMaterial(int old_idx, int new_idx);

@@ -3,6 +3,6 @@
     "youngs": 6.2e10,
     "poisson_ratio": 0.20,
     "rho": 2600,
-    "rayleigh_damping_a": 1,
+    "rayleigh_damping_a": 20,
     "rayleigh_damping_b": 1e-7
 }

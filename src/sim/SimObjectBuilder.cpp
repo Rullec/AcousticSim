@@ -1,11 +1,12 @@
 #include "SimObjectBuilder.h"
+#include "sim/ModalSoftBody.h"
+#include "sim/TransferSoftBody.h"
 #include "sim/BaseObject.h"
-#include "utils/JsonUtil.h"
-#include "sim/softbody/SoftBody.h"
-#include "sim/softbody/SoftBodyImplicit.h"
-#include "sim/AcousticSoftBody.h"
 #include "sim/KinematicBodyBuilder.h"
 #include "sim/cloth/ClothBuilder.h"
+#include "sim/softbody/SoftBody.h"
+#include "sim/softbody/SoftBodyImplicit.h"
+#include "utils/JsonUtil.h"
 cBaseObjectPtr BuildSimObj(const Json::Value &conf, int id_)
 {
     eObjectType type = cBaseObject::BuildObjectType(
@@ -13,16 +14,21 @@ cBaseObjectPtr BuildSimObj(const Json::Value &conf, int id_)
     cBaseObjectPtr object = nullptr;
     switch (type)
     {
-    case eObjectType::ACOUSTIC_TYPE:
+    case eObjectType::MODAL_ANALYSIS_TYPE:
     {
-        SIM_ERROR("do not support acoustic type");
+        object = std::make_shared<cModalSoftBody>(id_);
+        break;
+    }
+    case eObjectType::ACOUSTIC_TRANSFER_TYPE:
+    {
+        object = std::make_shared<cTransferSoftBody>(id_);
         break;
     }
     case eObjectType::SOFTBODY_TYPE:
     {
         // object = std::make_shared<cSoftBody>(id_);
-        // object = std::make_shared<cSoftBodyImplicit>(id_);
-        object = std::make_shared<cAcousticSoftBody>(id_);
+        object = std::make_shared<cSoftBodyImplicit>(id_);
+
         break;
     }
     case eObjectType::KINEMATICBODY_TYPE:

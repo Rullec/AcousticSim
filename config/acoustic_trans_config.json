@@ -2,10 +2,9 @@
     "scene_type": "sim",
     "obj_list": [
         {
-            "object_name": "soft_body",
-            "object_type": "SoftBody",
+            "object_name": "acoustic_transfer",
+            "object_type": "AcousticTransfer",
             "material_type": "STVK",
-            "material_type.stvk": "NEO_HOOKEAN",
             "init_translation": [
                 0,
                 0.6,
@@ -17,14 +16,10 @@
                 0
             ],
             "tet_path": "./data/tetmesh/cube_v38/cube_v38.1",
+            "modal_analysis_result": "data/vib_glass_stvk.json",
+            "material_path": "config/materials/glass.json",
             "friction": 0,
-            "collision_k": 1000,
-            "always_resolve_modal_analysis": true,
-            "material_path": "config/materials/steel.json",
-            "acoustic_sampling_freq_HZ": 48000,
-            "acoustic_duration": 1.0,
-            "hammer_force": 10,
-            "num_of_max_modes" : -1
+            "collision_k": 1000
         }
     ],
     "window_height": 800,

@@ -6,7 +6,7 @@
 #include "utils/RenderUtil.h"
 #include <string>
 std::string gObjectTypeStr[eObjectType::NUM_OBJ_TYPES] = {
-    "KinematicBody", "RigidBody", "Cloth", "Fluid", "SoftBody", "Acoustic"};
+    "KinematicBody", "RigidBody", "Cloth", "Fluid", "SoftBody", "ModalAnalysis", "AcousticTransfer"};
 
 cBaseObject::cBaseObject(eObjectType type, int id_) : mType(type), mObjId(id_)
 {

@@ -99,7 +99,7 @@ set(my_libs ${scenes_lib} ${utils_lib} ${imgui_lib})
 
 add_executable(main ./src/main.cpp)
 target_link_libraries(main PUBLIC ${libs} scenes_lib utils_lib geo_lib)
-
+target_include_directories(main PUBLIC ${PROJECT_BINARY_DIR})
 if(WIN32)
     move_release_to_src(main)
 else()

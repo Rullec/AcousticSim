@@ -142,11 +142,8 @@ void SparseMatVecProd(const tSparseMatd &A, const tVectorXd &b, tVectorXd &res)
     }
     // return b;
 }
-#include "VersionConfig.h"
 int main(int argc, char **argv)
 {
-    std::cout << ClothSim_VERSION_MAJOR << " " << ClothSim_VERSION_MINOR << std::endl;
-    exit(1);
     cMathUtil::SeedRand(0);
     Eigen::setNbThreads(15);
     std::string conf = "";
