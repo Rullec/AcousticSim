@@ -15,14 +15,18 @@ CalculateVertexVibration(int v_id, int num_of_selected_modes,
                          const std::vector<tDiscretedWavePtr> &mModalWaves,
                          const tMatrixXd &mVertexModesCoef, double sampling_hz);
 cTransferSoftBody::cTransferSoftBody(int id_) : cSoftBodyImplicit(id_) {}
-
+static int gGDIters, gGDPrintOuts;
+static double gGDStepsize;
 void cTransferSoftBody::Init(const Json::Value &conf)
 {
     cSoftBodyImplicit::Init(conf);
     mModalAnlysisResultPath =
         cJsonUtil::ParseAsString("modal_analysis_result", conf);
     mEnableDumpedModalSolution = false;
-    mNumOfMonopolesPerFreq = 1;
+    mNumOfMonopolesPerFreq = cJsonUtil::ParseAsInt("num_of_poles", conf);
+    gGDIters = cJsonUtil::ParseAsInt("gd_iters", conf);
+    gGDStepsize = cJsonUtil::ParseAsDouble("gd_stepsize", conf);
+    gGDPrintOuts = cJsonUtil::ParseAsInt("gd_printgap", conf);
     InitSurfaceNormal();
 
     LoadModalAnalysisResult();
@@ -30,11 +34,16 @@ void cTransferSoftBody::Init(const Json::Value &conf)
     int num_of_modes = mSurfaceVertexDOFCoef.cols();
     InitPole();
 
+    this->CheckGradient();
+
     for (int i = 0; i < num_of_modes; i++)
     {
         printf("------mode %d ------\n", i);
-        CalcSoundPressure(i);
-        SolveMonopole(i);
+        tVectorXd sound_pressure = CalcSoundPressure(i);
+        std::cout << "sound_pressure = " << sound_pressure.transpose()
+                  << std::endl;
+        SolveMonopole(i, sound_pressure);
+        exit(1);
     }
     SetModalVibrationSound();
 }
@@ -81,12 +90,36 @@ void cTransferSoftBody::CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
 /**
  * \brief           solve monopole positions and strengths for each mode
  */
-void cTransferSoftBody::SolveMonopole(int mode_idx)
+void cTransferSoftBody::SolveMonopole(int mode_idx,
+                                      const tVectorXd &sound_pressure)
 {
-    // int num_of_modes = mModalVibrationsInfo.size();
-    // int num_of_surface_id = mSurfaceVertexDOFCoef.size() / 3;
-    // tVector mode_info = mModalVibrationsInfo[mode_idx];
-    // tVectorXd dof_coef_for_modes = mSurfaceVertexDOFCoef.col(mode_idx);
+    int max_iters = gGDIters;
+    double stepsize = gGDStepsize;
+    tVectorXd cur_x = GetX(mode_idx);
+    for (int iters = 0; iters < max_iters; iters++)
+    {
+        // this->GetX(mode_idx)
+
+        double e = GetEnergy(mode_idx, sound_pressure);
+        if (iters % gGDPrintOuts == 0)
+        {
+            std::cout << "iter " << iters << " x = " << cur_x.transpose()
+                      << std::endl;
+
+            printf("iter %d ener %.3f\n", iters, e);
+        }
+        auto sound_diff = GetSoundPressureDiff(mode_idx, sound_pressure);
+        tVectorXd grad = GetGrad(mode_idx, sound_diff);
+        cur_x += -stepsize * grad;
+        SetX(mode_idx, cur_x);
+    }
+
+    // auto diff = GetSoundPressureDiff(mode_idx, sound_pressure);
+    // for (int i = 0; i < this->mSurfaceVertexIdArray.size(); i++)
+    // {
+    //     std::cout << "vertex " << i << " diff = " << diff[i].transpose()
+    //               << std::endl;
+    // }
 }
 
 void cTransferSoftBody::LoadModalAnalysisResult()
@@ -212,24 +245,67 @@ void cTransferSoftBody::InitPole()
         for (int j = 0; j < mNumOfMonopolesPerFreq; j++)
         {
             auto pole = std::make_shared<cMonopole>(cur_id++, modal->mW);
+            pole->mCenterPos.setRandom();
+            pole->mStrength = cMathUtil::RandDouble(0, 1);
             data.mPoles.push_back(pole);
         }
         data.mOmega = mModalVibrationArray[i]->mW;
-        // mPolesArray.push_back(modes);
+        mPolesArray.push_back(data);
     }
 }
 
 /**
  * \brief           get energy
  */
-double cTransferSoftBody::GetEnergy(int mode_idx) {
-    // calcualte residual 
+double cTransferSoftBody::GetEnergy(int mode_idx,
+                                    const tVectorXd &sound_pressure)
+{
+    // calcualte residual
+    auto diff = this->GetSoundPressureDiff(mode_idx, sound_pressure);
+    double e = 0;
+    for (auto &x : diff)
+    {
+        e += x.squaredNorm();
+    }
+    return e;
 }
 
 /**
  * \brief           get grad
  */
-tVectorXd cTransferSoftBody::GetGrad(int mode_idx) {}
+tVectorXd
+cTransferSoftBody::GetGrad(int mode_idx,
+                           const tEigenArr<tVector3d> &sound_pressure_diff)
+{
+    tVectorXd grad = tVectorXd::Zero(4 * this->mNumOfMonopolesPerFreq);
+
+    for (int pole_id = 0; pole_id < this->mNumOfMonopolesPerFreq; pole_id++)
+    {
+        auto pole = mPolesArray[mode_idx].mPoles[pole_id];
+
+        // for each boundary very
+        for (int v_id = 0; v_id < this->mSurfaceVertexIdArray.size(); v_id++)
+        {
+            int v_gid = mSurfaceVertexIdArray[v_id];
+            tVector3d v_global_pos = mVertexArray[v_gid]->mPos.segment(0, 3);
+            // 1. calcualte d
+            tVector3d d = sound_pressure_diff[v_id];
+            // 2. calculate dPdocef and dPdcom
+            tVector3d dPdcoef = pole->EvaluatedPdcoef(v_global_pos);
+            tMatrix3d dPdcenter = pole->EvaulatedPdcenter(v_global_pos);
+            // 3. multiply
+            grad[4 * pole_id] += -2 * d.dot(dPdcoef);
+            grad.segment(4 * pole_id + 1, 3) += -2 * d.transpose() * dPdcenter;
+
+            // 4. write down
+        }
+
+        // gradient to coef
+
+        // grad to center
+    }
+    return grad;
+}
 
 /**
  * \brief           get solution X
@@ -247,4 +323,83 @@ tVectorXd cTransferSoftBody::GetX(int mode_idx)
         x.segment(4 * i + 1, 3) = cur_pole->mCenterPos;
     }
     return x;
+}
+
+tEigenArr<tVector3d>
+cTransferSoftBody::GetSoundPressureDiff(int mode_idx,
+                                        const tVectorXd &sound_pressure)
+{
+    tEigenArr<tVector3d> pressure_diff = {};
+    auto pred_pressure = GetPredSoundPressure(mode_idx, sound_pressure);
+    for (int v_id = 0; v_id < this->mSurfaceVertexIdArray.size(); v_id++)
+    {
+        pressure_diff.push_back(mSurfaceVertexNormalArray[v_id].segment(0, 3) *
+                                    sound_pressure[v_id] -
+                                pred_pressure[v_id]);
+    }
+    return pressure_diff;
+}
+
+tEigenArr<tVector3d>
+cTransferSoftBody::GetPredSoundPressure(int mode_idx,
+                                        const tVectorXd &sound_pressure)
+{
+    tEigenArr<tVector3d> pressure = {};
+    for (int v_id = 0; v_id < this->mSurfaceVertexIdArray.size(); v_id++)
+    {
+        tVector3d v_pos =
+            mVertexArray[mSurfaceVertexIdArray[v_id]]->mPos.segment(0, 3);
+        // prediction
+        tVector3d pred = tVector3d::Zero();
+        for (int m_id = 0; m_id < mNumOfMonopolesPerFreq; m_id++)
+        {
+            pred += mPolesArray[mode_idx].mPoles[m_id]->EvaluatePressure(v_pos);
+        }
+        pressure.push_back(pred);
+    }
+    return pressure;
+}
+
+void cTransferSoftBody::CheckGradient()
+{
+    // 1. get old energy
+    int mode_idx = 0;
+    tVectorXd sound_pressure_gt = CalcSoundPressure(mode_idx);
+    double old_e = GetEnergy(mode_idx, sound_pressure_gt);
+
+    // 2. get grad ana
+    auto sound_pressure_diff =
+        GetSoundPressureDiff(mode_idx, sound_pressure_gt);
+    tVectorXd grad_ana = GetGrad(mode_idx, sound_pressure_diff);
+    tVectorXd grad_num = tVectorXd::Zero(grad_ana.size());
+    tVectorXd curX = GetX(mode_idx);
+    // 3. for each dof, add and set; calculate grad num
+    double eps = 1e-6;
+    for (int i = 0; i < grad_num.size(); i++)
+    {
+        curX[i] += eps;
+        SetX(mode_idx, curX);
+        double new_e = this->GetEnergy(mode_idx, sound_pressure_gt);
+        grad_num[i] = (new_e - old_e) / eps;
+        curX[i] -= eps;
+        SetX(mode_idx, curX);
+    }
+    std::cout << "ana = " << grad_ana.transpose() << std::endl;
+    std::cout << "num = " << grad_num.transpose() << std::endl;
+    auto diff = grad_ana - grad_num;
+    std::cout << "diff = " << diff.transpose() << std::endl;
+    // exit(1);
+}
+
+void cTransferSoftBody::SetX(int mode_idx, const tVectorXd &sol)
+{
+    //  tVectorXd x = tVectorXd::Zero(4 * mNumOfMonopolesPerFreq);
+
+    for (int i = 0; i < mNumOfMonopolesPerFreq; i++)
+    {
+        auto cur_pole = mPolesArray[mode_idx].mPoles[i];
+        // coef
+        cur_pole->mStrength = sol[4 * i];
+        cur_pole->mCenterPos = sol.segment(4 * i + 1, 3);
+    }
 }

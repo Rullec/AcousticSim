@@ -19,6 +19,10 @@
             "modal_analysis_result": "data/vib_glass_stvk.json",
             "material_path": "config/materials/glass.json",
             "friction": 0,
+            "num_of_poles": 5,
+            "gd_iters": 1e4,
+            "gd_stepsize": 1e-2,
+            "gd_printgap": 1000,
             "collision_k": 1000
         }
     ],
