@@ -1,6 +1,6 @@
 #ifndef AUDIO_OUTPUT_H_
 #pragma once
-#include "sim/AudioWave.h"
+#include "sim/acoustic/AudioWave.h"
 #include "utils/DefUtil.h"
 #include "utils/TimeUtil.hpp"
 

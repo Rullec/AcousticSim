@@ -20,7 +20,7 @@
 #include <iostream>
 #include <memory>
 
-#include "sim/AudioOutput.h"
+#include "sim/acoustic/AudioOutput.h"
 #include "utils/FileUtil.h"
 #include "utils/JsonUtil.h"
 #include "utils/LogUtil.h"
@@ -142,7 +142,6 @@ void SparseMatVecProd(const tSparseMatd &A, const tVectorXd &b, tVectorXd &res)
     }
     // return b;
 }
-#include "sim/Monopole.h"
 int main(int argc, char **argv)
 {
     // auto pole = cMonopole(0, 2.7);

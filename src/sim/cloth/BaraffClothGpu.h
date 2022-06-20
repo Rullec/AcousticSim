@@ -1,7 +1,7 @@
 #pragma once
 #include "sim/cloth/BaseCloth.h"
-#include "sim/gpu_utils/Cuda2DArray.h"
-#include "sim/gpu_utils/CudaArray.h"
+#include "sim/cloth/gpu_utils/Cuda2DArray.h"
+#include "sim/cloth/gpu_utils/CudaArray.h"
 struct tFixPoint
 {
 public:

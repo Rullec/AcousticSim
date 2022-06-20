@@ -1,8 +1,9 @@
 #include "SimObjectBuilder.h"
-#include "sim/ModalSoftBody.h"
-#include "sim/TransferSoftBody.h"
+#include "sim/ViscoMassSpring.h"
+#include "sim/acoustic/ModalSoftBody.h"
+#include "sim/acoustic/TransferSoftBody.h"
 #include "sim/BaseObject.h"
-#include "sim/KinematicBodyBuilder.h"
+#include "sim/kinematic/KinematicBodyBuilder.h"
 #include "sim/cloth/ClothBuilder.h"
 #include "sim/softbody/SoftBody.h"
 #include "sim/softbody/SoftBodyImplicit.h"
@@ -39,6 +40,10 @@ cBaseObjectPtr BuildSimObj(const Json::Value &conf, int id_)
     case eObjectType::CLOTH_TYPE:
     {
         object = BuildCloth(conf, id_);
+        break;
+    }
+    case eObjectType::VISCOSITY_MASS_SPRING_TYPE:{
+        object = std::make_shared<cViscoMassSpring>(id_);
         break;
     }
     default:

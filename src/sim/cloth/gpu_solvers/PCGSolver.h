@@ -1,6 +1,6 @@
 #ifndef PCG_SOLVER_H_
-#include "sim/gpu_utils/Cuda2DArray.h"
-#include "sim/gpu_utils/CudaArray.h"
+#include "sim/cloth/gpu_utils/Cuda2DArray.h"
+#include "sim/cloth/gpu_utils/CudaArray.h"
 // class cPCGSolver : public std::enable_shared_from_this<cPCGSolver>
 // {
 // public:

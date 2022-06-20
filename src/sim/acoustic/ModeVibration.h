@@ -12,6 +12,7 @@
     q_j(t)  = dt * f_j^U / (w_d) e^{- \xi * w * t} sin(w_d * t)
             = coef_j / w_d e^{- \xi * w * t} sin(w_d * t)
     
+    a_j(t) = q_j''(t) \approx =  coef_j * w_d e^{- \xi * w * t} sin(w_d * t)
     f^U is the generalized force
 
     we need to calculate

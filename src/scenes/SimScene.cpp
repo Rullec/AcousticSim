@@ -4,7 +4,7 @@
 #include "geometries/Triangulator.h"
 #include "imgui.h"
 #include "scenes/SimStateMachine.h"
-#include "sim/KinematicBody.h"
+#include "sim/kinematic/kinematicBody.h"
 #include "sim/Perturb.h"
 #include "sim/SimObjectBuilder.h"
 #include "sim/collision/BVHCollisionDetecter.h"
@@ -45,7 +45,7 @@ cSimScene::cSimScene()
 }
 
 eSceneType cSimScene::GetSceneType() const { return this->mSceneType; }
-#include "sim/AudioOutput.h"
+#include "sim/acoustic/AudioOutput.h"
 extern cAudioOutputPtr gAudioOutput;
 
 void cSimScene::Init(const std::string &conf_path)
@@ -446,7 +446,7 @@ void cSimScene::ReleasePerturb()
     }
 }
 
-#include "sim/KinematicBodyBuilder.h"
+#include "sim/kinematic/kinematicBodyBuilder.h"
 
 void cSimScene::CreateObstacle(const Json::Value &conf)
 {

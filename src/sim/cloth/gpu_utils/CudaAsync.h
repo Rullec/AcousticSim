@@ -1,6 +1,6 @@
 #pragma once
-#include "sim/gpu_utils/CudaDevPtr.h"
-#include "sim/gpu_utils/CudaMatrix.h"
+#include "sim/cloth/gpu_utils/CudaDevPtr.h"
+#include "sim/cloth/gpu_utils/CudaMatrix.h"
 class CudaAsync
 {
 public:

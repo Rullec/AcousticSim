@@ -1,7 +1,7 @@
 #include "CollisionDetecter.h"
 #include "CollisionInfo.h"
 #include "sim/BaseObject.h"
-#include "sim/KinematicBody.h"
+#include "sim/kinematic/kinematicBody.h"
 #include "utils/LogUtil.h"
 #include "utils/TimeUtil.hpp"
 #include <iostream>

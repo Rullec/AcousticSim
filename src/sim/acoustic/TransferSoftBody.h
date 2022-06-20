@@ -26,13 +26,13 @@ protected:
     virtual void SolveMonopole(int mode_idx, const tVectorXd &pressure);
     virtual void LoadModalAnalysisResult();
     virtual void InitSurfaceNormal();
-    virtual tVectorXd CalcSoundPressure(int mode_idx);
+    virtual tVectorXd CalcSurfaceVertexAccelNormal(int mode_idx);
     virtual void SetModalVibrationSound();
     tEigenArr<tModeVibrationPtr> mModalVibrationArray;
     tMatrixXd mSurfaceVertexDOFCoef;
     std::string mModalAnlysisResultPath;
     bool mEnableDumpedModalSolution; // use undamped & dumped modal analysis
-    bool mEnablePoleConstraint;
+    bool mFixPolePosition;
     // result
     int mNumOfMonopolesPerFreq; // number of monopoles
     tEigenArr<tVector> mSurfaceVertexNormalArray;
@@ -45,18 +45,18 @@ protected:
     std::vector<tPolesPerFreq> mPolesArray;
     tVector mAABBMin, mAABBMax;
     virtual void InitPole();
-    virtual double GetEnergy(int mode_idx, const tVectorXd &sound_pressure);
-    virtual tVectorXd GetGrad(int mode_idx,
-                              const tEigenArr<tVector3d> &sound_pressure_diff);
+    // virtual double GetEnergy(int mode_idx, const tVectorXd &sound_pressure);
+    // virtual tVectorXd GetGrad(int mode_idx,
+    //                           const tEigenArr<tVector3d>
+    //                           &sound_pressure_diff);
     virtual tVectorXd GetX(int mode_idx);
     virtual void SetX(int mode_idx, const tVectorXd &sol);
-    virtual tEigenArr<tVector3d>
-    GetSoundPressureDiff(int mode_idx, const tVectorXd &sound_pressure);
-    virtual tEigenArr<tVector3d>
-    GetPredSoundPressure(int mode_idx, const tVectorXd &sound_pressure);
-    virtual void CheckGradient();
+    // virtual tEigenArr<tVector3d>
+    // GetSoundPressureDiff(int mode_idx, const tVectorXd &sound_pressure);
+    // virtual tEigenArr<tVector3d>
+    // GetPredSoundPressure(int mode_idx, const tVectorXd &sound_pressure);
+    // virtual void CheckGradient();
     virtual void ConstrainX(tVectorXd &sol);
     virtual void PrintPoleInfo(int mode_idx);
-    virtual void PrintSoundPressureDiffInfo(int mode_idx,
-                                            const tVectorXd &sound_pressure);
+    virtual void SolveSoundFixPole(int mode_idx);
 };

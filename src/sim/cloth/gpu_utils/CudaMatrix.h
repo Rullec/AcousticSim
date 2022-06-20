@@ -1,5 +1,5 @@
 #pragma once
-#include "sim/gpu_utils/CudaDef.h"
+#include "sim/cloth/gpu_utils/CudaDef.h"
 #include <cassert>
 #include <cmath>
 #include <cstdlib>

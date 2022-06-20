@@ -1,6 +1,6 @@
-#include "sim/gpu_utils/Cuda2DArray.h"
-#include "sim/gpu_utils/CudaArray.h"
-#include "sim/gpu_utils/CudaMatrix.h"
+#include "sim/cloth/gpu_utils/Cuda2DArray.h"
+#include "sim/cloth/gpu_utils/CudaArray.h"
+#include "sim/cloth/gpu_utils/CudaMatrix.h"
 namespace GPUMatrixOps
 {
 __global__ void ELLMatrixAddKernel(int num_of_items,

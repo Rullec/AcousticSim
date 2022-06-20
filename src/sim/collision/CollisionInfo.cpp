@@ -1,6 +1,6 @@
 #include "sim/collision/CollisionInfo.h"
 #include "sim/BaseObject.h"
-#include "sim/KinematicBody.h"
+#include "sim/kinematic/kinematicBody.h"
 // ! Collision point for each pair of object
 // tColPoint::tColPoint()
 // {

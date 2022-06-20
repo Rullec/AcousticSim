@@ -1,8 +1,8 @@
 
-#include "sim/gpu_utils/Cuda2DArray.h"
-#include "sim/gpu_utils/CudaArray.h"
-#include "sim/gpu_utils/CudaDevPtr.h"
-#include "sim/gpu_utils/CudaIntrinsic.h"
+#include "sim/cloth/gpu_utils/Cuda2DArray.h"
+#include "sim/cloth/gpu_utils/CudaArray.h"
+#include "sim/cloth/gpu_utils/CudaDevPtr.h"
+#include "sim/cloth/gpu_utils/CudaIntrinsic.h"
 namespace PCGSolver
 {
 

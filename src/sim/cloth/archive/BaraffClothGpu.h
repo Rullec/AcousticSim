@@ -1,10 +1,10 @@
 #include "BaseCloth.h"
-#include "sim/gpu_utils/Cuda2DArray.h"
-#include "sim/gpu_utils/CudaArray.h"
-#include "sim/gpu_utils/CudaMatrix.h"
+#include "sim/cloth/gpu_utils/Cuda2DArray.h"
+#include "sim/cloth/gpu_utils/CudaArray.h"
+#include "sim/cloth/gpu_utils/CudaMatrix.h"
 #include "utils/DefUtil.h"
 #include "utils/SparseUtil.h"
-// #include "sim/gpu_utils/CudaVector.h"
+// #include "sim/cloth/gpu_utils/CudaVector.h"
 SIM_DECLARE_CLASS_AND_PTR(cBaraffMaterialUnstable);
 SIM_DECLARE_CLASS_AND_PTR(cQBendingMaterial);
 typedef tCudaMatrix<float, 9, 2> tCudaMatrix92f;

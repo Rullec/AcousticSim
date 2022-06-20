@@ -1,8 +1,8 @@
 #ifndef CUDA_2D_ARRAY_H_
 #define CUDA_2D_ARRAY_H_
 #include "CudaMemory.h"
-#include "sim/gpu_utils/CudaAsync.h"
-#include "sim/gpu_utils/CudaDevPtr.h"
+#include "sim/cloth/gpu_utils/CudaAsync.h"
+#include "sim/cloth/gpu_utils/CudaDevPtr.h"
 template <typename Type> class cCuda2DArray
 {
 

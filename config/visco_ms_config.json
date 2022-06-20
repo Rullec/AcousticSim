@@ -1,0 +1,35 @@
+{
+    "scene_type": "sim",
+    "obj_list": [
+        {
+            "object_name": "visco_ms",
+            "object_type": "ViscosityMassSpring"
+        }
+    ],
+    "window_height": 800,
+    "window_width": 1000,
+    "enable_draw": true,
+    "enable_only_exporting_cutted_window": true,
+    "pause_at_first": false,
+    "ground_png_path": "data/grid0.png",
+    "enable_camera_auto_rot": false,
+    "camera": {
+        "camera_type": "arcball_cam",
+        "camera_pos": [
+            0.0,
+            0.2,
+            1.5
+        ],
+        "camera_focus": [
+            0.0,
+            0.2,
+            0.0
+        ],
+        "fov": 52.5,
+        "near": 1e-3,
+        "far": 100
+    },
+    "enable_profiling": false,
+    "enable_draw_point": false,
+    "enable_collision_detection": true
+}

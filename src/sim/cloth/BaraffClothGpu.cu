@@ -1,6 +1,6 @@
 #include "sim/cloth/BaraffClothGpu.h"
-#include "sim/gpu_utils/CudaDef.h"
-#include "sim/gpu_utils/CudaIntrinsic.h"
+#include "sim/cloth/gpu_utils/CudaDef.h"
+#include "sim/cloth/gpu_utils/CudaIntrinsic.h"
 namespace BaraffClothGpu
 {
 
