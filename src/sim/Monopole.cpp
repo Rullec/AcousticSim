@@ -12,7 +12,7 @@ cMonopole::cMonopole(int _id, double omega)
 
 void cMonopole::Init(double strength, const tVector3d &center_pos)
 {
-    
+
     mCenterPos = center_pos;
 }
 
@@ -23,6 +23,7 @@ tVector3d cMonopole::EvaluatePressure(const tVector3d &pos)
 {
     tVector3d r = pos - this->mCenterPos;
     double r_norm = r.norm();
+    r_norm = SIM_MAX(r_norm, 1e-10);
     tVector3d r_bar = r / r_norm;
     return mStrength / (4 * M_PI * r_norm) * r_bar;
 }
@@ -34,6 +35,7 @@ tMatrix3d cMonopole::EvaulatedPdcenter(const tVector3d &pos)
 {
     tVector3d r = pos - this->mCenterPos;
     double r_norm = r.norm();
+    r_norm = SIM_MAX(r_norm, 1e-10);
     tVector3d r_bar = r / r_norm;
     tMatrix3d grad = -this->mStrength / (4 * M_PI) *
                      (tMatrix3d::Identity() - 2 * r_bar * r_bar.transpose()) /
@@ -48,6 +50,7 @@ tVector3d cMonopole::EvaluatedPdcoef(const tVector3d &pos)
 {
     tVector3d r = pos - this->mCenterPos;
     double r_norm = r.norm();
+    r_norm = SIM_MAX(r_norm, 1e-10);
     tVector3d r_bar = r / r_norm;
     return r_bar / (4 * M_PI * r_norm);
 }
@@ -81,24 +84,21 @@ void cMonopole::CheckGrad_dPdo()
     std::cout << "dPdcenter_ana = \n" << dPdcenter_ana << std::endl;
     PopState();
 }
-void cMonopole::CheckGrad_dPdc() 
+void cMonopole::CheckGrad_dPdc()
 {
     PushState();
     this->mCenterPos.setRandom();
     tVector3d x_pos = tVector3d::Random();
     // 1. get analytic gradient
     tVector3d dPdcoef_ana = EvaluatedPdcoef(x_pos);
-    
 
     // 2. get numberical gradient
     double eps = 1e-6;
     tVector3d old_p = EvaluatePressure(x_pos);
-    
+
     mStrength += eps;
     tVector3d new_p = EvaluatePressure(x_pos);
     tVector3d dPdcoef_num = (new_p - old_p) / eps;
-
-    
 
     auto diff = dPdcoef_ana - dPdcoef_num;
     double diff_norm = diff.norm();

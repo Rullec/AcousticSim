@@ -27,6 +27,10 @@ void cTransferSoftBody::Init(const Json::Value &conf)
     gGDIters = cJsonUtil::ParseAsInt("gd_iters", conf);
     gGDStepsize = cJsonUtil::ParseAsDouble("gd_stepsize", conf);
     gGDPrintOuts = cJsonUtil::ParseAsInt("gd_printgap", conf);
+    CalcAABB(this->mAABBMin, this->mAABBMax);
+    mEnablePoleConstraint =
+        cJsonUtil::ParseAsBool("enable_pole_constraint", conf);
+
     InitSurfaceNormal();
 
     LoadModalAnalysisResult();
@@ -42,7 +46,11 @@ void cTransferSoftBody::Init(const Json::Value &conf)
         tVectorXd sound_pressure = CalcSoundPressure(i);
         std::cout << "sound_pressure = " << sound_pressure.transpose()
                   << std::endl;
-        SolveMonopole(i, sound_pressure);
+        for (int i = 0; i < 3; i++)
+        {
+            InitPole();
+            SolveMonopole(i, sound_pressure);
+        }
         exit(1);
     }
     SetModalVibrationSound();
@@ -103,17 +111,21 @@ void cTransferSoftBody::SolveMonopole(int mode_idx,
         double e = GetEnergy(mode_idx, sound_pressure);
         if (iters % gGDPrintOuts == 0)
         {
-            std::cout << "iter " << iters << " x = " << cur_x.transpose()
-                      << std::endl;
+            // std::cout << "iter " << iters << " x = " << cur_x.transpose()
+            //           << std::endl;
 
             printf("iter %d ener %.3f\n", iters, e);
+            std::cout << "AABB info: " << mAABBMin.transpose()
+                      << mAABBMax.transpose() << std::endl;
+            PrintPoleInfo(mode_idx);
         }
         auto sound_diff = GetSoundPressureDiff(mode_idx, sound_pressure);
         tVectorXd grad = GetGrad(mode_idx, sound_diff);
         cur_x += -stepsize * grad;
+        ConstrainX(cur_x);
         SetX(mode_idx, cur_x);
     }
-
+    PrintSoundPressureDiffInfo(mode_idx, sound_pressure);
     // auto diff = GetSoundPressureDiff(mode_idx, sound_pressure);
     // for (int i = 0; i < this->mSurfaceVertexIdArray.size(); i++)
     // {
@@ -296,7 +308,13 @@ cTransferSoftBody::GetGrad(int mode_idx,
             // 3. multiply
             grad[4 * pole_id] += -2 * d.dot(dPdcoef);
             grad.segment(4 * pole_id + 1, 3) += -2 * d.transpose() * dPdcenter;
-
+            if (grad.hasNaN())
+            {
+                std::cout << "grad hasNan, dpdcoef = " << dPdcoef.transpose()
+                          << " dpdc = " << dPdcenter << std::endl;
+                std::cout << "d = " << d.transpose() << std::endl;
+                exit(1);
+            }
             // 4. write down
         }
 
@@ -304,6 +322,7 @@ cTransferSoftBody::GetGrad(int mode_idx,
 
         // grad to center
     }
+
     return grad;
 }
 
@@ -401,5 +420,52 @@ void cTransferSoftBody::SetX(int mode_idx, const tVectorXd &sol)
         // coef
         cur_pole->mStrength = sol[4 * i];
         cur_pole->mCenterPos = sol.segment(4 * i + 1, 3);
+    }
+}
+
+void cTransferSoftBody::ConstrainX(tVectorXd &sol)
+{
+    if (mEnablePoleConstraint == false)
+        return;
+    for (int i = 0; i < this->mNumOfMonopolesPerFreq; i++)
+    {
+        double &strength = sol[4 * i];
+        tVector3d pos = sol.segment(4 * i + 1, 3);
+        // 1. constrain strength
+        strength = SIM_MAX(0.0, strength);
+        for (int j = 0; j < 3; j++)
+        {
+            pos[j] = cMathUtil::Clamp(pos[j], mAABBMin[j], mAABBMax[j]);
+        }
+        sol.segment(4 * i + 1, 3) = pos;
+        sol[4 * i] = strength;
+    }
+}
+
+void cTransferSoftBody::PrintPoleInfo(int mode_idx)
+{
+    for (int i = 0; i < this->mNumOfMonopolesPerFreq; i++)
+    {
+        auto pole = mPolesArray[mode_idx].mPoles[i];
+        printf("pole %d pos %.2f %.2f %.2f, strength %.1f\n", i,
+               pole->mCenterPos[0], pole->mCenterPos[1], pole->mCenterPos[2],
+               pole->mStrength);
+    }
+}
+
+void cTransferSoftBody::PrintSoundPressureDiffInfo(
+    int mode_idx, const tVectorXd &sound_pressure)
+{
+    tEigenArr<tVector3d> pressure_diff = {};
+    auto pred_pressure = GetPredSoundPressure(mode_idx, sound_pressure);
+    for (int v_id = 0; v_id < this->mSurfaceVertexIdArray.size(); v_id++)
+    {
+        tVector3d real = mSurfaceVertexNormalArray[v_id].segment(0, 3) *
+                         sound_pressure[v_id];
+        tVector3d pred = pred_pressure[v_id];
+        tVector3d diff = real - pred;
+        std::cout << "v " << v_id << " real = " << real.transpose()
+                  << " pred = " << pred.transpose()
+                  << " diff = " << diff.transpose() << std::endl;
     }
 }

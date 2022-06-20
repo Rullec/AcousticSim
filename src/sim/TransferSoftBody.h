@@ -32,15 +32,18 @@ protected:
     tMatrixXd mSurfaceVertexDOFCoef;
     std::string mModalAnlysisResultPath;
     bool mEnableDumpedModalSolution; // use undamped & dumped modal analysis
-                                     // result
-    int mNumOfMonopolesPerFreq;      // number of monopoles
+    bool mEnablePoleConstraint;
+    // result
+    int mNumOfMonopolesPerFreq; // number of monopoles
     tEigenArr<tVector> mSurfaceVertexNormalArray;
     struct tPolesPerFreq
     {
         std::vector<cMonopolePtr> mPoles;
         double mOmega;
     };
+
     std::vector<tPolesPerFreq> mPolesArray;
+    tVector mAABBMin, mAABBMax;
     virtual void InitPole();
     virtual double GetEnergy(int mode_idx, const tVectorXd &sound_pressure);
     virtual tVectorXd GetGrad(int mode_idx,
@@ -52,4 +55,8 @@ protected:
     virtual tEigenArr<tVector3d>
     GetPredSoundPressure(int mode_idx, const tVectorXd &sound_pressure);
     virtual void CheckGradient();
+    virtual void ConstrainX(tVectorXd &sol);
+    virtual void PrintPoleInfo(int mode_idx);
+    virtual void PrintSoundPressureDiffInfo(int mode_idx,
+                                            const tVectorXd &sound_pressure);
 };
