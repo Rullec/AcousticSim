@@ -23,6 +23,7 @@ ObjUtil.cpp
 TetUtil.cpp
 # DepthImageSaver.cpp
 # MPIUtil.cpp
+SpecialFuncUtil.cpp
 StringUtil.cpp
 RenderUtil.cpp
 )
