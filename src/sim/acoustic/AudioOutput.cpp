@@ -13,20 +13,41 @@ using uint = unsigned int;
 
 ma_device_config deviceConfig;
 ma_device device;
-cAudioOutputPtr gAudioOutput = nullptr;
+
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
                    ma_uint32 frameCount)
 {
-    if (gAudioOutput != nullptr)
+    cAudioOutputPtr mAudioOutput = cAudioOutput::getInstance();
+    float *target_buf = static_cast<float *>(pOutput);
+    if (true == mAudioOutput->GetAudioFlag())
+        mAudioOutput->SetContent(frameCount, target_buf);
+    else
     {
-        float *target_buf = static_cast<float *>(pOutput);
-        gAudioOutput->SetContent(frameCount, target_buf);
-        (void)pInput;
+        printf("didn't set any data into audio channel\n");
     }
+    (void)pInput;
 }
 
 static int gCurFrame = 0;
-cAudioOutput::cAudioOutput() {}
+//下面这个静态成员变量在类加载的时候就已经初始化好了
+cAudioOutputPtr cAudioOutput::instance(new cAudioOutput(),
+                                       cAudioOutput::DestroyInstance);
+
+cAudioOutput::cAudioOutput()
+{
+    printf("AudioOutput constructed\n");
+    mEnableAudio = true;
+    this->Init();
+}
+cAudioOutput::~cAudioOutput()
+{
+    printf("AudioOutput deconstructed\n");
+    ma_device_uninit(&device);
+}
+bool cAudioOutput::GetAudioFlag() const { return mEnableAudio; }
+void cAudioOutput::SetAudioFlag(bool val) { mEnableAudio = val; }
+cAudioOutputPtr cAudioOutput::getInstance() { return instance; }
+void cAudioOutput::DestroyInstance(cAudioOutput *obj) { delete obj; }
 cTimePoint prev = cTimeUtil::GetCurrentTime_chrono();
 void cAudioOutput::Init()
 {
@@ -64,10 +85,9 @@ void cAudioOutput::SetContent(unsigned int frame_count, float *tar_buf)
         for (uint cur_frame = 0; cur_frame < frame_count;
              cur_frame++, gCurFrame++)
         {
-            real_output[cur_frame] =
-                mCurWave->data[gCurFrame % num_of_data];
+            real_output[cur_frame] = mCurWave->data[gCurFrame % num_of_data];
             // sine wave
-            if(gCurFrame > num_of_data)
+            if (gCurFrame > num_of_data)
             {
                 gCurFrame %= num_of_data;
                 // printf("after a cycle\n");
@@ -79,7 +99,6 @@ void cAudioOutput::SetContent(unsigned int frame_count, float *tar_buf)
     }
 }
 
-cAudioOutput::~cAudioOutput() { ma_device_uninit(&device); }
 #include <fstream>
 
 void cAudioOutput::SetWave(const tDiscretedWavePtr &wave)

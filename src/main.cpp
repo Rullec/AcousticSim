@@ -25,7 +25,7 @@
 #include "utils/JsonUtil.h"
 #include "utils/LogUtil.h"
 #include <cmath>
-extern cAudioOutputPtr gAudioOutput;
+
 #include "sim/softbody/FourOrderTensorTest.hpp"
 
 GLFWwindow *window = nullptr;

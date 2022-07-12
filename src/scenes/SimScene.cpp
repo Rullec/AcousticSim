@@ -46,7 +46,6 @@ cSimScene::cSimScene()
 
 eSceneType cSimScene::GetSceneType() const { return this->mSceneType; }
 #include "sim/acoustic/AudioOutput.h"
-extern cAudioOutputPtr gAudioOutput;
 
 void cSimScene::Init(const std::string &conf_path)
 {
@@ -59,8 +58,6 @@ void cSimScene::Init(const std::string &conf_path)
 
     mEnableCollisionDetection =
         cJsonUtil::ParseAsBool(cSimScene::ENABLE_COLLISION_DETECTION_KEY, root);
-    gAudioOutput = std::make_shared<cAudioOutput>();
-    gAudioOutput->Init();
     BuildObjects(cJsonUtil::ParseAsValue(cSimScene::OBJECT_LIST_KEY, root));
 
     CreateCollisionDetecter();

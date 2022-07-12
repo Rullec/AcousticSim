@@ -11,7 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <set>
-extern cAudioOutputPtr gAudioOutput;
+
 eMaterialType GetHyperMaterialFromAcousticMaterial(std::string name);
 std::string GetAcousticMaterialNameFromHyperMaterial(eMaterialType type);
 
@@ -115,6 +115,7 @@ void cModalSoftBody::GenerateSound()
     auto play_wave = CalculateVertexVibration(
         mSelectedVertexForHearing, mNumOfSelectedModes, mModalWaves,
         mVertexModesCoef, mAcousticSamplingFreqHZ);
+    auto gAudioOutput = cAudioOutput::getInstance();
     gAudioOutput->SetWave(play_wave);
 
     // save

@@ -9,7 +9,6 @@
 
 #include <iostream>
 const double gAirDensity = 1.225; // kg.m-3
-extern cAudioOutputPtr gAudioOutput;
 extern tDiscretedWavePtr
 CalculateVertexVibration(int v_id, int num_of_selected_modes,
                          const std::vector<tDiscretedWavePtr> &mModalWaves,
@@ -302,6 +301,7 @@ void cTransferSoftBody::SetModalVibrationSound()
     auto play_wave = CalculateVertexVibration(
         0, num_of_modes, modal_waves, mSurfaceVertexDOFCoef, sampling_hz);
 
+    auto gAudioOutput = cAudioOutput::getInstance();
     gAudioOutput->SetWave(play_wave);
 }
 
