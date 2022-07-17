@@ -4,29 +4,48 @@
         {
             "object_name": "acoustic_transfer",
             "object_type": "AcousticTransfer",
-            "material_type": "STVK",
-            "init_translation": [
+            "type": "custom",
+            "target_aabb": [
+                1,
+                1,
+                1
+            ],
+            "scale": 1.0,
+            "translation": [
                 0,
-                0.6,
+                0,
                 0
             ],
-            "init_rotation": [
+            "orientation": [
                 0,
                 0,
                 0
             ],
-            "tet_path": "./data/tetmesh/cube_v38/cube_v38.1",
-            "modal_analysis_result": "data/vib_glass_stvk.json",
-            "material_path": "config/materials/glass.json",
-            "friction": 0,
-            "num_of_poles": 30,
-            "fix_pole_position": true,
-            "gd_iters": 4000,
-            "gd_stepsize": 1e-2,
-            "gd_printgap": 1000,
-            "collision_k": 1000
+            "modal_analysis_result": "data/vib_glass_stvk.json"
         }
     ],
+    "bak": {
+        "material_type": "STVK",
+        "init_translation": [
+            0,
+            0.6,
+            0
+        ],
+        "init_rotation": [
+            0,
+            0,
+            0
+        ],
+        "tet_path": "./data/tetmesh/cube_v38/cube_v38.1",
+        "material_path": "config/materials/glass.json",
+        "friction": 0,
+        "num_of_poles": 1,
+        "fix_pole_position": true,
+        "gd_iters": 4000,
+        "gd_stepsize": 1e-2,
+        "gd_printgap": 1000,
+        "collision_k": 1000
+    },
     "window_height": 800,
     "window_width": 1000,
     "enable_draw": true,

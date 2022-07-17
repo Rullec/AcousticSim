@@ -4,12 +4,13 @@
 #include "geometries/Triangulator.h"
 #include "imgui.h"
 #include "scenes/SimStateMachine.h"
-#include "sim/kinematic/kinematicBody.h"
 #include "sim/Perturb.h"
 #include "sim/SimObjectBuilder.h"
 #include "sim/collision/BVHCollisionDetecter.h"
+#include "sim/kinematic/kinematicBody.h"
 #include "utils/ColorUtil.h"
 #include "utils/JsonUtil.h"
+#include "utils/ObjUtil.h"
 #include <iostream>
 // std::string gSceneTypeStr[eSceneType::NUM_OF_SCENE_TYPES] = {"sim",
 // "acoustic"};
@@ -88,12 +89,12 @@ void cSimScene::BuildObjects(const Json::Value &obj_conf_)
 /**
  * \breif       save current scene (obstacles to objes)
  */
-#include "geometries/ObjExport.h"
+
 void cSimScene::SaveCurrentScene()
 {
     for (auto &x : this->mObjectList)
     {
-        cObjExporter::ExportObj(x->GetObjName() + ".obj", x->GetVertexArray(),
+        cObjUtil::ExportObj(x->GetObjName() + ".obj", x->GetVertexArray(),
                                 x->GetTriangleArray());
     }
 }
@@ -143,6 +144,7 @@ void cSimScene::Update(double delta_time)
 /**
  * \brief           update obstacles
  */
+#include "sim/acoustic/TransferSoftBody.h"
 void cSimScene::UpdateObjects()
 {
 
@@ -157,7 +159,11 @@ void cSimScene::UpdateObjects()
 
     for (auto &obs : this->mObjectList)
     {
-
+        if (obs->GetObjectType() == eObjectType::ACOUSTIC_TRANSFER_TYPE)
+        {
+            std::dynamic_pointer_cast<cTransferSoftBody>(obs)->SetCameraPos(
+                this->mCamPos);
+        }
         obs->Update(mCurdt);
     }
 }

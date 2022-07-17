@@ -27,8 +27,11 @@ struct tModeVibration
     tModeVibration(double coef, double w, double xi, double wd);
     tVector GetCoefVec();
     tVectorXd GetWave(double duration_sec, double sampling_freq);
-
+    tVectorXd GetWaveExpAndSin(double duration_sec, double sampling_freq);
     double mCoef, mW, mXi, mWd;
+protected:
+    tVectorXd mCurDiscreteData;
+    double mCurDurationSec, mCurSamplingFreq;
 };
 
 SIM_DECLARE_STRUCT_AND_PTR(tModeVibration);

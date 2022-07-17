@@ -18,6 +18,7 @@ SIM_DECLARE_PTR(tVertex);
 class cObjUtil
 {
 public:
+    // load obj
     static void LoadObj(const std::string &path,
                         std::vector<tVertexPtr> &mVertexArray,
                         std::vector<tEdgePtr> &mEdgeArray,
@@ -31,5 +32,15 @@ public:
     static void BuildEdge(const std::vector<tVertexPtr> &mVertexArray,
                           std::vector<tEdgePtr> &mEdgeArray,
                           const std::vector<tTrianglePtr> &mTriangleArray);
-
+    
+    // export obj
+    static bool ExportObj(std::string export_path,
+                          const std::vector<tVertexPtr> &vertices_array,
+                          const std::vector<tTrianglePtr> &triangles_array,
+                          bool silent = false);
+    static bool ExportObj(std::string export_path,
+                          const tEigenArr<tVector> &vertices_pos_array,
+                          const tEigenArr<tVector2f> &vertices_uv_array,
+                          const tEigenArr<tVector3i> &triangle_vid_array,
+                          bool silent = false);
 };

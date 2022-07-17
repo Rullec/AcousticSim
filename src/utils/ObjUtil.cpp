@@ -306,3 +306,120 @@ void cObjUtil::BuildPlaneGeometryData(const double scale,
     }
     // exit(0);
 }
+template <typename... Args>
+inline std::string format_string(const char *format, Args... args)
+{
+    constexpr size_t oldlen = BUFSIZ;
+    char buffer[oldlen]; // 默认栈上的缓冲区
+
+    size_t newlen = snprintf(&buffer[0], oldlen, format, args...);
+    newlen++; // 算上终止符'\0'
+
+    if (newlen > oldlen)
+    { // 默认缓冲区不够大，从堆上分配
+        std::vector<char> newbuffer(newlen);
+        snprintf(newbuffer.data(), newlen, format, args...);
+        return std::string(newbuffer.data());
+    }
+
+    return buffer;
+}
+bool cObjUtil::ExportObj(std::string export_path,
+                         const std::vector<tVertexPtr> &vertices_array,
+                         const std::vector<tTrianglePtr> &triangles_array,
+                         bool silent /* = false*/)
+{
+    // 1. output the vertices info
+    std::ofstream fout(export_path, std::ios::out);
+    for (int i = 0; i < vertices_array.size(); i++)
+    {
+        auto v = vertices_array[i];
+        std::string cur_str = format_string("v %.5f %.5f %.5f\n", v->mPos[0],
+                                            v->mPos[1], v->mPos[2]);
+        fout << cur_str;
+    }
+    // if (enable_texutre_output == true)
+    {
+        // std::cout << "cloth texture coord *= 0.3\n";
+        for (int i = 0; i < vertices_array.size(); i++)
+        {
+            auto v = vertices_array[i];
+            std::string cur_str = format_string(
+                "vt %.5f %.5f\n", v->muv[0] * 0.3, v->muv[1] * 0.3);
+            fout << cur_str;
+        }
+    }
+
+    // 2. output the face id
+    // double thre = 1e-6;
+    for (int i = 0; i < triangles_array.size(); i++)
+    {
+        auto t = triangles_array[i];
+        std::string cur_str =
+            format_string("f %d/%d %d/%d %d/%d\n", t->mId0 + 1, t->mId0 + 1,
+                          t->mId1 + 1, t->mId1 + 1, t->mId2 + 1, t->mId2 + 1);
+        fout << cur_str;
+    }
+    if (silent == false)
+        printf("[debug] export obj to %s\n", export_path.c_str());
+    return true;
+}
+bool cObjUtil::ExportObj(std::string export_path,
+                         const tEigenArr<tVector> &vertices_pos_array,
+                         const tEigenArr<tVector2f> &vertices_uv_array,
+                         const tEigenArr<tVector3i> &triangle_vid_array,
+                         bool silent /* = false*/)
+{
+    // 1. output the vertices info
+    int num_of_v = vertices_pos_array.size();
+    std::ofstream fout(export_path, std::ios::out);
+    for (int i = 0; i < num_of_v; i++)
+    {
+
+        std::string cur_str =
+            format_string("v %.5f %.5f %.5f\n", vertices_pos_array[i][0],
+                          vertices_pos_array[i][1], vertices_pos_array[i][2]);
+        fout << cur_str;
+    }
+    // if (enable_texutre_output == true)
+    bool enable_uv_output = false;
+    {
+        if (vertices_uv_array.size() != num_of_v && silent == false)
+        {
+            enable_uv_output = false;
+            printf("[warn] uv is disabled in output %s\n", export_path.c_str());
+        }
+        else
+        {
+            enable_uv_output = true;
+            // std::cout << "cloth texture coord *= 0.3\n";
+            for (int i = 0; i < num_of_v; i++)
+            {
+                std::string cur_str =
+                    format_string("vt %.5f %.5f\n", vertices_uv_array[i][0],
+                                  vertices_uv_array[i][1]);
+                fout << cur_str;
+            }
+        }
+    }
+
+    // 2. output the face id
+    // double thre = 1e-6;
+    int num_of_tri = triangle_vid_array.size();
+    for (int i = 0; i < num_of_tri; i++)
+    {
+        // 0-based to 1-based
+        tVector3i t = triangle_vid_array[i] + tVector3i::Ones();
+        SIM_ASSERT(t.maxCoeff() <= num_of_v);
+        std::string cur_str = "";
+        if (enable_uv_output == true)
+            cur_str = format_string("f %d/%d %d/%d %d/%d\n", t[0], t[0], t[1],
+                                    t[1], t[2], t[2]);
+        else
+            cur_str = format_string("f %d %d %d\n", t[0], t[1], t[2]);
+        fout << cur_str;
+    }
+    if (silent == false)
+        printf("[debug] export obj to %s\n", export_path.c_str());
+    return true;
+}

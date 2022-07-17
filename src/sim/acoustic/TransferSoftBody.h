@@ -1,12 +1,13 @@
 #pragma once
-#include "sim/softbody/SoftBodyImplicit.h"
+#include "sim/kinematic/KinematicBody.h"
 
 SIM_DECLARE_CLASS_AND_PTR(tDiscretedWave);
+SIM_DECLARE_CLASS_AND_PTR(tAnalyticWave);
 SIM_DECLARE_CLASS_AND_PTR(cArrow);
 SIM_DECLARE_CLASS_AND_PTR(cMonopole);
 SIM_DECLARE_STRUCT_AND_PTR(tModeVibration);
 
-class cTransferSoftBody : public cSoftBodyImplicit
+class cTransferSoftBody : public cKinematicBody
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -14,49 +15,25 @@ public:
     virtual void Init(const Json::Value &conf) override;
     virtual void Update(float dt) override;
     virtual void UpdateImGui() override;
-    virtual int GetNumOfDrawTriangles() const override;
-    virtual int GetNumOfDrawEdges() const override;
-    virtual int GetNumOfDrawVertices() const override;
-    virtual void CalcTriangleDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                        int &st) const override;
-    virtual void CalcEdgeDrawBuffer(Eigen::Map<tVectorXf> &res,
-                                    int &st) const override;
+    virtual void SetCameraPos(const tVector3d &pos);
 
 protected:
-    virtual void SolveMonopole(int mode_idx, const tVectorXd &pressure);
+    tVector3d mCamPos;
+    tVector3d mCurSolvedCamPos;
+    double mOmega, mC;
+    tAnalyticWavePtr mAnaWave;
+    cMonopolePtr mPole;
+    std::vector<tModeVibrationPtr> mModalVibrationWaveArray;
+    std::string mModalAnalysisResult;
+    tMatrixXd mVertexModesCoef;
+    std::vector<std::vector<cMonopolePtr>> pole_array_array;
+    tEigenArr<tVectorXd> pole_weight_array;
+    virtual void ResolveSoundByCamPos();
     virtual void LoadModalAnalysisResult();
-    virtual void InitSurfaceNormal();
-    virtual tVectorXd CalcSurfaceVertexAccelNormal(int mode_idx);
-    virtual void SetModalVibrationSound();
-    tEigenArr<tModeVibrationPtr> mModalVibrationArray;
-    tMatrixXd mSurfaceVertexDOFCoef;
-    std::string mModalAnlysisResultPath;
-    bool mEnableDumpedModalSolution; // use undamped & dumped modal analysis
-    bool mFixPolePosition;
-    // result
-    int mNumOfMonopolesPerFreq; // number of monopoles
-    tEigenArr<tVector> mSurfaceVertexNormalArray;
-    struct tPolesPerFreq
-    {
-        std::vector<cMonopolePtr> mPoles;
-        double mOmega;
-    };
-
-    std::vector<tPolesPerFreq> mPolesArray;
-    tVector mAABBMin, mAABBMax;
-    virtual void InitPole();
-    // virtual double GetEnergy(int mode_idx, const tVectorXd &sound_pressure);
-    // virtual tVectorXd GetGrad(int mode_idx,
-    //                           const tEigenArr<tVector3d>
-    //                           &sound_pressure_diff);
-    virtual tVectorXd GetX(int mode_idx);
-    virtual void SetX(int mode_idx, const tVectorXd &sol);
-    // virtual tEigenArr<tVector3d>
-    // GetSoundPressureDiff(int mode_idx, const tVectorXd &sound_pressure);
-    // virtual tEigenArr<tVector3d>
-    // GetPredSoundPressure(int mode_idx, const tVectorXd &sound_pressure);
-    // virtual void CheckGradient();
-    virtual void ConstrainX(tVectorXd &sol);
-    virtual void PrintPoleInfo(int mode_idx);
-    virtual void SolveSoundFixPole(int mode_idx);
+    virtual void SetModalAnalysisSound();
+    virtual std::vector<cMonopolePtr> SolveForTargetMode(int tar_mode,
+                                                         tVectorXd &weight);
+    virtual void
+    SolveSoundForPoles(const std::vector<std::vector<cMonopolePtr>> &pole_array,
+                       const tEigenArr<tVectorXd> &pole_weight_array);
 };

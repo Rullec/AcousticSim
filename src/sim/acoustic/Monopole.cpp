@@ -3,11 +3,9 @@
 #include "utils/LogUtil.h"
 #include <iostream>
 double gWaveSpeed = 340;
-cMonopole::cMonopole(int _id, double omega)
+cMonopole::cMonopole(int _id, double omega, const tVector3d &pos) : mPos(pos)
 {
     mId = _id;
-    mPos.setRandom();
-    mA = cMathUtil::RandDouble(0, 1);
     mOmega = omega;
     // CheckCoef();
     // CheckdPdr();
@@ -17,7 +15,7 @@ cMonopole::cMonopole(int _id, double omega)
 // {
 //     mA = strength;
 //     mPos = center_pos;
-    
+
 // }
 
 /*
@@ -51,12 +49,14 @@ double cMonopole::CalcBaseItem(const tVector3d &pos)
 
 /*
 dPdr \in R^3
-dPdr = A * \bold r * base_item
+dPdr = - (x - c) / (4 * pi * r^3)
 */
 tVector3d cMonopole::CalcdPdr(const tVector3d &pos)
 {
     tVector3d r_vec = pos - mPos;
-    return mA * r_vec * CalcBaseItem(pos);
+    double r = r_vec.norm();
+    r = SIM_MAX(r, 1e-10);
+    return -r_vec / (4 * M_PI * r * r * r);
 }
 
 /*
@@ -71,40 +71,40 @@ double cMonopole::CalcdPdn(const tVector3d &pos, const tVector3d &normal)
 void cMonopole::CheckdPdr()
 {
     // 1. set up pos
-    double time = 0;
-    tVector3d test_pos = tVector3d::Random();
-    double eps = 1e-6;
+    // double time = 0;
+    // tVector3d test_pos = tVector3d::Random();
+    // double eps = 1e-6;
 
-    // 2. calculate ana dPdr
-    tVector3d dPdr_ana = CalcdPdr(test_pos);
-    tVector3d dPdr_num = tVector3d::Zero();
+    // // 2. calculate ana dPdr
+    // tVector3d dPdr_ana = CalcdPdr(test_pos);
+    // tVector3d dPdr_num = tVector3d::Zero();
 
-    // 3. calculate old p
-    double old_p = EvaluatePressure(test_pos, time);
+    // // 3. calculate old p
+    // double old_p = EvaluatePressure(test_pos, time);
 
-    // 4. change to new pos, calculate new p
-    for (int i = 0; i < 3; i++)
-    {
-        test_pos[i] += eps;
-        double new_p = EvaluatePressure(test_pos, time);
-        dPdr_num[i] = (new_p - old_p) / eps;
-        test_pos[i] -= eps;
-    }
-    tVector3d diff = (dPdr_num - dPdr_ana).cwiseAbs();
-    std::cout << "dPdr num = " << dPdr_num.transpose() << std::endl;
-    std::cout << "dPdr ana = " << dPdr_ana.transpose() << std::endl;
-    std::cout << "diff = " << diff.transpose() << std::endl;
+    // // 4. change to new pos, calculate new p
+    // for (int i = 0; i < 3; i++)
+    // {
+    //     test_pos[i] += eps;
+    //     double new_p = EvaluatePressure(test_pos, time);
+    //     dPdr_num[i] = (new_p - old_p) / eps;
+    //     test_pos[i] -= eps;
+    // }
+    // tVector3d diff = (dPdr_num - dPdr_ana).cwiseAbs();
+    // std::cout << "dPdr num = " << dPdr_num.transpose() << std::endl;
+    // std::cout << "dPdr ana = " << dPdr_ana.transpose() << std::endl;
+    // std::cout << "diff = " << diff.transpose() << std::endl;
     // 5. calculate num dPdr
 }
 /*
 p   = A/(4 * pi * r) * exp(i(w t - kr))
     = A/(4 * pi * r) * cos(wt - kr)
 */
-double cMonopole::EvaluatePressure(const tVector3d &pos, double time)
+double cMonopole::EvaluatePressure(const tVector3d &pos)
 {
     double r = SIM_MAX((pos - mPos).norm(), 1e-10);
     double k = mOmega / gWaveSpeed;
-    return mA / (4 * M_PI * r) * std::cos(mOmega * time - k * r);
+    return 1 / (4 * M_PI * r);
 }
 
 /*
@@ -116,7 +116,7 @@ void cMonopole::CheckCoef()
 {
     tVector3d pos = tVector3d::Random();
     tVector3d n = tVector3d::Random();
-    double coef_A = CalcCoef(pos, n) * mA;
+    double coef_A = CalcCoef(pos, n);
     double dpdn = this->CalcdPdn(pos, n);
     double diff = std::fabs(coef_A - dpdn);
     printf("coef A %.3f, dpdn %.3f, diff %.3f\n", coef_A, dpdn, diff);
@@ -218,12 +218,10 @@ void cMonopole::PushState()
     tPreState.mId = mId;
     tPreState.mPos = mPos;
     tPreState.mOmega = mOmega;
-    tPreState.mA = mA;
 }
 void cMonopole::PopState()
 {
     mId = tPreState.mId;
     mPos = tPreState.mPos;
     mOmega = tPreState.mOmega;
-    mA = tPreState.mA;
 }

@@ -8,19 +8,32 @@ tModeVibration::tModeVibration(const tVector &coef_vec)
 tModeVibration::tModeVibration(double coef, double w, double xi, double wd)
     : mCoef(coef), mW(w), mXi(xi), mWd(wd)
 {
+    mCurDurationSec = 0;
+    mCurSamplingFreq = 0;
 }
 
 tVector tModeVibration::GetCoefVec() { return tVector(mCoef, mW, mXi, mWd); }
 tVectorXd tModeVibration::GetWave(double duration_sec, double sampling_freq)
 {
-    double dt = 1.0 / sampling_freq;
-    double num_of_steps = duration_sec * sampling_freq;
-    // q(t) = coef_j / w_d e^{- \xi * w * t} sin(w_d * t)
-    tVectorXd data = tVectorXd::Zero(num_of_steps);
-    for (int i = 0; i < num_of_steps; i++)
+    return mCoef / mWd * GetWaveExpAndSin(duration_sec, sampling_freq);
+}
+
+tVectorXd tModeVibration::GetWaveExpAndSin(double duration_sec,
+                                           double sampling_freq)
+{
+    if (std::fabs(mCurDurationSec - duration_sec) > 1e-3 ||
+        std::fabs(sampling_freq - mCurSamplingFreq) > 1e-3)
     {
-        double t = i * dt;
-        data[i] = mCoef / mWd * std::exp(-mXi * mW * t) * std::sin(mWd * t);
+
+        double dt = 1.0 / sampling_freq;
+        double num_of_steps = duration_sec * sampling_freq;
+        // q(t) = coef_j / w_d e^{- \xi * w * t} sin(w_d * t)
+        mCurDiscreteData = tVectorXd::Zero(num_of_steps);
+        for (int i = 0; i < num_of_steps; i++)
+        {
+            double t = i * dt;
+            mCurDiscreteData[i] = std::exp(-mXi * mW * t) * std::sin(mWd * t);
+        }
     }
-    return data;
+    return mCurDiscreteData;
 }

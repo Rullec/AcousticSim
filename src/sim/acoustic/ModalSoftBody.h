@@ -36,10 +36,9 @@ protected:
 
     // selected vertex
     int mSelectedVertexForHearing;
-    tEigenArr<tModeVibrationPtr> mModalVibrationsInfo;
     std::vector<tDiscretedWavePtr> mModalWaves;
     int mNumOfSelectedModes;
-    tMatrixXd mVertexModesCoef;
+    tMatrixXd mVertexModesCoef; // for each vertex, its coef in each valid eigenmode
     void SolveForMonopole();
     std::string GetWaveName() const;
     tSparseMatd mLinearElasticityStiffnessMatrix;
@@ -64,4 +63,5 @@ protected:
     std::vector<cArrowPtr> mDrawVertexNormalArray, mDrawTriNormalArray;
     bool mEnableDrawVertexNormal, mEnableDrawTriNormal;
     virtual void InitArrowFromNormal();
+    virtual void SaveSufaceToObj(std::string path);
 };

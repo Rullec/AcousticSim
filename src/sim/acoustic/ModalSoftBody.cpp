@@ -8,10 +8,12 @@
 #include "sim/softbody/BaseMaterial.h"
 #include "utils/FileUtil.h"
 #include "utils/JsonUtil.h"
+#include "utils/ObjUtil.h"
 #include <fstream>
 #include <iostream>
 #include <set>
 
+tEigenArr<tModeVibrationPtr> mModalVibrationsInfo = {};
 eMaterialType GetHyperMaterialFromAcousticMaterial(std::string name);
 std::string GetAcousticMaterialNameFromHyperMaterial(eMaterialType type);
 
@@ -375,7 +377,7 @@ CalculateVertexVibration(int v_id, int num_of_selected_modes,
 
     tVectorXd weight = mVertexModesCoef.row(v_id);
     tVectorXf new_data = tVectorXf::Zero(mModalWaves[0]->data.size());
-
+    std::cout << "combination coef = " << weight.transpose() << std::endl;
     // 1. begin to select modes
     std::set<int> selected_modes = {};
     if (num_of_selected_modes > num_of_modes)
@@ -413,6 +415,10 @@ CalculateVertexVibration(int v_id, int num_of_selected_modes,
         // std::cout << "mode " << i << " weight = " << weight[i] << " data = "
         //           << mModalWaves[i]->data.segment(0, 2).transpose()
         //           << std::endl;
+
+        printf("mode %d coef %.3f info = ", i, weight[i]);
+        std::cout << mModalVibrationsInfo[i]->GetCoefVec().transpose()
+                  << std::endl;
         new_data += weight[i] * mModalWaves[i]->data;
     }
     printf("[info] generate sound from %d modes\n", selected_modes.size());
@@ -611,6 +617,36 @@ void cModalSoftBody::ChangeMaterial(int old_idx, int new_idx)
     GenerateSound();
 }
 
+void cModalSoftBody::SaveSufaceToObj(std::string path)
+{
+    this->mSurfaceVertexIdArray;
+    this->mSurfaceTriangleIdArray;
+    this->mSurfaceEdgeIdArray;
+    std::map<int, int> mGlobalToLocalVid = {};
+    tEigenArr<tVector> vertex_pos_array = {};
+    for (int i = 0; i < mSurfaceVertexIdArray.size(); i++)
+    {
+        mGlobalToLocalVid[mSurfaceVertexIdArray[i]] = i;
+        vertex_pos_array.push_back(
+            mVertexArray[mSurfaceVertexIdArray[i]]->mPos);
+    }
+    // 1. get triangle's vertex id
+    tEigenArr<tVector3i> tri_id_array = {};
+    for (int tid = 0; tid < mSurfaceTriangleIdArray.size(); tid++)
+    {
+        int global_tid = mSurfaceTriangleIdArray[tid];
+        int global_v0 = mTriangleArray[global_tid]->mId0;
+        int global_v1 = mTriangleArray[global_tid]->mId1;
+        int global_v2 = mTriangleArray[global_tid]->mId2;
+        int local_v0 = mGlobalToLocalVid[global_v0];
+        int local_v1 = mGlobalToLocalVid[global_v1];
+        int local_v2 = mGlobalToLocalVid[global_v2];
+        // find local v
+        tri_id_array.push_back(tVector3i(local_v0, local_v1, local_v2));
+    }
+    cObjUtil::ExportObj(path, vertex_pos_array, {}, tri_id_array, false);
+}
+
 /**
  * \brief       load material params
  */
@@ -644,34 +680,24 @@ void cModalSoftBody::LoadMaterialParams()
 
 void cModalSoftBody::DumpResultForTransfer()
 {
-    Json::Value geometry, modes, coef;
+    Json::Value modes, coef;
+
+    std::string surface_obj_path =
+        cFileUtil::RemoveExtension(mTetMeshPath) + ".obj";
+
     // 1. geo info: surface vertex pos, id, normal vector
     {
         int num_of_surface_v = mSurfaceVertexIdArray.size();
-        Json::Value v_lst = Json::arrayValue, pos_lst = Json::arrayValue,
-                    normal_lst = Json::arrayValue;
-        for (int i = 0; i < num_of_surface_v; i++)
-        {
-            int vid = mSurfaceVertexIdArray[i];
-            auto v = mVertexArray[vid];
 
-            tVector3d pos = v->mPos.segment(0, 3);
-            tVector3d normal = v->mNormal.segment(0, 3);
-            v_lst.append(vid);
-            pos_lst.append(cJsonUtil::BuildVectorJson(pos));
-            normal_lst.append(cJsonUtil::BuildVectorJson(normal));
-        }
-        geometry["tet_path"] = mTetMeshPath;
-        geometry["vertex_id_lst"] = v_lst;
-        geometry["pos_lst"] = pos_lst;
-        geometry["normal_lst"] = normal_lst;
+        // save tet as trimesh
+        SaveSufaceToObj(surface_obj_path);
     }
 
     // 2. modes
 
     {
         modes = Json::arrayValue;
-        int num_of_modes = this->mModalVibrationsInfo.size();
+        int num_of_modes = mModalVibrationsInfo.size();
         for (auto &info : mModalVibrationsInfo)
         {
             modes.append(cJsonUtil::BuildVectorJson(info->GetCoefVec()));
@@ -699,7 +725,7 @@ void cModalSoftBody::DumpResultForTransfer()
         "_" + GetAcousticMaterialNameFromIdx(this->mAcousticMaterialModelIdx) +
         ".json";
     Json::Value root;
-    root["geometry"] = geometry;
+    root["surface_obj_path"] = surface_obj_path;
     root["modes"] = modes;
     root["coef"] = coef;
     cJsonUtil::WriteJson(output, root);

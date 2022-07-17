@@ -152,9 +152,6 @@ int main(int argc, char **argv)
     // exit(1);
     cMathUtil::SeedRand(0);
 
-    cSpecFunc::Test();
-    exit(1);
-
     std::string conf = "";
     ParseArg(argc, argv, conf);
 
