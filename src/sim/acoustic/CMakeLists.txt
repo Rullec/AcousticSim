@@ -3,6 +3,7 @@ add_library(acoustic_lib
     AudioWave.cpp
     ModalSoftBody.cpp
     ModeVibration.cpp
+    BasePole.cpp
     Monopole.cpp
     TransferSoftBody.cpp
 )

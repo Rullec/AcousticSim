@@ -21,7 +21,8 @@
                 0,
                 0
             ],
-            "modal_analysis_result": "data/vib_glass_stvk.json"
+            "modal_analysis_result": "data/vib_glass_stvk.json",
+            "num_of_poles_per_mode": 3
         }
     ],
     "bak": {

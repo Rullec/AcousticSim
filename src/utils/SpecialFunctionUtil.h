@@ -15,7 +15,6 @@ a + bi = e^{ln(sqrt(a^2 + b^2)) + i * tan(b, a)}
 */
 class cSpecialFunctionUtil
 {
-    // python verification first
     static tVector3d ConvertSphericalToCartesian(double r, double theta,
                                                  double phi);
     static tVector3d ConvertCartesianToSpherical(double x, double y, double z);

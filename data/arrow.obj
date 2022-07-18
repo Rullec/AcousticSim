@@ -1,6 +1,5 @@
 # This file uses centimeters as units for non-parametric coordinates.
 
-mtllib jt.mtl
 g default
 v 0.951057 4.084548 -0.309017
 v 0.809018 4.084548 -0.587786
@@ -549,7 +548,6 @@ vn 0.000001 -1.000000 0.000000
 vn 0.000001 -1.000000 0.000000
 s 1
 g pCone1
-usemtl initialShadingGroup
 f 1/1/1 2/2/2 21/22/3
 f 2/2/2 3/3/4 21/22/3
 f 3/3/4 4/4/5 21/22/3

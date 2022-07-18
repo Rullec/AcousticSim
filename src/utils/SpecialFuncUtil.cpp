@@ -64,13 +64,14 @@ double cSpecFunc::AssociatedLegendrePoly(int l, int m, double x)
 }
 doublec cSpecFunc::SphericalHarmonics(int n, int m, double theta, double phi)
 {
-    SIM_ASSERT(n >= 0 && m >= 0);
-    SIM_ASSERT(m <= n);
+    int m_abs =  m > 0 ? m : -m;
+    SIM_ASSERT(n >= 0);
+    SIM_ASSERT(m_abs <= n);
     double coef =
-        (2 * n + 1) * factor(n - m) * 1.0 / factor(n + m) / (4 * M_PI);
+        (2 * n + 1) * factor(n - m_abs) * 1.0 / factor(n + m_abs) / (4 * M_PI);
     double asso_legendre =
         cSpecFunc::AssociatedLegendrePoly(n, m, std::cos(theta));
-    doublec e_imphi(0, m * phi);
+    doublec e_imphi(0, m_abs * phi);
     e_imphi = std::exp(e_imphi);
     return coef * asso_legendre * e_imphi;
 }

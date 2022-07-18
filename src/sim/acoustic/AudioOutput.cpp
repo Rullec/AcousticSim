@@ -19,7 +19,7 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
 {
     cAudioOutputPtr mAudioOutput = cAudioOutput::getInstance();
     float *target_buf = static_cast<float *>(pOutput);
-    if (true == mAudioOutput->GetAudioFlag())
+    if (mAudioOutput != nullptr && true == mAudioOutput->GetAudioFlag())
         mAudioOutput->SetContent(frameCount, target_buf);
     else
     {

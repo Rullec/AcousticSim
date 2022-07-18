@@ -2,9 +2,9 @@
 #include "BasePole.h"
 
 /*
-the sound pressure of monopole:
+the sound pressure of dipole:
 
-p(x) = exp(- i * k * r) / (4 * pi * r)
+p(x) = 
 
 where r = |x - c_i|, c_i is the pole pos.
 
@@ -21,11 +21,9 @@ public:
     explicit cMonopole(int _id, double omega, const tVector3d &pos);
     virtual tVector3d CalcdPdx_Re(const tVector3d &pos) override;
     // virtual double CalcPressure(const tVector3d &pos) override;
-    virtual double
-    CalcPressureForSoundSynthesis(const tVector3d &pos,
-                                  const tVectorXd &weight) override;
+    virtual double CalcPressureForSoundSynthesis(const tVector3d &pos, const tVectorXd & weight) override;
     virtual double CalcdPdn_Re(const tVector3d &pos,
-                               const tVector3d &normal) override;
+                            const tVector3d &normal) override;
 
 protected:
     virtual double CalcBaseItem(const tVector3d &pos) override;
